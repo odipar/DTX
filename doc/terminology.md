@@ -13,11 +13,11 @@ bytes, and a row `RR` it repeats to once the last row is done. A **row** is
 one step of one: `C` values, and nothing in it about what any of them is
 for. A **column** is one field of a row, the same width in every row.
 
-**Yielding** is one row at a time and in order. A clock advances to a next
-row, and holds its own place in the table: the first advance gives row 0,
-the next row 1, and the advance after row `R` minus one gives row `RR`, or
-nothing where the table does not repeat. Two clocks on one table hold two
-places, and neither moves the other's.
+**Yielding** is one row at a time and in order. A **clock** advances to a
+next row, and holds its own place in the table: the first advance gives
+row 0, the next row 1, and the advance after row `R` minus one gives row
+`RR`, or nothing where the table does not repeat. Two clocks on one table
+hold two places, and neither moves the other's.
 
 `R` counts the rows a table holds, not the rows it yields. One that repeats
 yields them without end.
