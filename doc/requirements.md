@@ -117,7 +117,18 @@ What a table may hold, and what a reader does where it holds otherwise.
 - **R6.5** A reader given a table that breaks any of these, or R5.6,
   reports it and reads no further. What it reports is SPEC.md's.
 
-## R7. Not yet written
+## R7. Not yet required
 
-The rest. [doc/SPEC.md](SPEC.md) is empty, and the requirements above are
-what stands.
+What R1 to R6 do not yet say. Each is open, and none of it is settled by
+[doc/SPEC.md](SPEC.md), which states the format R1 to R6 require.
+
+- Whether a table states its own length, and whether a reader needs one to
+  read it.
+- What a reader reports of a table it will not read. R6.5 has it report and
+  read no further, and leaves what it reports to SPEC.md, which has not
+  written it.
+- Whether a variant may hold columns of more than one kind, some packed and
+  some plain.
+- What holds this repository's readers to one another. Java is the source
+  of truth and Go, C# and a 68000 one follow it, and nothing here requires
+  that they agree or says how that is shown.
