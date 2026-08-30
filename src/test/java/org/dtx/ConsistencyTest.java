@@ -17,10 +17,9 @@ import org.junit.jupiter.api.Test;
  * The documents against themselves: every reference that can be followed,
  * every figure that can be recomputed.
  *
- * <p>Ported from YMXR, which holds the same three tests. Three of its
- * checks read documents this repository has not written - the column
- * table, the numbered sections of a specification, and the figures of an
- * experiment - and they come back with the documents they read.
+ * <p>Ported from YMXR, which holds the same three tests. Two of its checks
+ * read documents this repository has not written - a column table, and the
+ * figures of an experiment - and they come back with those documents.
  *
  * <p>{@code HouseStyleTest} holds the prose to {@code AGENTS.md} and
  * {@code GlossaryTest} holds the terms to the glossary. This holds the
@@ -32,14 +31,15 @@ import org.junit.jupiter.api.Test;
  */
 final class ConsistencyTest {
 
+    private static final Path SPEC = Path.of("doc/SPEC.md");
+
     private static final Path REQ = Path.of("doc/requirements.md");
     private static final Path GLO = Path.of("doc/glossary.md");
     private static final Path TERM = Path.of("doc/terminology.md");
     private static final Path EXP = Path.of("doc/experiments.md");
 
     private static final List<Path> DOCUMENTS =
-            List.of(Path.of("README.md"), Path.of("doc/SPEC.md"), REQ, GLO,
-                    TERM, EXP);
+            List.of(Path.of("README.md"), SPEC, REQ, GLO, TERM, EXP);
 
     private static String read(Path p) throws IOException {
         return Files.readString(p);
@@ -64,6 +64,30 @@ final class ConsistencyTest {
         }
         assertTrue(dangling.isEmpty(), () -> String.join("\n", dangling)
                 + "\nrequirements.md defines " + defined);
+    }
+
+    @Test
+    void everySectionCitedExists() throws IOException {
+        String spec = read(SPEC);
+        Set<String> headings = new TreeSet<>();
+        Matcher h = Pattern.compile("^#{2,3} (\\d+(?:\\.\\d+)?)\\.? ",
+                Pattern.MULTILINE).matcher(spec);
+        while (h.find()) {
+            headings.add(h.group(1));
+        }
+        List<String> missing = new ArrayList<>();
+        Matcher r = Pattern.compile("[Ss]ection (\\d+(?:\\.\\d+)?)|\\((\\d\\.\\d+)"
+                + "(?:, (\\d\\.\\d+))?(?:, (\\d\\.\\d+))?\\)").matcher(spec);
+        while (r.find()) {
+            for (int g = 1; g <= r.groupCount(); g++) {
+                String ref = r.group(g);
+                if (ref != null && !headings.contains(ref)) {
+                    missing.add("SPEC.md points at " + ref);
+                }
+            }
+        }
+        assertTrue(missing.isEmpty(), () -> String.join("\n", missing)
+                + "\nits headings are " + headings);
     }
 
     /** Every row of the glossary's table, its term and where it points. */

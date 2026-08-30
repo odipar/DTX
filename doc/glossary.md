@@ -13,7 +13,9 @@ same change (requirements.md, R0.6 to R0.9).
 | `R` | The table's row count, of the rows it holds. | terminology.md, tables, rows and columns |
 | row | One step of a table: `C` values, with nothing in it about what any of them is for. | terminology.md, tables, rows and columns |
 | `RR` | The row a table repeats to once the last row is done. | terminology.md, tables, rows and columns |
+| ST4 | The packer a DTX2 column is packed with, specified in its own repository. A data set of it is packed at a unit `k` and unpacks through a ring of `N` bytes. | SPEC.md 2.3 |
 | table | What yields rows: `R` of them, `C` columns wide, repeating at `RR`. | terminology.md, tables, rows and columns |
+| variant | One way of laying a table's rows out in bytes. DTX0 row by row, DTX1 column by column, DTX2 column by column and packed. | terminology.md, the variants |
 | yielding | Giving one row of a table, in order. A clock advances to a next row and holds its own place in the table. | terminology.md, tables, rows and columns |
 
 ## Named, not yet defined
