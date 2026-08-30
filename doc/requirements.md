@@ -90,15 +90,19 @@ before what it describes, and what things are called comes before both.
 - **R5.3** A reader holds one ST4 decoder, built for that `k`, and takes
   every column of the payload through it. ST4 code is built for a unit,
   and one unit a payload is what lets one build serve every column.
-- **R5.4** One ring size `N` for a payload, so a reader holds one ring
-  size rather than one a column.
-- **R5.5** `R` divides by `k`. ST4 packs whole units, so a column that is
+- **R5.4** One ring size `N` for a payload. No data set in it reaches back
+  further than `N`, so a ring of `N` bytes serves any of them, and every
+  data set was packed for the `N` the payload states.
+- **R5.5** A reader holds its rings at that one size, so they stand at a
+  fixed stride from one another and one cursor arithmetic serves every
+  column.
+- **R5.6** `R` divides by `k`. ST4 packs whole units, so a column that is
   not a whole number of them unpacks to more bytes than it holds.
-- **R5.6** A table in fewer bytes than DTX1 holds the same one. That is
+- **R5.7** A table in fewer bytes than DTX1 holds the same one. That is
   what DTX2 is for.
-- **R5.7** Read back through a ring that does not grow with `R`. A reader
+- **R5.8** Read back through a ring that does not grow with `R`. A reader
   holds a window on a column, not the column.
-- **R5.8** An ST4 data set begins on a long, which is what ST4 asks of one
+- **R5.9** An ST4 data set begins on a long, which is what ST4 asks of one
   of its containers.
 
 ## R6. The constraints
@@ -110,7 +114,7 @@ What a table may hold, and what a reader does where it holds otherwise.
 - **R6.3** A column's width is 1, 2 or 4 bytes, and no other.
 - **R6.4** `RR` names a row of the table, 0 to `R` minus one, or is `R`
   itself where the table does not repeat.
-- **R6.5** A reader given a table that breaks any of these, or R5.5,
+- **R6.5** A reader given a table that breaks any of these, or R5.6,
   reports it and reads no further. What it reports is SPEC.md's.
 
 ## R7. Not yet written
