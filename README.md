@@ -7,9 +7,9 @@ The format is data. A compile step and a calling convention belong to a
 reader and not to the format, so the specification states what the bytes
 are and what a reader takes out of them, and no more than that.
 
-No reader is written yet. The trees are `src/main/java/`, `go/`,
-`dotnet/` and `68k/`, and `test/` is where the harnesses go. Nothing yet
-holds one reader to another, and R7 leaves that open.
+Java reads DTX0 and DTX1 and writes all three, under `src/main/java/`.
+`go/`, `dotnet/` and `68k/` are empty, and `test/` is where the harnesses
+go. Nothing yet holds one reader to another, and R7 leaves that open.
 
 DTX says nothing about what a column holds. A format built on DTX says
 that, in its own repository and against what this one says.

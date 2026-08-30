@@ -19,6 +19,8 @@
         <!-- Every package is null-marked and enforced. -->
         <nullaway.packages>org.dtx</nullaway.packages>
         <nullaway.severity>ERROR</nullaway.severity>
+        <!-- CLI arguments for exec:exec@rewrite (-Dargs="..."). -->
+        <args></args>
     </properties>
 
     <dependencies>
@@ -78,6 +80,26 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
+            </plugin>
+            <plugin>
+                <!-- A DTX0 or DTX1 file into a DTX2 one:
+                       mvn -q compile exec:exec@rewrite \
+                           -Dargs="in.dtx out.dtx -k1 -m960 -pst4" -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>rewrite</id>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <commandlineArgs>-ea -cp %classpath org.dtx.Rewrite ${args}</commandlineArgs>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
