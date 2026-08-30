@@ -30,7 +30,7 @@ DTX0 and DTX1 want no more than a word, and take the same rule so that a
 header is one shape under every variant.
 
 A reader takes the variant from byte 3 and reads no further where it does
-not read that variant (R2.10).
+not read that variant (R2.3).
 
 A table of `R` = 3 rows and `C` = 3 columns, of widths 1, 4 and 2, has
 this header, and the pictures below lay out that same table:
@@ -54,7 +54,7 @@ The payload begins on a long. Inside it DTX0 pads nothing, DTX1 pads
 before each column to a word, and DTX2 pads before each data set to a
 long: each variant's section says where. A pad byte is zero.
 
-Nowhere does padding cost an offset its arithmetic (R2.4). Where a value
+Nowhere does padding cost an offset its arithmetic (R3.3, R4.2). Where a value
 sits is a multiplication and a sum of the widths, and where a variant pads
 the pad is as fixed as the widths are.
 
@@ -67,7 +67,7 @@ A row is the sum of the widths, with nothing between its columns. Column
 begins at `n` times a row, and the payload is `R` times a row.
 
 A value falls where the widths put it, so a two or four byte column can
-fall on an odd offset and a reader takes it as bytes (R2.5).
+fall on an odd offset and a reader takes it as bytes (R3.4).
 
 ```
    a row of the example: 1 + 4 + 2, seven bytes
@@ -91,7 +91,7 @@ times `W[k]` bytes and begins on a word: where the column before it ends
 odd, a zero byte stands between them. Its row `n` is `n` times `W[k]`
 further on.
 
-That padding is what DTX1 has over DTX0 (R2.5). A column begins even and
+That padding is what DTX1 has over DTX0 (R4.3). A column begins even and
 its values are `W[k]` apart, so every value of a two or four byte column
 sits on a word and a 68000 reads it as one. It costs at most a byte a
 column, and only where a column of an odd length precedes another.
@@ -128,14 +128,14 @@ data sets are:
 | 3 | 1 | zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
-`N` is what R2.8 asks for. A reader takes it once and holds a ring of that
+`N` is what R5.5 asks for. A reader takes it once and holds a ring of that
 many bytes, and the ring does not grow as `R` does.
 
 `k` need not be `W[k]`: a two byte column packs at a unit of 1 or of 2.
 One `k` for the payload is not only shorter than one a column - ST4 asks
 it, and rejects a file whose data sets do not share a unit.
 
-`R` divides by `k` (R3.5). A column holds `R` times `W[k]` bytes and ST4
+`R` divides by `k` (R5.3). A column holds `R` times `W[k]` bytes and ST4
 packs whole units, so a column that is not a whole number of them unpacks
 to more bytes than the column holds. Where `R` divides by `k` it cannot:
 `R` times `W[k]` then divides by `k` at every width.
@@ -172,7 +172,7 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 ```
 
 A reader unpacks a column into a buffer of its own choosing rather than
-into `R` times `W[k]` bytes (R2.8).
+into `R` times `W[k]` bytes (R5.5).
 
 ---
 
