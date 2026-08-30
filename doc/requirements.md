@@ -31,8 +31,9 @@ before what it describes, and what things are called comes before both.
 
 - **R1.1** A table of `R` rows and `C` columns, a column 1, 2 or 4 bytes
   wide, and a row `RR` it repeats to once the last row is done.
-- **R1.2** Data and no more. There is no compile step here, no engine and
-  no calling convention.
+- **R1.2** A format, not an engine. The table is data; a compile step or a
+  calling convention is a reader's, and a reader is written against the
+  format rather than named by it.
 - **R1.3** Nothing about what a column holds. A use states that in its own
   repository.
 
