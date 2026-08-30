@@ -71,6 +71,12 @@ final class HouseStyleTest {
             "stand as they were",
             // a consumer does not understand a stream, it implements it
             "understand",
+            // AGENTS.md: no file, program or algorithm wants or knows. The
+            // plain verbs are there - a variant needs, a header gives. Both
+            // entries lead with a space, which the matcher below reads as a
+            // word boundary, so "unknown" and "acknowledge" pass
+            " want",
+            " know",
             "refuse",
             // the sweep: a trailing clause generalising the sentence
             "whatever",
@@ -131,7 +137,9 @@ final class HouseStyleTest {
         for (Path document : documents) {
             List<String> lines = Files.readAllLines(document);
             for (int at = 0; at < lines.size(); at++) {
-                String line = lines.get(at).toLowerCase();
+                // a space in front, so an entry that leads with one
+                // matches a word at the start of a line as well as inside
+                String line = " " + lines.get(at).toLowerCase();
                 for (String struck : STRUCK) {
                     if (line.contains(struck)) {
                         hits.add(document + ":" + (at + 1)
