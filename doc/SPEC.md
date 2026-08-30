@@ -128,14 +128,17 @@ data sets are:
 | 3 | 1 | zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
-`N` is what R5.5 asks for. A reader takes it once and holds a ring of that
+`N` is what R5.7 asks for. A reader takes it once and holds a ring of that
 many bytes, and the ring does not grow as `R` does.
 
 `k` need not be `W[k]`: a two byte column packs at a unit of 1 or of 2.
-One `k` for the payload is not only shorter than one a column - ST4 asks
-it, and rejects a file whose data sets do not share a unit.
 
-`R` divides by `k` (R5.3). A column holds `R` times `W[k]` bytes and ST4
+One `k` for the payload buys a reader one decoder. ST4 code is built for a
+unit, and a reader of DTX2 takes every column of a payload through the one
+build that unit asks for (R5.3). ST4 asks the same of a file of its own,
+and rejects one whose data sets do not share a unit.
+
+`R` divides by `k` (R5.5). A column holds `R` times `W[k]` bytes and ST4
 packs whole units, so a column that is not a whole number of them unpacks
 to more bytes than the column holds. Where `R` divides by `k` it cannot:
 `R` times `W[k]` then divides by `k` at every width.
@@ -155,8 +158,9 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 - Its header is twenty bytes, and it begins on a long so a reader takes
   that header a long at a time. That is why DTX2 aligns its data sets.
 - A reader built for one unit rejects a data set whose fourth byte gives
-  another. The payload's `k` gives that same unit, so a reader knows
-  before it opens a data set what it will find there.
+  another. The payload's `k` is that same unit (R5.2), so a reader knows
+  before it opens a data set that its own build will read it, and may
+  check the two against each other.
 - A run of bytes shorter than twenty is smaller stored than packed, which
   is ST4's own to say and not read here.
 
@@ -172,7 +176,7 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 ```
 
 A reader unpacks a column into a buffer of its own choosing rather than
-into `R` times `W[k]` bytes (R5.5).
+into `R` times `W[k]` bytes (R5.7).
 
 ---
 
