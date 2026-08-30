@@ -53,6 +53,12 @@ final class HouseStyleTest {
             // a column holds a value; nothing sits anywhere
             "sits in",
             "stand apart",
+            // the cleft: "X is what makes Y" is "X makes Y". R3.5, R4.4
+            // and R5.7 keep "That is what DTXn is for", so the bare "is
+            // what" stays off the list and the struck forms are listed
+            "which is what",
+            "this is what",
+            " is what lets",
             // a rule justified by quoting a speaking thing
             "spells out",
             "spell out",

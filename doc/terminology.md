@@ -38,7 +38,7 @@ The three answer two goals. DTX0 and DTX1 are for reading and writing
 plainly: the bytes are the rows, so a reader finds a value by arithmetic
 and takes it, and a writer puts a row down as it is. Row by row a whole
 row is one run of bytes; column by column a column's values sit together,
-which is what lets a reader take one column without touching the others.
+so a reader takes one column without touching the others.
 
 DTX1 pays a byte a column for one thing more: a column begins on a word,
 so a value of two or four bytes sits where a 68000 reads it as one. In
@@ -48,8 +48,8 @@ where that is odd.
 DTX2 is for size. Packing a column costs the plainness: a reader no longer
 finds a value by arithmetic, and holds a ring of `N` bytes on each column
 rather than the column itself. The ring does not grow as the table does.
-What it buys is a table in fewer bytes, once the table has rows enough to
-pay for the packing. A short one packs to more than it holds, since what
+Packing buys a table in fewer bytes, once the table has rows enough to pay
+for the packing. A short one packs to more than it holds, since what
 the packing costs does not grow with `R` (requirements.md, R5.7).
 
 ---
