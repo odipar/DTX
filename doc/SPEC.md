@@ -48,7 +48,7 @@ this header, and the pictures below lay out that same table:
 
 ## 2. The payload
 
-`W[k]` is column `k`'s width, from the header.
+`W[i]` is column `i`'s width, from the header.
 
 The payload begins on a long. Inside it DTX0 pads nothing, DTX1 pads
 before each column to a word, and DTX2 pads before each data set to a
@@ -63,7 +63,7 @@ the pad is as fixed as the widths are.
 `R` rows, each holding column 0 through column `C` minus one in order.
 
 A row is the sum of the widths, with nothing between its columns. Column
-`k` within a row begins at the sum of the widths before `k`, row `n`
+`i` within a row begins at the sum of the widths before `i`, row `n`
 begins at `n` times a row, and the payload is `R` times a row.
 
 A value falls where the widths put it, so a two or four byte column can
@@ -86,13 +86,13 @@ fall on an odd offset and a reader takes it as bytes (R3.4).
 
 ### 2.2 DTX1, column by column
 
-`C` columns, each holding its `R` values in row order. Column `k` is `R`
-times `W[k]` bytes and begins on a word: where the column before it ends
-odd, a zero byte stands between them. Its row `n` is `n` times `W[k]`
+`C` columns, each holding its `R` values in row order. Column `i` is `R`
+times `W[i]` bytes and begins on a word: where the column before it ends
+odd, a zero byte stands between them. Its row `n` is `n` times `W[i]`
 further on.
 
 That padding is what DTX1 has over DTX0 (R4.3). A column begins even and
-its values are `W[k]` apart, so every value of a two or four byte column
+its values are `W[i]` apart, so every value of a two or four byte column
 sits on a word and a 68000 reads it as one. It costs at most a byte a
 column, and only where a column of an odd length precedes another.
 
@@ -114,7 +114,7 @@ DTX1.
 ### 2.3 DTX2, column by column and packed
 
 `C` ST4 data sets, one a column. A column's data set packs the bytes
-DTX1's column `k` holds and is complete: its own header, its own streams,
+DTX1's column `i` holds and is complete: its own header, its own streams,
 and the length of what it unpacks to.
 
 Every data set in a payload is packed at one unit and unpacks through a
@@ -136,17 +136,17 @@ reaches back further than `N`, so one ring size serves them all, the rings
 stand at a fixed stride from one another, and one cursor arithmetic runs
 every column (R5.4, R5.5).
 
-`k` need not be `W[k]`: a two byte column packs at a unit of 1 or of 2.
+`k` need not be `W[i]`: a two byte column packs at a unit of 1 or of 2.
 
 One `k` for the payload buys a reader one decoder. ST4 code is built for a
 unit, and a reader of DTX2 takes every column of a payload through the one
 build that unit asks for (R5.3). ST4 asks the same of a file of its own,
 and rejects one whose data sets do not share a unit.
 
-`R` divides by `k` (R5.6). A column holds `R` times `W[k]` bytes and ST4
+`R` divides by `k` (R5.6). A column holds `R` times `W[i]` bytes and ST4
 packs whole units, so a column that is not a whole number of them unpacks
 to more bytes than the column holds. Where `R` divides by `k` it cannot:
-`R` times `W[k]` then divides by `k` at every width.
+`R` times `W[i]` then divides by `k` at every width.
 
 Four bytes and `4C` divide by 4, so the first data set begins on a long
 where the payload does. The data sets follow, each beginning on a long:
@@ -181,7 +181,7 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 ```
 
 A reader unpacks a column into a buffer of its own choosing rather than
-into `R` times `W[k]` bytes (R5.8).
+into `R` times `W[i]` bytes (R5.8).
 
 ---
 
