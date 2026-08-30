@@ -7,16 +7,15 @@ The format is data. A compile step and a calling convention belong to a
 reader and not to the format, so the specification states what the bytes
 are and what a reader takes out of them, and no more than that.
 
-The readers are here: Java is the source of truth, Go and C# follow it
-byte for byte, and a 68000 one is under `68k/`.
+No reader is written yet. The trees are `src/main/java/`, `go/`,
+`dotnet/` and `68k/`, and `test/` is where the harnesses go. Nothing yet
+holds one reader to another, and R7 leaves that open.
 
 DTX says nothing about what a column holds. A format built on DTX says
 that, in its own repository and against what this one says.
 
 [doc/requirements.md](doc/requirements.md) comes first. Nothing else is
 written until it says what DTX has to do.
-
-The harnesses under `test/` hold the three trees to each other.
 
 | | |
 |---|---|
