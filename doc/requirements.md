@@ -129,6 +129,7 @@ What R1 to R6 do not yet say. Each is open, and none of it is settled by
   written it.
 - Whether a variant may hold columns of more than one kind, some packed and
   some plain.
-- What holds this repository's readers to one another. Java is the source
-  of truth and Go, C# and a 68000 one follow it, and nothing here requires
-  that they agree or says how that is shown.
+- What holds this repository's readers to one another. None is written yet;
+  when they are, Java is the source of truth and Go, C# and a 68000 one
+  follow it, and nothing here requires that they agree or says how that is
+  shown.
