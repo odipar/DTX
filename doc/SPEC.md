@@ -191,8 +191,8 @@ into `R` times `W[i]` bytes (R5.8).
 Where a table states its length, or whether it states one at all.
 
 What a reader reports of a table it will not read: a variant it does not
-know, a `C` over 256, a width other than 1, 2 or 4, an `RR` over `R`, or a
-DTX2 whose `R` does not divide by its `k`.
+know, an `R` below 1, a `C` outside 1 to 256, a width other than 1, 2 or 4,
+an `RR` over `R`, or a DTX2 whose `R` does not divide by its `k`.
 
 Whether a variant may hold columns of more than one kind, packing some and
 leaving others plain.
