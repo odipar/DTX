@@ -54,9 +54,10 @@ The payload begins on a long. Inside it DTX0 pads nothing, DTX1 pads
 before each column to a word, and DTX2 pads before each data set to a
 long: each variant's section says where. A pad byte is zero.
 
-Nowhere does padding cost an offset its arithmetic (R3.3, R4.2). Where a value
-sits is a multiplication and a sum of the widths, and where a variant pads
-the pad is as fixed as the widths are.
+In DTX0 and DTX1 an offset is arithmetic on `R`, `C` and the widths (R3.3,
+R4.2), and DTX1's pad enters that arithmetic as a fixed term. DTX2
+differs: the payload states at what offset each column begins, and a value
+within a packed column is found by unpacking (2.3).
 
 ### 2.1 DTX0, row by row
 
