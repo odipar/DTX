@@ -98,8 +98,10 @@ before what it describes, and what things are called comes before both.
   column.
 - **R5.6** `R` divides by `k`. ST4 packs whole units, so a column that is
   not a whole number of them unpacks to more bytes than it holds.
-- **R5.7** A table in fewer bytes than DTX1 holds the same one. That is
-  what DTX2 is for.
+- **R5.7** A table in fewer bytes than DTX1 holds the same one, once it
+  has rows enough to pay for the packing. That is what DTX2 is for. What
+  the packing costs does not grow with `R`, where what it saves does, so
+  a short table packs to more than it holds.
 - **R5.8** Read back through a ring that does not grow with `R`. A reader
   holds a window on a column, not the column.
 - **R5.9** An ST4 data set begins on a long, which is what ST4 asks of one

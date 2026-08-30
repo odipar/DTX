@@ -47,8 +47,10 @@ where that is odd.
 
 DTX2 is for size. Packing a column costs the plainness: a reader no longer
 finds a value by arithmetic, and holds a window on each column instead of
-the column. What it buys is a table small enough to keep, and a buffer
-that does not grow as the table does.
+the column. What it buys is a table in fewer bytes, once the table has rows
+enough to pay for the packing. A short one packs to more than it holds,
+since what the packing costs does not grow with `R` (requirements.md,
+R5.7).
 
 ---
 
