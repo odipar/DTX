@@ -8,7 +8,7 @@ same change (requirements.md, R0.6 to R0.9).
 |---|---|---|
 | `C` | The table's column count. | terminology.md, tables, rows and columns |
 | column | One field of a row, 1, 2 or 4 bytes wide, the same width in every row. | terminology.md, tables, rows and columns |
-| DTX | This format: a table of `R` rows and `C` columns, and no code. | README.md |
+| DTX | This format: a table of `R` rows and `C` columns. The table is data, and a reader of it is code. | README.md |
 | metadata | What describes a table without holding it: `R`, `C`, `RR` and each column's width. | terminology.md, tables, rows and columns |
 | `R` | The table's row count, of the rows it holds. | terminology.md, tables, rows and columns |
 | row | One step of a table: `C` values, with nothing in it about what any of them is for. | terminology.md, tables, rows and columns |

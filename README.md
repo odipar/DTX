@@ -3,9 +3,12 @@
 DTX is a data format: a table of `R` rows and `C` columns, where a column
 is 1, 2 or 4 bytes wide and the rows repeat at a row `RR`.
 
-It holds no code. There is no engine here, no compile step and no calling
-convention: a table is data, and how a reader takes rows out of it is what
-this repository states.
+The format is data. A compile step and a calling convention belong to a
+reader and not to the format, so the specification states what the bytes
+are and what a reader takes out of them, and no more than that.
+
+The readers are here: Java is the source of truth, Go and C# follow it
+byte for byte, and a 68000 one is under `68k/`.
 
 DTX says nothing about what a column holds. That is a use's to define, and
 [YMXR](https://github.com/odipar/YMXR) is one - a chiptune format for the
@@ -16,9 +19,8 @@ its own R1.
 [doc/requirements.md](doc/requirements.md) comes first. Nothing else is
 written until it says what DTX has to do.
 
-The shape follows YMXR: Java is the source of truth, Go and C# follow it
-byte for byte, a 68000 reader is under `68k/`, and the harnesses under
-`test/` hold the three trees to each other.
+The shape follows YMXR, and the harnesses under `test/` hold the three
+trees to each other.
 
 | | |
 |---|---|
