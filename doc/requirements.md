@@ -38,8 +38,8 @@ before what it describes, and what things are called comes before both.
 - **R1.3** How the rows are laid out is a variant's (R2). The table does
   not change with the variant: the same `R`, `C` and `RR`, the same column
   widths, and the same rows in the same order.
-- **R1.4** Nothing about what a column holds. A use states that in its own
-  repository.
+- **R1.4** Nothing about what a column holds. A format built on this one
+  states that in its own repository.
 
 ## R2. The variants
 

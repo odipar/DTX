@@ -25,4 +25,3 @@ specification settles.
 
 - **reader** and **writer** - what takes rows out of a table, and what puts
   them in.
-- **use** - a format built on this one, which says what a column holds.
