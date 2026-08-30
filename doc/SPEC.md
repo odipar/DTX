@@ -4,7 +4,9 @@ A table of `R` rows and `C` columns, in one of the variants R2 defines.
 Every variant holds the same table and lays it out differently, so the
 header below is the same under all of them and only the payload differs.
 
-Every field of more than one byte is most significant byte first.
+Every field of more than one byte is most significant byte first. A word
+is two bytes and a long is four; an offset is on a word where it divides
+by 2, and on a long where it divides by 4.
 
 ---
 
