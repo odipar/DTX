@@ -105,6 +105,92 @@ final class ConsistencyTest {
         return out;
     }
 
+    /** The number words the pictures' captions state a small count in. */
+    private static final List<String> WORD = List.of("zero", "one", "two",
+            "three", "four", "five", "six", "seven", "eight", "nine", "ten");
+
+    /**
+     * SPEC.md's pictures against the example table the same section states.
+     * Every count a caption gives is recomputed from `R`, `C` and the
+     * widths, so a caption reworded away from what its picture draws fails
+     * here rather than standing.
+     */
+    @Test
+    void everyPictureAddsUpToTheExampleItDraws() throws IOException {
+        String spec = read(SPEC);
+        Matcher example = Pattern.compile("A table of `R` = (\\d+) rows and "
+                + "`C` = (\\d+) columns, of widths (\\d+), (\\d+) and "
+                + "(\\d+),").matcher(spec);
+        assertTrue(example.find(), "SPEC.md states no example table");
+        int rows = Integer.parseInt(example.group(1));
+        int columns = Integer.parseInt(example.group(2));
+        assertTrue(columns == 3, "the example has grown past three columns"
+                + " and this check reads three");
+        int[] width = new int[columns];
+        int row = 0;
+        StringBuilder sum = new StringBuilder();
+        for (int i = 0; i < columns; i++) {
+            width[i] = Integer.parseInt(example.group(3 + i));
+            row += width[i];
+            sum.append(i == 0 ? "" : " + ").append(width[i]);
+        }
+        List<String> wrong = new ArrayList<>();
+
+        // the header picture: 14 plus `C`, padded up to a long
+        int named = 14 + columns;
+        int padded = (named + 3) / 4 * 4;
+        Matcher offsets = Pattern.compile(
+                "^ +0 +3 +4 +8 +10 +14 +(\\d+) +(\\d+)$", Pattern.MULTILINE)
+                .matcher(spec);
+        if (!offsets.find()) {
+            wrong.add("the header picture draws no offsets");
+        } else {
+            holds(wrong, offsets.group(1), named, "the widths begin at");
+            holds(wrong, offsets.group(2), padded, "the header runs to");
+        }
+        for (int w : width) {
+            want(wrong, spec, "| " + w + " |", "the header picture's width " + w);
+        }
+
+        // 2.1: a row is the sum of the widths, the payload `R` of them
+        want(wrong, spec, "a row of the example: " + sum + ", " + WORD.get(row)
+                + " bytes", "2.1's row");
+        for (int n = 0; n < rows; n++) {
+            want(wrong, spec, "row " + n + ", bytes " + n * row + " to "
+                    + (n * row + row - 1), "2.1's row " + n);
+        }
+        want(wrong, spec, rows * row + " bytes, what the table holds",
+                "2.1's payload");
+
+        // 2.2: each column begins on a word
+        int packed = 0;
+        for (int w : width) {
+            packed += packed % 2;
+            packed += rows * w;
+        }
+        want(wrong, spec, packed + " bytes: the table's " + rows * row + ", and "
+                + WORD.get(packed - rows * row) + " byte of pad", "2.2's payload");
+        assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
+                + "\nthe example is `R` = " + rows + ", `C` = " + columns
+                + ", widths " + sum);
+    }
+
+    /** Adds to {@code wrong} where SPEC.md does not state {@code figure}. */
+    private static void want(List<String> wrong, String spec, String figure,
+            String what) {
+        if (!spec.contains(figure)) {
+            wrong.add(what + " should read \"" + figure + '"');
+        }
+    }
+
+    /** Adds to {@code wrong} where a picture's number is not {@code want}. */
+    private static void holds(List<String> wrong, String drawn, int want,
+            String what) {
+        if (Integer.parseInt(drawn) != want) {
+            wrong.add(what + " " + want + ", and the picture draws " + drawn);
+        }
+    }
+
     @Test
     void theGlossaryIsInOrder() throws IOException {
         List<String[]> rows = glossaryRows(read(GLO));
