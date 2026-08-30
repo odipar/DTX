@@ -26,7 +26,7 @@ The header is padded with zero bytes so the payload begins on a long. Its
 length is 14 plus `C`, rounded up to a multiple of 4.
 
 A long and not a word, because DTX2's data sets begin on longs (2.3).
-DTX0 and DTX1 want no more than a word, and take the same rule so that a
+DTX0 and DTX1 need no more than a word, and take the same rule so that a
 header is one shape under every variant.
 
 A reader takes the variant from byte 3 and reads no further where it does
@@ -164,8 +164,7 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 - Its header is twenty bytes, and it begins on a long so a reader takes
   that header a long at a time. That is why DTX2 aligns its data sets.
 - A reader built for one unit rejects a data set whose fourth byte gives
-  another. The payload's `k` is that same unit (R5.2), so a reader knows
-  before it opens a data set that its own build will read it, and may
+  another. The payload's `k` is that same unit (R5.2), so a reader may
   check the two against each other.
 - A run of bytes shorter than twenty is smaller stored than packed, which
   is ST4's own to say and not read here.
@@ -190,9 +189,10 @@ into `R` times `W[i]` bytes (R5.8).
 
 Where a table states its length, or whether it states one at all.
 
-What a reader reports of a table it will not read: a variant it does not
-know, an `R` below 1, a `C` outside 1 to 256, a width other than 1, 2 or 4,
-an `RR` over `R`, or a DTX2 whose `R` does not divide by its `k`.
+What a reader reports of a table it will not read: a variant not among
+those it reads, an `R` below 1, a `C` outside 1 to 256, a width other than
+1, 2 or 4, an `RR` over `R`, or a DTX2 whose `R` does not divide by its
+`k`.
 
 Whether a variant may hold columns of more than one kind, packing some and
 leaving others plain.

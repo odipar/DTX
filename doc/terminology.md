@@ -35,11 +35,10 @@ difference: DTX0 lays the rows out row by row, DTX1 column by column, and
 DTX2 column by column with each column packed.
 
 The three answer two goals. DTX0 and DTX1 are for reading and writing
-plainly: the bytes are the rows, so a reader finds what it wants by
-arithmetic and takes it, and a writer puts a row down as it is. Row by row
-a whole row is one run of bytes; column by column a column's values sit
-together, which is what lets a reader take one column without touching the
-others.
+plainly: the bytes are the rows, so a reader finds a value by arithmetic
+and takes it, and a writer puts a row down as it is. Row by row a whole
+row is one run of bytes; column by column a column's values sit together,
+which is what lets a reader take one column without touching the others.
 
 DTX1 pays a byte a column for one thing more: a column begins on a word,
 so a value of two or four bytes sits where a 68000 reads it as one. In
