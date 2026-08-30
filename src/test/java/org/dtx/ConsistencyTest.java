@@ -149,17 +149,17 @@ final class ConsistencyTest {
             holds(wrong, offsets.group(2), padded, "the header runs to");
         }
         for (int w : width) {
-            want(wrong, spec, "| " + w + " |", "the header picture's width " + w);
+            states(wrong, spec, "| " + w + " |", "the header picture's width " + w);
         }
 
         // 2.1: a row is the sum of the widths, the payload `R` of them
-        want(wrong, spec, "a row of the example: " + sum + ", " + WORD.get(row)
+        states(wrong, spec, "a row of the example: " + sum + ", " + WORD.get(row)
                 + " bytes", "2.1's row");
         for (int n = 0; n < rows; n++) {
-            want(wrong, spec, "row " + n + ", bytes " + n * row + " to "
+            states(wrong, spec, "row " + n + ", bytes " + n * row + " to "
                     + (n * row + row - 1), "2.1's row " + n);
         }
-        want(wrong, spec, rows * row + " bytes, what the table holds",
+        states(wrong, spec, rows * row + " bytes, what the table holds",
                 "2.1's payload");
 
         // 2.2: each column begins on a word
@@ -168,7 +168,7 @@ final class ConsistencyTest {
             packed += packed % 2;
             packed += rows * w;
         }
-        want(wrong, spec, packed + " bytes: the table's " + rows * row + ", and "
+        states(wrong, spec, packed + " bytes: the table's " + rows * row + ", and "
                 + WORD.get(packed - rows * row) + " byte of pad", "2.2's payload");
         assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
                 + "\nthe example is `R` = " + rows + ", `C` = " + columns
@@ -176,18 +176,18 @@ final class ConsistencyTest {
     }
 
     /** Adds to {@code wrong} where SPEC.md does not state {@code figure}. */
-    private static void want(List<String> wrong, String spec, String figure,
+    private static void states(List<String> wrong, String spec, String figure,
             String what) {
         if (!spec.contains(figure)) {
             wrong.add(what + " should read \"" + figure + '"');
         }
     }
 
-    /** Adds to {@code wrong} where a picture's number is not {@code want}. */
-    private static void holds(List<String> wrong, String drawn, int want,
+    /** Adds to {@code wrong} where a picture's number is not {@code figure}. */
+    private static void holds(List<String> wrong, String drawn, int figure,
             String what) {
-        if (Integer.parseInt(drawn) != want) {
-            wrong.add(what + " " + want + ", and the picture draws " + drawn);
+        if (Integer.parseInt(drawn) != figure) {
+            wrong.add(what + " " + figure + ", and the picture draws " + drawn);
         }
     }
 
