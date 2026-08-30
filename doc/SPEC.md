@@ -128,8 +128,13 @@ data sets are:
 | 3 | 1 | zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
-`N` is what R5.7 asks for. A reader takes it once and holds a ring of that
+`N` is what R5.8 asks for. A reader takes it once and holds a ring of that
 many bytes, and the ring does not grow as `R` does.
+
+One `N` for the payload buys what one `k` buys in code: no data set
+reaches back further than `N`, so one ring size serves them all, the rings
+stand at a fixed stride from one another, and one cursor arithmetic runs
+every column (R5.4, R5.5).
 
 `k` need not be `W[k]`: a two byte column packs at a unit of 1 or of 2.
 
@@ -138,7 +143,7 @@ unit, and a reader of DTX2 takes every column of a payload through the one
 build that unit asks for (R5.3). ST4 asks the same of a file of its own,
 and rejects one whose data sets do not share a unit.
 
-`R` divides by `k` (R5.5). A column holds `R` times `W[k]` bytes and ST4
+`R` divides by `k` (R5.6). A column holds `R` times `W[k]` bytes and ST4
 packs whole units, so a column that is not a whole number of them unpacks
 to more bytes than the column holds. Where `R` divides by `k` it cannot:
 `R` times `W[k]` then divides by `k` at every width.
@@ -176,7 +181,7 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 ```
 
 A reader unpacks a column into a buffer of its own choosing rather than
-into `R` times `W[k]` bytes (R5.7).
+into `R` times `W[k]` bytes (R5.8).
 
 ---
 
