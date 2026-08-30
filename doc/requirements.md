@@ -15,8 +15,8 @@ before what it describes, and what things are called comes before both.
 - **R0.5** Using a struck phrase again removes it from the list, in the same
   change.
 - **R0.6** [glossary.md](glossary.md) lists every term and names the
-  document that explains it. The terms are the ubiquitous language of this
-  repository.
+  document that explains it. The terms are this repository's ubiquitous
+  language.
 - **R0.7** Every document, comment and name in this repository uses those
   terms, and no second word for a thing that has one.
 - **R0.8** A term that changes in the glossary changes everywhere in the
