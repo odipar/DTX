@@ -56,8 +56,8 @@ that does not grow as the table does.
 ## What a column holds
 
 Nothing here. A column is so many bytes wide and no more, and what its
-bytes mean belongs to the use that reads them. A use states that in its own
-repository.
+bytes mean belongs to the format built on this one that reads them. That
+format states it in its own repository.
 
-That is the whole of the boundary. A table is a shape, and a use is what
-gives the shape a meaning.
+That is the whole of the boundary: a table is a shape, and a format built
+on it gives the shape a meaning.

@@ -10,8 +10,8 @@ are and what a reader takes out of them, and no more than that.
 The readers are here: Java is the source of truth, Go and C# follow it
 byte for byte, and a 68000 one is under `68k/`.
 
-DTX says nothing about what a column holds. That is a use's to define, in
-its own repository and against what this one says.
+DTX says nothing about what a column holds. A format built on DTX says
+that, in its own repository and against what this one says.
 
 [doc/requirements.md](doc/requirements.md) comes first. Nothing else is
 written until it says what DTX has to do.
