@@ -103,9 +103,8 @@ before what it describes, and what things are called comes before both.
   the packing costs does not grow with `R`, where what it saves does, so
   a short table packs to more than it holds.
 - **R5.8** Read back through a ring that does not grow with `R`. A reader
-  holds a window on a column, not the column.
-- **R5.9** An ST4 data set begins on a long, which is what ST4 asks of one
-  of its containers.
+  holds `N` bytes of a column at a time, not the column.
+- **R5.9** An ST4 data set begins on a long.
 
 ## R6. The constraints
 

@@ -115,8 +115,8 @@ DTX1.
 ### 2.3 DTX2, column by column and packed
 
 `C` ST4 data sets, one a column. A column's data set packs the bytes
-DTX1's column `i` holds and is complete: its own header, its own streams,
-and the length of what it unpacks to.
+DTX1's column `i` holds and is complete: its own ST4 header, and the
+length of what it unpacks to.
 
 Every data set in a payload is packed at one unit and unpacks through a
 ring of one size, so the payload states both once and then says where the
@@ -161,8 +161,9 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 
 - Its first long is `$53 $34 $04 k`: `'S'`, `'4'`, the ST4 format version
   4, and the unit `k`.
-- Its header is twenty bytes, and it begins on a long so a reader takes
-  that header a long at a time. That is why DTX2 aligns its data sets.
+- Its ST4 header is twenty bytes, and a data set begins on a long so a
+  reader takes that header a long at a time. That is why DTX2 aligns its
+  data sets (R5.9).
 - A reader built for one unit rejects a data set whose fourth byte gives
   another. The payload's `k` is that same unit (R5.2), so a reader may
   check the two against each other.
@@ -180,8 +181,8 @@ stated in full in [ST4](https://github.com/odipar/ST4).
                                       its own header and length
 ```
 
-A reader unpacks a column into a buffer of its own choosing rather than
-into `R` times `W[i]` bytes (R5.8).
+A reader unpacks a column through its ring rather than into `R` times
+`W[i]` bytes (R5.8).
 
 ---
 

@@ -100,6 +100,11 @@ final class HouseStyleTest {
             "—",
             "–",
             "−",
+            // one word for a thing that has one: a data set, and the ring
+            // it unpacks through
+            "container",
+            "window",
+            "buffer",
             // a noun pressed into service as a verb
             "vendor",
             // the verdict: the sentence grading itself or its subject
