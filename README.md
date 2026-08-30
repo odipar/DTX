@@ -10,17 +10,13 @@ are and what a reader takes out of them, and no more than that.
 The readers are here: Java is the source of truth, Go and C# follow it
 byte for byte, and a 68000 one is under `68k/`.
 
-DTX says nothing about what a column holds. That is a use's to define, and
-[YMXR](https://github.com/odipar/YMXR) is one - a chiptune format for the
-Atari ST, whose columns hold what a sound chip and its timers are set to.
-YMXR is written against what this repository says, and records it under
-its own R1.
+DTX says nothing about what a column holds. That is a use's to define, in
+its own repository and against what this one says.
 
 [doc/requirements.md](doc/requirements.md) comes first. Nothing else is
 written until it says what DTX has to do.
 
-The shape follows YMXR, and the harnesses under `test/` hold the three
-trees to each other.
+The harnesses under `test/` hold the three trees to each other.
 
 | | |
 |---|---|

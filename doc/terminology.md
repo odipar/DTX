@@ -27,6 +27,32 @@ describe it without holding any of it.
 
 ---
 
+## The variants
+
+A **variant** is one way of laying a table's rows out in bytes. The table
+is the same under all of them, and the variant is the whole of the
+difference: DTX0 lays the rows out row by row, DTX1 column by column, and
+DTX2 column by column with each column packed.
+
+The three answer two goals. DTX0 and DTX1 are for reading and writing
+plainly: the bytes are the rows, so a reader finds what it wants by
+arithmetic and takes it, and a writer puts a row down as it is. Row by row
+a whole row is one run of bytes; column by column a column's values sit
+together, which is what lets a reader take one column without touching the
+others.
+
+DTX1 pays a byte a column for one thing more: a column begins on a word,
+so a value of two or four bytes sits where a 68000 reads it as one. In
+DTX0 a value falls where the widths put it, and a reader takes it as bytes
+where that is odd.
+
+DTX2 is for size. Packing a column costs the plainness: a reader no longer
+finds a value by arithmetic, and holds a window on each column instead of
+the column. What it buys is a table small enough to keep, and a buffer
+that does not grow as the table does.
+
+---
+
 ## What a column holds
 
 Nothing here. A column is so many bytes wide and no more, and what its
