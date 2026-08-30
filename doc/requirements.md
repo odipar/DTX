@@ -43,10 +43,8 @@ before what it describes, and what things are called comes before both.
 
 ## R2. The variants
 
-- **R2.1** A **variant** is one way of laying the rows out. It is the only
-  thing that differs between them: the table is the same under all, the
-  same `R`, `C` and `RR`, the same widths, and the same rows in the same
-  order.
+- **R2.1** A **variant** is one way of laying the rows out, and the only
+  thing two layouts of one table differ in (R1.3).
 - **R2.2** **DTX0**, **DTX1** and **DTX2** are the variants this
   specification defines, in R3, R4 and R5. A variant it does not define
   takes the next number, and **DTXN** names one of those.
@@ -75,8 +73,8 @@ before what it describes, and what things are called comes before both.
 - **R4.2** The rows as they stand and found by arithmetic, as R3.2 and
   R3.3 have DTX0's.
 - **R4.3** A column begins on a word, so every value of a two or four byte
-  column sits where a 68000 reads it as one. This is what DTX1 has over
-  DTX0, at a byte a column.
+  column sits where a 68000 reads it as one. DTX1 has this over DTX0, at a
+  byte a column.
 - **R4.4** A column's values together, so a reader takes one column
   without touching the others. That is what DTX1 is for.
 
@@ -89,7 +87,7 @@ before what it describes, and what things are called comes before both.
   check one against the other.
 - **R5.3** A reader holds one ST4 decoder, built for that `k`, and takes
   every column of the payload through it. ST4 code is built for a unit,
-  and one unit a payload is what lets one build serve every column.
+  and one unit a payload lets one build serve every column.
 - **R5.4** One ring size `N` for a payload. No data set in it reaches back
   further than `N`, so a ring of `N` bytes serves any of them, and every
   data set was packed for the `N` the payload states.

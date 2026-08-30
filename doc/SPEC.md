@@ -82,7 +82,7 @@ fall on an odd offset and a reader takes it as bytes (R3.4).
   +---+---------+-----+
     1      4       2
 
-   21 bytes, which is what the table holds
+   21 bytes, what the table holds
 ```
 
 ### 2.2 DTX1, column by column
@@ -92,13 +92,13 @@ times `W[i]` bytes and begins on a word: where the column before it ends
 odd, a zero byte stands between them. Its row `n` is `n` times `W[i]`
 further on.
 
-That padding is what DTX1 has over DTX0 (R4.3). A column begins even and
-its values are `W[i]` apart, so every value of a two or four byte column
-sits on a word and a 68000 reads it as one. It costs at most a byte a
-column, and only where a column of an odd length precedes another.
+DTX1 has that padding over DTX0 (R4.3). A column begins even and its
+values are `W[i]` apart, so every value of a two or four byte column sits
+on a word and a 68000 reads it as one. It costs at most a byte a column,
+and only where a column of an odd length precedes another.
 
-What else differs is what one read reaches: a row of DTX0, or a column of
-DTX1.
+The other difference is what one read reaches: a row of DTX0, or a column
+of DTX1.
 
 ```
    column 0   column 1                     column 2
@@ -129,8 +129,8 @@ data sets are:
 | 3 | 1 | zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
-`N` is what R5.8 asks for. A reader takes it once and holds a ring of that
-many bytes, and the ring does not grow as `R` does.
+R5.8 asks for `N`. A reader takes it once and holds a ring of that many
+bytes, and the ring does not grow as `R` does.
 
 One `N` for the payload buys what one `k` buys in code: no data set
 reaches back further than `N`, so one ring size serves them all, the rings
