@@ -38,8 +38,10 @@ final class ConsistencyTest {
     private static final Path TERM = Path.of("doc/terminology.md");
     private static final Path EXP = Path.of("doc/experiments.md");
 
+    private static final Path ABI = Path.of("doc/abi.md");
+
     private static final List<Path> DOCUMENTS =
-            List.of(Path.of("README.md"), SPEC, REQ, GLO, TERM, EXP);
+            List.of(Path.of("README.md"), SPEC, REQ, GLO, TERM, EXP, ABI);
 
     private static String read(Path p) throws IOException {
         return Files.readString(p);
