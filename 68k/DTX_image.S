@@ -37,12 +37,16 @@ _fmt:
 
 ; DTX_metadata. Both blocks are bytes in the image, reached with one lea
 ; each, so this call needs no state and may be made before init.
+;
+; R, C and RR are read out of the table's own header rather than assembled
+; in, so this call holds the same instructions at any table.
+; SPEC.md 1 lays the header out: R at +4, C at +8 and RR at +10.
 DTX_metadata:
         lea     _fmt(pc),a0
         lea     _table(pc),a1
-        move.l  #DTX_ROWS,d0
-        move.w  #DTX_COLUMNS,d1
-        move.l  #DTX_REPEAT,d2
+        move.l  4(a1),d0                ; R
+        move.w  8(a1),d1                ; C
+        move.l  10(a1),d2               ; RR
         rts
         .endm
 

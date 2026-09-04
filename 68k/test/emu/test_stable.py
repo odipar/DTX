@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""The code a variant assembles to, against the table that follows it.
+
+R, C and RR are the table's, not the reader's: an image holds the same
+instructions at any of them, and its format block and its table are
+what differ. This assembles a corpus a variant at a time and holds every image's
+code to the first one's, byte for byte.
+
+Under DTX2 the decoder is built for one unit and for copies or not, so k and
+-copies may move the code and R, C and RR may not: those are grouped.
+
+    python3 68k/test/emu/test_stable.py
+
+Needs `mvn compile`, rmac on the path or at $RMAC, `pip install unicorn`, and
+an ST4 packer at $ST4.
+"""
+import sys
+sys.path.insert(0, '68k/test/emu')
+import test_dtx as T
+
+def code(variant, rows, width, rr, ring=960, unit=1, copies=False):
+    csv = "\n".join(",".join(str((r * (i + 1)) % 97) for i in range(len(width)))
+                    for r in range(rows)) + "\n"
+    blob = T.write_table(csv, variant, width, rr, unit, ring, copies)
+    image, _ = T.package(blob, copies)
+    # The instructions alone: the six slots are constant, the format block
+    # at +24 is data that states the table, and the table follows the code.
+    return image[44:len(image) - len(blob)]
+
+TABLES = [
+    ("R=64  C=2 widths 1,1  no repeat", 64, [1, 1], None),
+    ("R=128 C=2 widths 1,1  no repeat", 128, [1, 1], None),
+    ("R=512 C=2 widths 1,1  no repeat", 512, [1, 1], None),
+    ("R=64  C=2 widths 1,1  RR=0", 64, [1, 1], 0),
+    ("R=64  C=2 widths 1,1  RR=32", 64, [1, 1], 32),
+    ("R=64  C=1 widths 1", 64, [1], None),
+    ("R=64  C=3 widths 1,1,1", 64, [1, 1, 1], None),
+    ("R=64  C=4 widths 1,2,4,1", 64, [1, 2, 4, 1], None),
+    ("R=64  C=8 widths all 1", 64, [1] * 8, None),
+]
+
+# k and copies build the decoder, not the table: a DTX2 image may hold
+# different code for each of them, and must not for R, C or RR.
+bad = 0
+for v in (0, 1, 2):
+    print("DTX%d" % v)
+    first, name0 = None, None
+    for name, rows, width, rr in TABLES:
+        c = code(v, rows, width, rr)
+        if first is None:
+            first, name0 = c, name
+            print("    %-34s %4d bytes   the one to match" % (name, len(c)))
+        elif c == first:
+            print("    %-34s %4d bytes   the same code" % (name, len(c)))
+        else:
+            bad += 1
+            n = sum(1 for x, y in zip(c, first) if x != y) if len(c) == len(first) else None
+            print("    %-34s %4d bytes   DIFFERS (%s)" % (name, len(c),
+                  "%d bytes" % n if n is not None else "%+d bytes long" % (len(c) - len(first))))
+print()
+print("%d tables assemble to code the base table does not" % bad)
+
+print()
+print("DTX2, one blob a decoder: k and copies may move it, R, C and RR may not")
+for unit, copies in ((1, False), (2, False), (4, False), (1, True)):
+    first, ok, seen = None, True, 0
+    # every width is a whole number of units, or no budget is one
+    corpus = {1: ((64, [1, 2], None), (128, [1, 2], None), (64, [1, 2], 0),
+                  (64, [1, 2, 1], None), (64, [1, 2, 4, 2], None)),
+              2: ((64, [2, 2], None), (128, [2, 2], None), (64, [2, 2], 0),
+                  (64, [2, 4, 2], None)),
+              4: ((64, [4, 4], None), (128, [4, 4], None), (64, [4, 4], 0),
+                  (64, [4, 4, 4], None))}[unit]
+    for rows, width, rr in corpus:
+        c = code(2, rows, width, rr, 960, unit, copies)
+        seen += 1
+        if first is None:
+            first = c
+        elif c != first:
+            ok = False
+    if first is None:
+        print("    k=%d %-14s no table of the corpus fits" % (unit, ""))
+        continue
+    if not ok:
+        bad += 1
+    print("    k=%d %-14s %5d bytes over %d tables   %s"
+          % (unit, "with copies" if copies else "without copies",
+             len(first), seen, "one blob" if ok else "STILL MOVES"))
