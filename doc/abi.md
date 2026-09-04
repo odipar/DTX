@@ -101,12 +101,19 @@ That preload lets a read alternate between the streams and touch no
 decoder: from row 0 onward every value a read takes is already in a
 ring.
 
-Init writes nothing outside the block. The image is read after packaging
-and never written, so a 68030 caller flushes no instruction cache: the
-carried decoder is built without the copy code, and its init writes no
-instruction. Two readers of one image run at once, a block each. A call
-is not re-entrant on one block, and an interrupt that reads uses a block
-of its own.
+Init writes nothing outside the block. Where the columns hold no copy
+from the literal stream the image is read after packaging and never
+written, so it may stand in ROM and a 68030 caller flushes no instruction
+cache: the decoder is built without the copy code and its init writes no
+instruction. Where they do, the decoder is built with its copy code, and
+its init writes the reach into two of its own instructions: the image is
+then code in RAM, and a 68030 caller flushes the instruction cache after
+every call that seeds a decoder, which is init and a jump that runs from
+row 0.
+
+Two readers of one image run at once, a block each. A call is not
+re-entrant on one block, and an interrupt that reads uses a block of its
+own.
 
 Init may be called again on a block at any time. `DTX_metadata` is the
 one call that may be made before it.
@@ -352,11 +359,19 @@ of every data set, the ring displacements, and the offset in the row of
 every value, with byte moves where a wide value falls odd.
 
 Under DTX2 the carried decoder is ST4's wrap decoder built at `ST4_UNIT`
-equal to `k`. The data sets are packed without copies from the literal
-stream, so the copy code is out of the build and its init writes no
-instruction: the image is read only and may stand in ROM. The packer's
-options are `-f -k<k> -m<N/k> -l65535`, and the last of them is what
-holds ST4_wrap's assumption 4.
+equal to `k`. The packer's options are `-f -k<k> -m<N/k> -l65535`, and the
+last of them is what holds ST4_wrap's assumption 4: no operation longer
+than the 65535 units a 68000 decoder counts in a word.
+
+A column may be packed with `-c` as well, which lets a match beyond the
+ring copy from the column's own literal stream. That packs a small ring
+far smaller, and it asks two things of the package: the decoder is built
+with its copy code, 32 bytes more measured, and the image is code in RAM
+rather than ROM. The packager takes the same word for it, and the two have
+to agree: a column packed with copies and packaged without the copy code
+reads wrong bytes, and no field of the file says which it is. The other
+way round is safe, since a decoder with the copy code reads a column
+without copies correctly, at 2.0 to 4.0% more cycles.
 
 The packager chooses `N` and `P` together and packs the columns for the
 `N` it chose, so no payload arrives with an `N` no `P` fits.

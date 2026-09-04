@@ -165,6 +165,15 @@ final class PackagerTest {
     }
 
     @Test
+    void theCopyCodeIsAskedForOnlyWhereTheColumnsHoldCopies() {
+        byte[] file = packed(64, new int[] {1, 2}, 1, 960);
+        assertTrue(!Packager.table(file).contains("ST4_WINDOW"),
+                "a table packed without copies asks for no copy code");
+        assertTrue(Packager.table(file, true).contains("ST4_WINDOW\tequ\t1"),
+                "a table packed with copies asks for it");
+    }
+
+    @Test
     void thePackedFiguresStateThePeriodTheRingAndTheUnit() {
         String out = Packager.table(packed(64, new int[] {1, 2}, 1, 960));
         assertTrue(out.contains("DTX_VARIANT\tequ\t2"), "the variant");

@@ -21,6 +21,7 @@ bin/dtx-write in.csv out.dtx -v2 -k1 -m960 -pst4
 | `-kK` | the unit a DTX2 column is packed at, and `R` divides by it (R5.6). The default is 1 |
 | `-mN` | the ring a DTX2 column unpacks through, in bytes, 1 to 65535 (R5.4). The default is 960 |
 | `-pPACKER` | the ST4 executable a DTX2 file is packed by. The default is `st4` on the path |
+| `-copies[S]` | a match beyond the ring copies from the column's own literal stream, and `-copiesS` searches `S` seconds for a better parse. It reaches the packer as `-c`. YMX spells it the same way |
 
 `-k`, `-m` and `-p` reach a DTX2 file alone: no other variant packs.
 
@@ -65,7 +66,8 @@ bin/dtx-package in.dtx out.bin
 | flag | gives |
 |---|---|
 | `-aRMAC` | the assembler to run. The default is `rmac` on the path |
-| `-s` | write the assembly rather than the image, for reading or for a build of your own |
+| `-s` | write the figures rather than the image, for reading or for a build of your own |
+| `-copies` | the columns were packed with `-copies`, so the decoder is built with its copy code |
 
 The image holds one table and the code for that table's variant. What the
 table settles is folded into the code: `R`, `RR`, the row's bytes, each
@@ -100,9 +102,29 @@ bin/dtx-rewrite in.dtx out.dtx -k1 -m960 -pst4
 | `-kK` | the unit every column is packed at: 1, 2 or 4, and `R` divides by it (R5.6). The default is 1 |
 | `-mN` | the ring in bytes, 1 to 65535 (R5.4). The default is 960 |
 | `-pPACKER` | the ST4 executable to run. The default is `st4` on the path |
+| `-copies[S]` | as Write reads it |
 
 Rewrite keeps no packer of its own. `-p` names the one ST4's own repository
 builds, and a column reaches it as a file.
+
+Every column is packed with `-l65535` as well, which holds ST4_wrap's
+assumption 4: no operation longer than the 65535 units a 68000 decoder
+counts in a word.
+
+### Copies from the literal stream
+
+`-copies` lets a match beyond the ring copy from the column's own literal
+stream, and it pays at the small rings DTX2 reads through. Measured
+on a table of 512 rows repeating a pattern 37 rows long, at `N` of 64: the
+file goes from 1164 bytes to 272, and its image from 2196 to 1336.
+
+**A column packed that way is packaged with `bin/dtx-package -copies`**, or
+it reads wrong bytes: the decoder needs its copy code, the image is then
+code in RAM rather than ROM, and no field of the file says which a column
+is. Measured on the same table, packaging it without the flag reads row 37
+wrong, where the pattern first repeats past the ring. The other way round
+is safe: a decoder with the copy code reads a column without copies
+correctly, at 2.0 to 4.0% more cycles and 32 bytes more code.
 
 ## The rigs
 
