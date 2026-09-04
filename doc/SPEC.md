@@ -143,8 +143,7 @@ every column (R5.4, R5.5).
 
 One `k` for the payload buys a reader one decoder. ST4 code is built for a
 unit, and a reader of DTX2 takes every column of a payload through the one
-build that unit asks for (R5.3). ST4 asks the same of a file of its own,
-and rejects one whose data sets do not share a unit.
+build that unit asks for (R5.3).
 
 `R` divides by `k` (R5.6). A column holds `R` times `W[i]` bytes and ST4
 packs whole units, so a column that is not a whole number of them unpacks
