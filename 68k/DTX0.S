@@ -91,10 +91,10 @@ DTX_advance:
 ; words where they are even, bytes where they are odd. A row that takes more
 ; than eight moves takes a loop instead.
 
-DTX_read:
-        tst.l   DTX_ROW(a0)
-        bmi.s   .none
-        movea.l DTX_CURSOR(a0),a2
+; The run of moves a row takes. It walks a2 from the row's first byte to one
+; past its last, which is the next row's cursor: DTX_take stores that and
+; adds nothing.
+        .macro  DTX_READ_RUN
         .if DTX_READCOUNT<=8
         .rept   DTX_READCOUNT
         .if DTX_READSIZE=4
@@ -109,7 +109,7 @@ DTX_read:
         .endr
         .else
         move.w  #DTX_READCOUNT-1,d0
-.run:
+.run\~:
         .if DTX_READSIZE=4
         move.l  (a2)+,(a1)+
         .endif
@@ -119,9 +119,34 @@ DTX_read:
         .if DTX_READSIZE=1
         move.b  (a2)+,(a1)+
         .endif
-        dbf     d0,.run
+        dbf     d0,.run\~
         .endif
+        .endm
+
+DTX_read:
+        tst.l   DTX_ROW(a0)
+        bmi.s   .none
+        movea.l DTX_CURSOR(a0),a2
+        DTX_READ_RUN
 .none:
+        rts
+
+; -----------------------------------------------------------------------------
+; DTX_take. A read and an advance in one call. The read leaves a2 one past
+; the row it took, which is the cursor the step would work out, so the step
+; stores a2 and does no arithmetic at all.
+
+DTX_take:
+        tst.l   DTX_ROW(a0)
+        bmi.w   DTX_advance             ; no row: step to row 0 and write none
+        movea.l DTX_CURSOR(a0),a2
+        DTX_READ_RUN
+        move.l  DTX_ROW(a0),d0
+        addq.l  #1,d0
+        DTX_TAKE_END_OR_REPEAT
+.step:
+        move.l  d0,DTX_ROW(a0)
+        move.l  a2,DTX_CURSOR(a0)       ; where the read ended
         rts
 
 ; -----------------------------------------------------------------------------

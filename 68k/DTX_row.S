@@ -14,10 +14,18 @@
 ; these two.
 ; -----------------------------------------------------------------------------
 
-; A class cursor into the register a read takes it from. a0 holds the state
-; block, so the class that takes a0 is loaded last.
+; A class cursor into the register a read takes it from. The classes take
+; a2, a3 and a4, so a0 holds the state block through a read and through the
+; step that follows one in DTX_take.
         .macro  DTX_LOAD_CURSOR c,cur
         movea.l DTX_CURSOR+\c(a0),\cur
+        .endm
+
+; A class cursor one row on, taken from the register the read left it in
+; rather than out of the block again. DTX2 states its own, which wraps.
+        .macro  DTX_STEP_HELD c,width,cur
+        lea     \width(\cur),\cur
+        move.l  \cur,DTX_CURSOR+\c(a0)
         .endm
 
 ; One value into the row: the size its width asks for, off its class cursor.

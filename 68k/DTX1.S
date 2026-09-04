@@ -91,13 +91,32 @@ DTX_advance:
         DTX_STEP_CURSORS
         rts
 
-; The row as DTX0 lays it out, and nothing between the values.
+; The row as DTX0 lays it out, and nothing between the values. The class
+; cursors take a2, a3 and a4, so a0 still holds the block when this returns.
 DTX_read:
         tst.l   DTX_ROW(a0)
         bmi.s   .none
         DTX_LOAD_CURSORS
         DTX_READ_ROW
 .none:
+        rts
+
+; -----------------------------------------------------------------------------
+; DTX_take. A read and an advance in one call. The read leaves every class
+; cursor in its register, so the step adds a width to each and stores it,
+; rather than loading them out of the block a second time.
+
+DTX_take:
+        tst.l   DTX_ROW(a0)
+        bmi.w   DTX_advance             ; no row: step to row 0 and write none
+        DTX_LOAD_CURSORS
+        DTX_READ_ROW
+        move.l  DTX_ROW(a0),d0
+        addq.l  #1,d0
+        DTX_TAKE_END_OR_REPEAT
+.step:
+        move.l  d0,DTX_ROW(a0)
+        DTX_STEP_HELD_CURSORS
         rts
 
 ; -----------------------------------------------------------------------------

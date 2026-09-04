@@ -33,6 +33,9 @@ public final class Packager {
     /** What the format block runs to, doc/abi.md 1. */
     static final int FORMAT = 20;
 
+    /** Where it stands: behind the six slots. */
+    static final int FORMAT_AT = 24;
+
     private Packager() {
     }
 
@@ -139,13 +142,13 @@ public final class Packager {
     }
 
     /**
-     * The address register a width class's cursor stands in. {@code a1} is
-     * the row's destination and {@code a0} the state block, so a0 takes the
-     * third class and is loaded last, which holds the read to the a0 to a3
-     * doc/abi.md 2 states it clobbers.
+     * The address register a width class's cursor stands in: a2, a3 and a4.
+     * {@code a1} is the row's destination and {@code a0} the state block,
+     * and a0 stays the block through a read so that {@code DTX_take} reaches
+     * the block afterwards without loading it again (doc/abi.md 2).
      */
     private static String cursor(int at) {
-        return at == 2 ? "a0" : "a" + (2 + at);
+        return "a" + (2 + at);
     }
 
     /** log2 of {@code of}, where it is a power of two, or -1. */
@@ -250,6 +253,12 @@ public final class Packager {
         if (variant != Dtx.DTX0) {
             out.append(list("DTX_LOAD_CURSORS", taken.length, c ->
                     "DTX_LOAD_CURSOR " + 4 * c + "," + cursor(c)));
+            out.append(list("DTX_STEP_HELD_CURSORS", taken.length, c ->
+                    variant == Dtx.DTX2
+                            ? "DTX_STEP_HELD_RING " + 4 * c + "," + taken[c]
+                                    + "," + base[c] + "," + cursor(c)
+                            : "DTX_STEP_HELD " + 4 * c + "," + taken[c] + ","
+                                    + cursor(c)));
             out.append("\n; One a column: its width, its displacement off its"
                     + " class cursor, and\n; the register that cursor stands"
                     + " in.\n");
@@ -357,7 +366,7 @@ public final class Packager {
                 // The format block states where the table stands, and the
                 // table is appended here: the two agree or the image would
                 // read its own code as a header.
-                int table = Dtx.getLong(code, 20 + 8);
+                int table = Dtx.getLong(code, FORMAT_AT + 8);
                 if (table != code.length) {
                     throw new IllegalStateException("the code runs to "
                             + code.length + " bytes and the format block puts"

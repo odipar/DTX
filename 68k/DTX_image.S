@@ -7,14 +7,14 @@
 ;
 ; Included by DTX0.S, DTX1.S and DTX2.S, never assembled on its own. It holds
 ; what doc/abi.md 1 states of every image and what no variant changes: the
-; five slots, the format block, and the one call that reads neither the state
+; six slots, the format block, and the one call that reads neither the state
 ; block nor the table's layout.
 ;
 ; A template includes this after DTX_table.i, invokes DTX_IMAGE where the
 ; image begins, and DTX_TABLE_FOLLOWS where its code ends.
 ; -----------------------------------------------------------------------------
 
-; The five slots, the format block and DTX_metadata. The three figures a
+; The six slots, the format block and DTX_metadata. The three figures a
 ; variant states of itself reach it as arguments: P, N and k stand at 1, 0
 ; and 0 where nothing is packed.
         .macro  DTX_IMAGE variant,period,ring,unit
@@ -24,6 +24,7 @@ _base:
         bra.w   DTX_jump
         bra.w   DTX_advance
         bra.w   DTX_read
+        bra.w   DTX_take
 
 _fmt:
         dc.b    'D','T','X',\variant
@@ -68,6 +69,23 @@ _payload        equ     _table+DTX_HEADER
         .if DTX_REPEAT<DTX_ROWS
         move.l  #DTX_REPEAT,d0
         bra.w   DTX_jump                ; the repeat is a jump
+        .else
+        moveq   #-1,d0                  ; the end, and it is sticky
+        rts
+        .endif
+        .endm
+
+; The same rule for DTX_take, which gives a1 back one past the row it wrote.
+; The repeat runs DTX_jump, and a jump moves a1.
+        .macro  DTX_TAKE_END_OR_REPEAT
+        cmpi.l  #DTX_ROWS,d0
+        bne.s   .step
+        .if DTX_REPEAT<DTX_ROWS
+        move.l  a1,-(a7)
+        move.l  #DTX_REPEAT,d0
+        bsr     DTX_jump
+        movea.l (a7)+,a1
+        rts
         .else
         moveq   #-1,d0                  ; the end, and it is sticky
         rts

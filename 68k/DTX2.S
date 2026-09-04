@@ -64,6 +64,20 @@
 
         include "DTX_row.S"
 
+; A class cursor one row on, taken from the register a read left it in. The
+; ring end is worked out in d1: a3 holds a class cursor here, so no address
+; register is free to lea it into.
+        .macro  DTX_STEP_HELD_RING c,width,base,cur
+        lea     \width(\cur),\cur
+        move.l  \cur,d1
+        sub.l   a6,d1                   ; the cursor's place in the block
+        cmpi.l  #DTX_RING+\base+DTX_N,d1
+        bne.s   .held\~
+        lea     DTX_RING+\base(a6),\cur
+.held\~:
+        move.l  \cur,DTX_CURSOR+\c(a6)
+        .endm
+
 ; The budget one refill asks for, in units: the rows in d3 times the column's
 ; width, divided by k. Both are shifts, and both stand at or above zero.
         .macro  DTX_BUDGET wshift,kshift
@@ -147,6 +161,9 @@ DTX_seed:
 
 DTX_step:
         DTX_STEP_CURSORS
+; DTX_take steps the cursors from the registers a read left them in, and
+; comes in here for the turn and the refill.
+DTX_refill:
         move.l  #DTX_ROWS,d3
         sub.l   DTX_DECODED(a6),d3      ; the rows this period's refills take
         ble.w   DTX_turn                ; every row decoded: no refill at all
@@ -242,7 +259,8 @@ DTX_advance:
         rts
 
 ; The row as DTX0 lays it out, and nothing between the values. A read moves
-; no cursor, refills nothing and decodes nothing.
+; no cursor, refills nothing and decodes nothing, and the class cursors take
+; a2, a3 and a4, so a0 still holds the block when this returns.
 DTX_read:
         tst.l   DTX_ROW(a0)
         bmi.s   .none
@@ -252,10 +270,54 @@ DTX_read:
         rts
 
 ; -----------------------------------------------------------------------------
+; DTX_take. A read and an advance in one call. The read leaves every class
+; cursor in its register and the block in a0, so the step takes both from
+; there. a1 goes on the stack for the length of the refill: a1 is the
+; decoder's write pointer, and ST4_resume takes it.
+
+DTX_take:
+        tst.l   DTX_ROW(a0)
+        bmi.w   DTX_advance             ; no row: step to row 0 and write none
+        DTX_LOAD_CURSORS
+        DTX_READ_ROW
+        move.l  a1,-(a7)                ; the decoder takes a1
+        movem.l d6-d7/a6,DTX_PARK(a0)
+        movea.l a0,a6
+        move.l  DTX_ROW(a6),d0
+        addq.l  #1,d0
+        cmpi.l  #DTX_ROWS,d0
+        bne.s   .step
+        .if DTX_REPEAT<DTX_ROWS
+        move.l  #DTX_REPEAT,d0
+        movem.l DTX_PARK(a6),d6-d7/a6
+        bsr     DTX_jump                ; a0 holds the block still
+        movea.l (a7)+,a1
+        rts
+        .else
+        moveq   #-1,d0                  ; the end, and it is sticky
+        movem.l DTX_PARK(a6),d6-d7/a6
+        movea.l (a7)+,a1
+        rts
+        .endif
+.step:
+        move.l  d0,DTX_ROW(a6)
+        DTX_STEP_HELD_CURSORS
+        bsr     DTX_refill
+        move.l  DTX_ROW(a6),d0
+        movem.l DTX_PARK(a6),d6-d7/a6
+        movea.l (a7)+,a1
+        rts
+
+; -----------------------------------------------------------------------------
 ; The carried decoder, ST4_wrap.S at this payload's unit.
 
         .align  4
         include "ST4_wrap.S"
+
+; rmac cuts its listing's symbol table off before ST4_resume, which sorts
+; late. The emulation rig counts what the decoder is asked for, and reaches
+; it through this name instead.
+DTX_resume      equ     ST4_resume
 
 ; -----------------------------------------------------------------------------
         DTX_TABLE_FOLLOWS

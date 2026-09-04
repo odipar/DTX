@@ -183,10 +183,10 @@ final class PackagerTest {
                 "no rmac at " + rmac);
         byte[] image = Packager.image(table(Dtx.DTX0), rmac);
         assertEquals(0x60, image[0] & 0xFF, "the first slot is a bra.w");
-        assertEquals("DTX", new String(image, 20, 3), "the format block at 20");
-        assertEquals(0, image[23], "the variant the format block states");
-        assertEquals(28, Dtx.getLong(image, 24), "the state block's bytes");
-        int header = Dtx.getLong(image, 28);
+        assertEquals("DTX", new String(image, 24, 3), "the format block at 24");
+        assertEquals(0, image[27], "the variant the format block states");
+        assertEquals(28, Dtx.getLong(image, 28), "the state block's bytes");
+        int header = Dtx.getLong(image, 32);
         assertEquals("DTX", new String(image, header, 3),
                 "the header the format block points at");
     }

@@ -54,7 +54,8 @@ STACK = 0x40000          # the caller's stack
 DONE = 0x50000           # the return address a call comes back to
 GUARD = 0xCC             # what stands around a buffer, to catch an overrun
 
-SLOT = {"init": 0, "metadata": 4, "jump": 8, "advance": 12, "read": 16}
+SLOT = {"init": 0, "metadata": 4, "jump": 8, "advance": 12, "read": 16,
+        "take": 20}
 
 A = [UC_M68K_REG_A0, UC_M68K_REG_A1, UC_M68K_REG_A2, UC_M68K_REG_A3,
      UC_M68K_REG_A4, UC_M68K_REG_A5, UC_M68K_REG_A6, UC_M68K_REG_A7]
@@ -303,8 +304,8 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
         kind, rows, columns, rr, width, _, row_bytes, want = read_dtx(blob)
     image, _ = package(blob)
 
-    # the format block, doc/abi.md 1, at the image's byte 20
-    fmt = image[20:20 + 20]
+    # the format block, doc/abi.md 1, behind the six slots
+    fmt = image[24:24 + 20]
     assert fmt[:3] == b"DTX" and fmt[3] == kind, "the format block's variant"
     state_bytes, header_at = struct.unpack(">II", fmt[4:12])
     stated_row, p, n = struct.unpack(">HHH", fmt[12:18])
@@ -328,7 +329,7 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
     assert got["d0"] == rows, "metadata gave R = %d" % got["d0"]
     assert got["d1"] & 0xFFFF == columns, "metadata gave C"
     assert got["d2"] == rr, "metadata gave RR"
-    assert got["a0"] == IMAGE + 20, "metadata gave the format block"
+    assert got["a0"] == IMAGE + 24, "metadata gave the format block"
     assert got["a1"] == IMAGE + header_at, "metadata gave the header"
 
     m.call("init")
@@ -383,6 +384,29 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
             assert m.row(got["a1"], row_bytes) == want[r + 1], \
                 "the row after a jump and an advance"
 
+    # DTX_take against DTX_read then DTX_advance: the same row bytes, the
+    # same row number, and the same a1 back.
+    m.call("init")
+    two = []
+    for r in range(rows):
+        m.call("advance")
+        m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
+        wrote = m.call("read")["a1"]
+        two.append((m.row(wrote, row_bytes), wrote))
+    m.seed()
+    m.call("init")
+    m.call("advance")
+    one = []
+    for r in range(rows):
+        m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
+        got = m.call("take")
+        one.append((m.row(got["a1"], row_bytes), got["a1"]))
+        want_row = r + 1 if r + 1 < rows else (rr if rr < rows else 0xFFFFFFFF)
+        assert got["d0"] == want_row, \
+            "take at row %d left the clock on %d, not %d" \
+            % (r, got["d0"], want_row)
+    assert one == two, "a take gives what a read and an advance give"
+
     print("  %-40s DTX%d  R=%-5d C=%-3d row=%-3d P=%-4d state=%-6d image=%d"
           % (name, kind, rows, columns, row_bytes, p, state_bytes, len(image)))
 
@@ -417,12 +441,18 @@ def rows_through_68k(csv, variant, widths, repeat, unit, ring):
     """Every row a packaged reader of this variant gives, and its image."""
     blob = write_table(csv, variant, widths, repeat, unit, ring)
     image, at = package(blob)
-    fmt = image[20:20 + 20]
+    fmt = image[24:24 + 20]
     assert fmt[:3] == b"DTX" and fmt[3] == variant, "the format block"
     state_bytes = struct.unpack(">I", fmt[4:8])[0]
     row_bytes = struct.unpack(">H", fmt[12:14])[0]
     m = Machine(image, state_bytes)
-    resumes = m.count(IMAGE + at["ST4_resume"]) if "ST4_resume" in at else None
+    # rmac's listing cuts its symbol table off, so the decoder is reached
+    # through DTX_resume, which sorts early enough to survive it. A missing
+    # symbol is a fault in the rig, not a count of zero.
+    if variant == 2:
+        assert "DTX_resume" in at, \
+            "no DTX_resume in the listing: the rig cannot count the decoder"
+    resumes = m.count(IMAGE + at["DTX_resume"]) if "DTX_resume" in at else None
     rows = m.call("metadata")["d0"]
     m.call("init")
     out = []
