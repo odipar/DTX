@@ -1,15 +1,28 @@
 #!/usr/bin/env python3
-"""The packaged DTX0 and DTX1 reader, under emulation, against the bytes.
+"""The DTX reader, under emulation, against the text a table came from.
 
-Every table is written by the Java tools, packaged by org.dtx.Packager and
-assembled by rmac, then run on a plain 68000 through Unicorn. What a row
-should hold is read out of the .dtx file here, by a reader that shares no
-code with the one under test: this file parses the header and the payload
-itself, as an independent reader would from doc/SPEC.md.
+Two kinds of check run here.
+
+THE CALLS. Every table is written by the Java tools, packaged by
+org.dtx.Packager, assembled by rmac and run on a plain 68000 through
+Unicorn: every row through advance and read, a jump to every row forward
+and backward, the repeat at RR, the sticky end, a read before the first
+advance, the registers that stand across a call, and a guard band past the
+row.
+
+THE ROUND TRIP. The same text through the writer, the packager and the
+68000 at DTX0, DTX1 and DTX2, held to the rows the text states and to one
+another (R1.3). What a row should hold is worked out in this file, from the
+text, by a reader that shares no code with the one under test - so neither
+the writer nor the 68000 is checked against itself. Under DTX2 it also
+counts what the decoder is asked for, which is the one thing a wrong
+stopping rule shows up in: the output does not change when a column is
+driven one call past its end marker, but the count does.
 
     python3 68k/test/emu/test_dtx.py
 
-Needs `mvn compile`, rmac on the path or at $RMAC, and `pip install unicorn`.
+Needs `mvn compile`, rmac on the path or at $RMAC, `pip install unicorn`,
+and an ST4 packer at $ST4 for the packed tables.
 """
 
 import os
@@ -18,7 +31,8 @@ import subprocess
 import sys
 import tempfile
 
-from unicorn import Uc, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN, UcError
+from unicorn import (Uc, UC_ARCH_M68K, UC_HOOK_CODE, UC_MODE_BIG_ENDIAN,
+                     UcError)
 from unicorn.m68k_const import (
     UC_CPU_M68K_M68000,
     UC_M68K_REG_A0, UC_M68K_REG_A1, UC_M68K_REG_A2, UC_M68K_REG_A3,
@@ -81,6 +95,69 @@ def read_dtx(blob):
 
 
 # --------------------------------------------------------------------------
+# An independent CSV reader: doc/tools.md, "The text", in Python. This is
+# what makes the round trip a round trip - the rows a table should hold come
+# out of the text the writer was given, not out of the file it wrote.
+
+def csv_values(csv):
+    """The values of `csv`, a row a line, as whole numbers."""
+    out, columns = [], -1
+    for at, line in enumerate(csv.split("\n"), 1):
+        read = line.strip()
+        if not read or read.startswith("#"):
+            continue
+        cell = [c.strip() for c in read.split(",")]
+        if columns < 0:
+            columns = len(cell)
+        assert len(cell) == columns, \
+            "line %d holds %d values, not %d" % (at, len(cell), columns)
+        row = []
+        for c in cell:
+            if c.startswith("$"):
+                row.append(int(c[1:], 16))
+            elif c.startswith("-$"):
+                row.append(-int(c[2:], 16))
+            else:
+                row.append(int(c))
+        out.append(row)
+    assert out, "the text holds no row"
+    return out
+
+
+def fits(value, width):
+    """Whether `value` lies from -2^(8W-1) to 2^(8W)-1."""
+    return -(1 << (8 * width - 1)) <= value <= (1 << (8 * width)) - 1
+
+
+def csv_widths(values):
+    """The narrowest width of 1, 2 and 4 that holds every value a column."""
+    out = []
+    for i in range(len(values[0])):
+        taken = 1
+        for row in values:
+            while not fits(row[i], taken):
+                assert taken != 4, "column %d takes no width" % i
+                taken = 2 if taken == 1 else 4
+        out.append(taken)
+    return out
+
+
+def csv_rows(csv, widths=None):
+    """What each row of `csv` holds, as the bytes a read writes out."""
+    values = csv_values(csv)
+    width = widths or csv_widths(values)
+    out = []
+    for row in values:
+        bytes_out = b""
+        for i, w in enumerate(width):
+            assert fits(row[i], w), \
+                "%d does not fit %d bytes" % (row[i], w)
+            bytes_out += (row[i] & ((1 << (8 * w)) - 1)).to_bytes(w, "big")
+        out.append(bytes_out)
+    return width, out
+
+
+# --------------------------------------------------------------------------
 # The tools.
 
 def run(argv):
@@ -109,14 +186,33 @@ def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960):
 
 
 def package(blob):
-    """The raw image org.dtx.Packager and rmac make of `blob`."""
+    """The raw image, and where every label of it stands.
+
+    The packager emits the assembly and this assembles it, rather than
+    letting the packager do both: the listing rmac writes carries a symbol
+    table, and the address of ST4_resume in it is how the rig counts what
+    the decoder is asked for.
+    """
     work = tempfile.mkdtemp(prefix="dtx68")
-    src, img = os.path.join(work, "t.dtx"), os.path.join(work, "t.bin")
+    src = os.path.join(work, "t.dtx")
+    asm = os.path.join(work, "t.s")
+    img = os.path.join(work, "t.bin")
+    lst = os.path.join(work, "t.lst")
     with open(src, "wb") as f:
         f.write(blob)
-    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img, "-a" + RMAC])
+    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, asm, "-s"])
+    run([RMAC, "-m68000", "-fr", "+o3", "-i" + os.path.join(ROOT, "68k"),
+         "-l" + lst, "-o", img, asm])
+    at = {}
+    for line in open(lst):
+        cell = line.split()
+        if len(cell) == 3 and len(cell[1]) == 16 and cell[2] in ("t", "d", "b"):
+            try:
+                at[cell[0]] = int(cell[1], 16)
+            except ValueError:
+                pass
     with open(img, "rb") as f:
-        return f.read()
+        return f.read(), at
 
 
 # --------------------------------------------------------------------------
@@ -171,6 +267,14 @@ class Machine:
                 "a0": mu.reg_read(UC_M68K_REG_A0),
                 "a1": mu.reg_read(UC_M68K_REG_A1)}
 
+    def count(self, at):
+        """A counter of how often the instruction at `at` is reached."""
+        hits = [0]
+        self.mu.hook_add(UC_HOOK_CODE,
+                         lambda u, a, s, d: hits.__setitem__(0, hits[0] + 1),
+                         begin=at, end=at)
+        return hits
+
     def row(self, wrote, row_bytes):
         """What a read left in the row buffer, and nothing past it."""
         out = bytes(self.mu.mem_read(ROWBUF, row_bytes))
@@ -185,7 +289,7 @@ class Machine:
 
 def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
     blob = write_table(csv, variant, widths, repeat, unit, ring)
-    if variant == 2:
+    if variant == 2:  # noqa: the plain file gives what a row holds
         # The table is the same under every variant (R1.3), so what a row
         # holds is read out of the plain file, by the reader in this rig.
         plain = write_table(csv, 1, widths, repeat)
@@ -193,7 +297,7 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
         kind = 2
     else:
         kind, rows, columns, rr, width, _, row_bytes, want = read_dtx(blob)
-    image = package(blob)
+    image, _ = package(blob)
 
     # the format block, doc/abi.md 1, at the image's byte 20
     fmt = image[20:20 + 20]
@@ -296,13 +400,94 @@ TABLES = [
 ]
 
 
-# Tables a DTX2 image is made of: P is at least C and at most R, and N
-# divides by P times every width, so C stays small beside R.
 def numbers(rows, columns, span=251):
     return "\n".join(",".join(str((r * (i + 1)) % span) for i in range(columns))
                      for r in range(rows)) + "\n"
 
 
+# --------------------------------------------------------------------------
+# The round trip: text, through the writer, through the packager, through a
+# 68000, and back to the rows the text states.
+
+def rows_through_68k(csv, variant, widths, repeat, unit, ring):
+    """Every row a packaged reader of this variant gives, and its image."""
+    blob = write_table(csv, variant, widths, repeat, unit, ring)
+    image, at = package(blob)
+    fmt = image[20:20 + 20]
+    assert fmt[:3] == b"DTX" and fmt[3] == variant, "the format block"
+    state_bytes = struct.unpack(">I", fmt[4:8])[0]
+    row_bytes = struct.unpack(">H", fmt[12:14])[0]
+    m = Machine(image, state_bytes)
+    resumes = m.count(IMAGE + at["ST4_resume"]) if "ST4_resume" in at else None
+    rows = m.call("metadata")["d0"]
+    m.call("init")
+    out = []
+    for r in range(rows):
+        assert m.call("advance")["d0"] == r, "advance skipped row %d" % r
+        m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
+        out.append(m.row(m.call("read")["a1"], row_bytes))
+    p = struct.unpack(">H", fmt[14:16])[0]
+    return out, blob, image, (resumes[0] if resumes else 0), p
+
+
+def roundtrip(name, csv, widths=None, repeat=None, unit=1, ring=960):
+    """The text against every variant, and every variant against the rest."""
+    width, want = csv_rows(csv, widths)
+    given, sizes, asked = {}, [], ""
+    for variant in (0, 1, 2):
+        got, blob, image, resumes, p = rows_through_68k(
+            csv, variant, widths, repeat, unit, ring)
+        if variant == 2:
+            # ST4_wrap assumption 5: a column takes ceil(O/budget) calls and
+            # no more. One at init and one a period while rows remain.
+            due = len(width) * -(-len(want) // p)
+            assert resumes == due, \
+                "the decoder was asked %d times, not the %d ST4_wrap allows" \
+                % (resumes, due)
+            asked = "  %d resumes at P=%d" % (resumes, p)
+        # The writer's link, where this rig can read the file: the bytes the
+        # writer laid down hold the rows the text gave.
+        if variant != 2:
+            _, _, _, _, _, _, _, laid = read_dtx(blob)
+            assert laid == want, \
+                "DTX%d: the writer laid down rows the text does not give" % variant
+        # The reader's link: what a 68000 gives is what the text gave.
+        assert len(got) == len(want), \
+            "DTX%d gave %d rows, not %d" % (variant, len(got), len(want))
+        for r, (a, b) in enumerate(zip(got, want)):
+            assert a == b, "DTX%d row %d read %s, the text gives %s" % (
+                variant, r, a.hex(), b.hex())
+        given[variant] = got
+        sizes.append(len(image))
+    assert given[0] == given[1], "DTX0 and DTX1 give different rows"
+    assert given[1] == given[2], "DTX1 and DTX2 give different rows"
+    print("  %-32s R=%-5d C=%-2d widths=%-8s images %s%s"
+          % (name, len(want), len(width),
+             ",".join(str(w) for w in width),
+             "/".join(str(s) for s in sizes), asked))
+
+
+ROUND = [
+    ("one column of one byte", numbers(64, 1), [1], None, 1, 960),
+    ("three widths", numbers(64, 3), [1, 2, 1], None, 1, 960),
+    ("a four byte column", numbers(64, 3), [1, 2, 4], None, 1, 960),
+    ("every width, widest first", numbers(64, 3), [4, 2, 1], None, 1, 960),
+    ("k of 2", numbers(64, 2), [2, 2], None, 2, 960),
+    ("k of 4", numbers(64, 2), [4, 4], None, 4, 960),
+    ("a table that repeats", numbers(64, 2), [1, 1], 16, 1, 960),
+    ("the widths inferred", numbers(64, 2), None, None, 1, 960),
+    ("negatives and hexadecimal",
+     "".join("-%d,$%X\n" % (r % 128, (r * 7) % 65536) for r in range(64)),
+     [1, 2], None, 1, 960),
+    ("a comment and a blank line",
+     "# what follows is a table\n\n" + numbers(64, 2), [1, 1], None, 1, 960),
+    ("R not a multiple of P", numbers(50, 3), [1, 1, 1], None, 1, 960),
+    ("a long table", numbers(300, 2), [1, 2], None, 1, 960),
+]
+
+
+# Tables a DTX2 image is made of: P is at least C and at most R, and N
+# divides by P times every width, so C stays small beside R.
 PACKED = [
     ("one byte a row", numbers(64, 1), [1], None, 1, 960),
     ("two columns, one and two bytes", numbers(64, 2), [1, 2], None, 1, 960),
@@ -337,6 +522,13 @@ def main():
         except AssertionError as wrong:
             bad += 1
             print("  %-40s FAILED: %s" % (name, wrong))
+    print("the round trip: text, writer, packager, 68000, back to the text")
+    for name, csv, widths, repeat, unit, ring in ROUND:
+        try:
+            roundtrip(name, csv, widths, repeat, unit, ring)
+        except AssertionError as wrong:
+            bad += 1
+            print("  %-34s FAILED: %s" % (name, wrong))
     if bad:
         raise SystemExit("%d checks failed" % bad)
     print("every check passed")
