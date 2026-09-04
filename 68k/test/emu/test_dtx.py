@@ -168,7 +168,8 @@ def run(argv):
     return done.stdout
 
 
-def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960):
+def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960,
+                copies=False):
     """A .dtx file of `csv`, through the Java writer."""
     work = tempfile.mkdtemp(prefix="dtx68")
     text, out = os.path.join(work, "t.csv"), os.path.join(work, "t.dtx")
@@ -181,12 +182,14 @@ def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960):
         argv.append("-r%d" % repeat)
     if variant == 2:
         argv += ["-k%d" % unit, "-m%d" % ring, "-p" + ST4]
+        if copies:
+            argv.append("-copies")
     run(argv)
     with open(out, "rb") as f:
         return f.read()
 
 
-def package(blob):
+def package(blob, copies=False):
     """The raw image the packager makes, and where every label of it stands.
 
     The image comes from the packager, which assembles 68k/DTX.S for this
@@ -201,9 +204,11 @@ def package(blob):
     lst = os.path.join(work, "t.lst")
     with open(src, "wb") as f:
         f.write(blob)
-    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img, "-a" + RMAC])
+    extra = ["-copies"] if copies else []
+    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img, "-a" + RMAC]
+        + extra)
     run(["java", "-cp", CLASSES, "org.dtx.Packager", src,
-         os.path.join(work, "DTX_table.i"), "-s"])
+         os.path.join(work, "DTX_table.i"), "-s"] + extra)
     run([RMAC, "-m68000", "-fr", "+o3", "-i" + work,
          "-i" + os.path.join(ROOT, "68k"), "-l*" + lst,
          "-o", os.path.join(work, "code.bin"),
@@ -437,10 +442,10 @@ def numbers(rows, columns, span=251):
 # The round trip: text, through the writer, through the packager, through a
 # 68000, and back to the rows the text states.
 
-def rows_through_68k(csv, variant, widths, repeat, unit, ring):
+def rows_through_68k(csv, variant, widths, repeat, unit, ring, copies=False):
     """Every row a packaged reader of this variant gives, and its image."""
-    blob = write_table(csv, variant, widths, repeat, unit, ring)
-    image, at = package(blob)
+    blob = write_table(csv, variant, widths, repeat, unit, ring, copies)
+    image, at = package(blob, copies)
     fmt = image[24:24 + 20]
     assert fmt[:3] == b"DTX" and fmt[3] == variant, "the format block"
     state_bytes = struct.unpack(">I", fmt[4:8])[0]
@@ -464,13 +469,15 @@ def rows_through_68k(csv, variant, widths, repeat, unit, ring):
     return out, blob, image, (resumes[0] if resumes else 0), p
 
 
-def roundtrip(name, csv, widths=None, repeat=None, unit=1, ring=960):
+def roundtrip(name, csv, widths=None, repeat=None, unit=1, ring=960,
+              copies=False):
     """The text against every variant, and every variant against the rest."""
     width, want = csv_rows(csv, widths)
     given, sizes, asked = {}, [], ""
     for variant in (0, 1, 2):
         got, blob, image, resumes, p = rows_through_68k(
-            csv, variant, widths, repeat, unit, ring)
+            csv, variant, widths, repeat, unit, ring,
+            copies and variant == 2)
         if variant == 2:
             # ST4_wrap assumption 5: a column takes ceil(O/budget) calls and
             # no more. One at init and one a period while rows remain.
@@ -519,6 +526,10 @@ ROUND = [
     ("a long table", numbers(300, 2), [1, 2], None, 1, 960),
 ]
 
+# A column that repeats a pattern further back than the ring reaches: what
+# copies from the literal stream are for.
+REPEATING = "\n".join("%d,%d" % (r % 37, (r % 37) * 7) for r in range(512)) + "\n"
+
 
 # Tables a DTX2 image is made of: P is at least C and at most R, and N
 # divides by P times every width, so C stays small beside R.
@@ -563,6 +574,15 @@ def main():
         except AssertionError as wrong:
             bad += 1
             print("  %-34s FAILED: %s" % (name, wrong))
+    print("copies from the literal stream, at a ring they pay for")
+    for name, ring, copies in (("a small ring, plain", 64, False),
+                               ("a small ring, copies", 64, True),
+                               ("a ring the pattern fits, copies", 128, True)):
+        try:
+            roundtrip(name, REPEATING, [1, 2], None, 1, ring, copies)
+        except AssertionError as wrong:
+            bad += 1
+            print("  %-32s FAILED: %s" % (name, wrong))
     if bad:
         raise SystemExit("%d checks failed" % bad)
     print("every check passed")

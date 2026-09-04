@@ -62,6 +62,33 @@ final class St4Test {
     }
 
     @Test
+    void everyColumnIsPackedWithTheOperationLengthTheDecodersCount()
+            throws Exception {
+        // ST4_wrap assumption 4 asks for -l65535, and a packer that did not
+        // take the flag would fail rather than pack.
+        byte[] file = Dtx2.write(table(), new St4(packer()), 1, 960);
+        assertEquals(2, file[3], "the variant");
+    }
+
+    @Test
+    void aColumnPackedWithCopiesRunsToFewerBytesAtASmallRing()
+            throws Exception {
+        // A column that repeats a pattern further back than the ring
+        // reaches: what copies from the literal stream are for.
+        // The pattern runs 101 rows, further back than a ring of 64
+        // bytes reaches, so a match for it is a copy or it is nothing.
+        byte[] column = new byte[512];
+        for (int r = 0; r < column.length; r++) {
+            column[r] = (byte) (r % 101);
+        }
+        Table table = Table.of(512, 512, new int[] {1}, new byte[][] {column});
+        byte[] plain = Dtx2.write(table, new St4(packer()), 1, 64);
+        byte[] copies = Dtx2.write(table, new St4(packer(), "-c"), 1, 64);
+        assertTrue(copies.length < plain.length, "copies " + copies.length
+                + " bytes against " + plain.length + " without them");
+    }
+
+    @Test
     void aPackedTableRunsToFewerBytesThanTheColumnsItHolds() throws Exception {
         Table table = table();
         byte[] plain = Dtx1.write(table);

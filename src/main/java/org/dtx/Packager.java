@@ -170,6 +170,19 @@ public final class Packager {
      *     where no period holds every rule of doc/abi.md 4
      */
     public static String table(byte[] file) {
+        return table(file, false);
+    }
+
+    /**
+     * The same, for a table whose columns were packed with copies from the
+     * literal stream. The decoder then takes {@code ST4_WINDOW equ 1}, and
+     * the image is code in RAM: {@code ST4_init} writes the reach into two
+     * of its own instructions, so a 68030 caller flushes the instruction
+     * cache after every call that seeds a decoder.
+     *
+     * @param copies whether the columns were packed with {@code st4 -c}
+     */
+    public static String table(byte[] file, boolean copies) {
         Dtx.Header header = Dtx.header(file);
         int variant = header.variant();
         if (variant != Dtx.DTX0 && variant != Dtx.DTX1
@@ -236,6 +249,11 @@ public final class Packager {
                     .append(equ("DTX_SLOT", slot(header)))
                     .append(equ("DTX_RING", ring(header)))
                     .append(equ("ST4_UNIT", packed.unit()));
+            if (copies) {
+                out.append(equ("ST4_WINDOW", 1))
+                        .append("; the columns were packed with st4 -c, so"
+                                + " the decoder takes the copy code\n");
+            }
         }
 
         out.append("\n; One a width class: the cursor's place in the block,"
@@ -345,12 +363,17 @@ public final class Packager {
      * @param rmac the assembler to run
      */
     public static byte[] image(byte[] file, Path rmac) {
+        return image(file, rmac, false);
+    }
+
+    /** The same, for a table packed with copies from the literal stream. */
+    public static byte[] image(byte[] file, Path rmac, boolean copies) {
         try {
             Path work = Files.createTempDirectory("dtx68");
             try {
                 Path states = work.resolve("DTX_table.i");
                 Path out = work.resolve("image.bin");
-                Files.writeString(states, table(file));
+                Files.writeString(states, table(file, copies));
                 Process run = new ProcessBuilder(rmac.toString(), "-m68000",
                         "-fr", "+o3", "-i" + work, "-i" + carried(),
                         "-o", out.toString(),
@@ -400,17 +423,21 @@ public final class Packager {
     /** Reads the DTX file named first and writes the image named second. */
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
-            System.err.println("Packager in.dtx out.bin [-aRMAC] [-s]");
+            System.err.println(
+                    "Packager in.dtx out.bin [-aRMAC] [-s] [-copies]");
             System.exit(2);
             return;
         }
         String rmac = "rmac";
         boolean states = false;
+        boolean copies = false;
         for (int i = 2; i < args.length; i++) {
             if (args[i].startsWith("-a")) {
                 rmac = args[i].substring(2);
             } else if (args[i].equals("-s")) {
                 states = true;
+            } else if (args[i].equals("-copies")) {
+                copies = true;
             } else {
                 System.err.println("Packager does not read " + args[i]);
                 System.exit(2);
@@ -420,9 +447,9 @@ public final class Packager {
         byte[] file = Files.readAllBytes(Path.of(args[0]));
         Dtx.Header header = Dtx.header(file);
         if (states) {
-            Files.writeString(Path.of(args[1]), table(file));
+            Files.writeString(Path.of(args[1]), table(file, copies));
         } else {
-            Files.write(Path.of(args[1]), image(file, Path.of(rmac)));
+            Files.write(Path.of(args[1]), image(file, Path.of(rmac), copies));
         }
         long bytes = Files.size(Path.of(args[1]));
         int state = header.variant() == Dtx.DTX2

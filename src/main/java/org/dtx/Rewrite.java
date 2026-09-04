@@ -20,19 +20,26 @@ public final class Rewrite {
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
             System.err.println("Rewrite in.dtx out.dtx"
-                    + " [-kK] [-mN] [-pPACKER]");
+                    + " [-kK] [-mN] [-pPACKER]"
+                    + " [-copies[S]]");
             System.exit(2);
             return;
         }
         int unit = 1;
         int ring = 960;
         String packer = "st4";
+        String copies = "";
         for (int i = 2; i < args.length; i++) {
             String arg = args[i];
             if (arg.startsWith("-k")) {
                 unit = Integer.parseInt(arg.substring(2));
             } else if (arg.startsWith("-m")) {
                 ring = Integer.parseInt(arg.substring(2));
+            } else if (arg.startsWith("-copies")) {
+                // the packer's own: a match beyond the ring copies from the
+                // literal stream, and -copiesS searches S seconds for a
+                // better parse. YMX spells it the same way.
+                copies = "-c" + arg.substring(7);
             } else if (arg.startsWith("-p")) {
                 packer = arg.substring(2);
             } else {
@@ -42,7 +49,7 @@ public final class Rewrite {
             }
         }
         byte[] in = Files.readAllBytes(Path.of(args[0]));
-        byte[] out = Dtx2.from(in, new St4(Path.of(packer)), unit, ring);
+        byte[] out = Dtx2.from(in, new St4(Path.of(packer), copies), unit, ring);
         Files.write(Path.of(args[1]), out);
         Dtx.Header header = Dtx.header(in);
         System.out.printf("DTX%d %d bytes -> DTX2 %d bytes, %d rows,"

@@ -25,7 +25,8 @@ public final class Write {
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
             System.err.println("Write in.csv out.dtx"
-                    + " [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER]");
+                    + " [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER]"
+                    + " [-copies[S]]");
             System.exit(2);
             return;
         }
@@ -35,6 +36,7 @@ public final class Write {
         int unit = 1;
         int ring = 960;
         String packer = "st4";
+        String copies = "";
         for (int i = 2; i < args.length; i++) {
             String arg = args[i];
             if (arg.startsWith("-v")) {
@@ -47,6 +49,11 @@ public final class Write {
                 unit = Integer.parseInt(arg.substring(2));
             } else if (arg.startsWith("-m")) {
                 ring = Integer.parseInt(arg.substring(2));
+            } else if (arg.startsWith("-copies")) {
+                // the packer's own: a match beyond the ring copies from the
+                // literal stream, and -copiesS searches S seconds for a
+                // better parse. YMX spells it the same way.
+                copies = "-c" + arg.substring(7);
             } else if (arg.startsWith("-p")) {
                 packer = arg.substring(2);
             } else {
@@ -62,7 +69,7 @@ public final class Write {
         byte[] out = switch (variant) {
             case Dtx.DTX0 -> Dtx0.write(table);
             case Dtx.DTX1 -> Dtx1.write(table);
-            case Dtx.DTX2 -> Dtx2.write(table, new St4(Path.of(packer)),
+            case Dtx.DTX2 -> Dtx2.write(table, new St4(Path.of(packer), copies),
                     unit, ring);
             default -> throw new IllegalArgumentException(
                     "the variant is 0, 1 or 2, not " + variant);
