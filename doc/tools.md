@@ -52,6 +52,31 @@ column 2 holds a negative value.
 `org.dtx.Csv` is the same reader as a library, and `Table`, `Dtx0`,
 `Dtx1` and `Dtx2` write a table a caller builds itself.
 
+## Package
+
+A DTX0 or DTX1 file into a standalone 68000 image: the code, then the
+table's bytes, reached PC relative. [abi.md](abi.md) states the five calls
+the image answers, and the state block a caller supplies.
+
+```
+bin/dtx-package in.dtx out.bin
+```
+
+| flag | gives |
+|---|---|
+| `-aRMAC` | the assembler to run. The default is `rmac` on the path |
+| `-s` | write the assembly rather than the image, for reading or for a build of your own |
+
+The image holds one table and the code for that table's variant. What the
+table settles is folded into the code: `R`, `RR`, the row's bytes, each
+width as the size of a move, and every column's displacement off its class
+cursor. The tool prints the image's bytes and the state block's, and the
+format block states the same figures for a caller to read out of the file.
+
+DTX2 is not packaged yet: a packed column takes the decoder carried at
+[68k/ST4_wrap.S](../68k/ST4_wrap.S), and abi.md 4 states the turn it is
+driven by.
+
 ## Rewrite
 
 A DTX0 or DTX1 file into a DTX2 one. The table is the same under every
@@ -70,6 +95,22 @@ bin/dtx-rewrite in.dtx out.dtx -k1 -m960 -pst4
 
 Rewrite keeps no packer of its own. `-p` names the one ST4's own repository
 builds, and a column reaches it as a file.
+
+## The rigs
+
+```
+python3 68k/test/emu/test_dtx.py
+```
+
+Packages every table of a corpus at DTX0 and DTX1, assembles it with rmac,
+and runs the image on a plain 68000 under emulation: every row through
+advance and read, a jump to every row forward and backward, the repeat, the
+end and a read before the first advance. What a row should hold is read out
+of the `.dtx` file by a reader written in the rig itself, which shares no
+code with the one under test.
+
+It needs `mvn compile`, [rmac](http://rmac.is-slick.com) on the path or at
+`$RMAC`, and `pip install unicorn`.
 
 ## Through Maven
 
