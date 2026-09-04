@@ -29,16 +29,16 @@ In this order, from the image's first byte:
 
 | at | bytes | holds |
 |---|---|---|
-| +0 | 20 | five `bra.w` slots, one a call |
-| +20 | 20 | the format block, on a long |
-| +40 | .. | the bodies the variant asks for |
+| +0 | 24 | six `bra.w` slots, one a call |
+| +24 | 20 | the format block, on a long |
+| +44 | .. | the bodies the variant asks for |
 | .. | 324, 328 or 330 | under DTX2, ST4's wrap decoder at `k` |
 | .. | .. | the table's bytes, header and payload, on a long |
 
-The five slots stand at +0, +4, +8, +12 and +16, in the order the calls
-are numbered below, following ST4's own precedent. The dispatch is the
-whole of it: no call tests the variant, because the variant chose which
-bodies the packager emitted.
+The six slots stand at +0, +4, +8, +12, +16 and +20, in the order the
+calls are numbered below, following ST4's own precedent. The dispatch is
+the whole of it: no call tests the variant, because the variant chose
+which bodies the packager emitted.
 
 **The format block**, 20 bytes on a long:
 
@@ -65,7 +65,7 @@ image.
 
 ---
 
-## 2. The five calls
+## 2. The six calls
 
 Under every variant `d6`, `d7`, `a6` and the stack beyond the return
 address stand, as they stand across an ST4 call. No call builds a stack
@@ -77,7 +77,8 @@ frame.
 | `DTX_metadata` | nothing | `a0` format block, `a1` the table's header, `d0.l` `R`, `d1.w` `C`, `d2.l` `RR` | d0-d2, a0-a1 |
 | `DTX_jump` | `a0`, `d0.l` the row | `d0.l` that row | d0-d5, a0-a5 |
 | `DTX_advance` | `a0` | `d0.l` the row, or $FFFFFFFF | d0-d5, a0-a5 |
-| `DTX_read` | `a0`, `a1` where the row goes | `a1` one past the last byte | d0-d1, a0-a3 |
+| `DTX_read` | `a0`, `a1` where the row goes | `a1` one past the last byte | d0-d1, a1-a4 |
+| `DTX_take` | `a0`, `a1` where the row goes | `a1` one past the last byte, `d0.l` the row the clock now stands on, or $FFFFFFFF | d0-d5, a1-a5 |
 
 ### 0. `DTX_init`, image+0
 
@@ -182,7 +183,8 @@ width and nothing between them: the row as DTX0 lays it out (SPEC.md
 `a1` as it came.
 
 Read moves no cursor, refills nothing and decodes nothing, so a second
-read of one row writes the same bytes.
+read of one row writes the same bytes. It leaves `a0` where it came, so a
+caller that reads and then steps holds the block through both.
 
 Under DTX0 it is one run of bytes from the cursor. Under DTX1 and DTX2 it
 takes `C` values, alternating between the columns: column `i` of a width
@@ -194,6 +196,26 @@ is `R` times `W[i]` bytes in the payload.
 
 A displacement off an address register is a signed word, so the packager
 holds the furthest of them to 32767 and fails the package otherwise.
+
+### 5. `DTX_take`, image+20
+
+A read and an advance in one call: it writes the row the clock stands on,
+then steps the clock, and gives back what each of them gives. Where the
+clock stands on no row it writes nothing and steps to row 0, as an advance
+alone does.
+
+The two calls share what they hold. A class cursor stands in a register
+for the read, and the step takes it from there rather than out of the
+block again: under DTX0 the read's own pointer ends on the next row, so
+the step stores that and adds nothing at all. Read leaves `a0` holding the
+block, so the step reaches the block without loading it again.
+
+Taking a row costs one call rather than two, and a caller's loop is
+
+        bsr     DTX_advance     ; onto row 0
+    .row:
+        bsr     DTX_take        ; the row, and the clock steps
+        bpl.s   .row
 Where a wide value falls on an odd offset of the row, the packager emits
 two byte moves for it, or four for a four byte value, since it holds
 every offset at build time.

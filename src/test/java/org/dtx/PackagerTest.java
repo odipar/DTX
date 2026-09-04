@@ -26,16 +26,43 @@ final class PackagerTest {
     }
 
     @Test
-    void theFormatBlockStatesWhatTheTableStates() {
+    void theFiguresStateWhatTheTableStates() {
         for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
-            String out = Packager.assembly(table(variant));
-            assertTrue(out.contains("\tdc.b\t'D','T','X'," + variant),
-                    "the variant byte at DTX" + variant);
-            assertTrue(out.contains("\tdc.w\t4\t\t; the row's bytes"),
-                    "the row's bytes at DTX" + variant);
-            assertTrue(out.contains("\tdc.w\t1\t\t; P"), "P is 1 without a ring");
-            assertTrue(out.contains("\tdc.w\t0\t\t; N"), "N is 0 without a ring");
+            String out = Packager.table(table(variant));
+            assertTrue(out.contains("DTX_VARIANT\tequ\t" + variant),
+                    "the variant at DTX" + variant);
+            assertTrue(out.contains("DTX_ROWS\tequ\t4"), "R");
+            assertTrue(out.contains("DTX_COLUMNS\tequ\t3"), "C");
+            assertTrue(out.contains("DTX_ROWBYTES\tequ\t4"), "the row's bytes");
+            assertTrue(out.contains("DTX_HEADER\tequ\t20"), "the header");
         }
+    }
+
+    @Test
+    void theFiguresHoldNoInstruction() {
+        // 68k/DTX.S is where every instruction stands. What the packager
+        // writes is equates and macro invocations, and a move or a bra in
+        // it would be an instruction the template does not hold.
+        for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
+            for (String line : Packager.table(table(variant)).split("\n")) {
+                String read = line.trim();
+                assertTrue(!read.startsWith("move") && !read.startsWith("bra")
+                                && !read.startsWith("lea") && !read.startsWith("dc."),
+                        "the figures hold an instruction: " + read);
+            }
+        }
+    }
+
+    @Test
+    void theRepeatCountIsNeverNegative() {
+        // rmac crashes on a negative .rept, conditional or not, so the row
+        // shift stays at or above zero and a flag says whether it stands.
+        Table table = Csv.table("1,2,3\n4,5,6\n", new int[] {1, 2, 4});
+        String out = Packager.table(Dtx0.write(table));
+        assertTrue(out.contains("DTX_ROWPOW\tequ\t0"),
+                "seven bytes a row is no power of two");
+        assertTrue(out.contains("DTX_ROWSHIFT\tequ\t0"),
+                "and its shift stands at zero, not -1");
     }
 
     @Test
@@ -51,14 +78,20 @@ final class PackagerTest {
     }
 
     @Test
-    void theFiveSlotsStandInTheOrderTheAbiGives() {
-        String out = Packager.assembly(table(Dtx.DTX0));
-        int at = out.indexOf("_base:");
-        assertTrue(at > 0, "the image has no base");
-        String slots = out.substring(at, out.indexOf("_fmt:"));
-        assertEquals("_base:\n\tbra.w\t_init\n\tbra.w\t_metadata\n"
-                + "\tbra.w\t_jump\n\tbra.w\t_advance\n\tbra.w\t_read\n\n",
-                slots, "the slots, doc/abi.md 1");
+    void everyListTheTemplateInvokesIsWritten() {
+        String plain = Packager.table(table(Dtx.DTX1));
+        for (String list : new String[] {"DTX_SEED_CURSORS", "DTX_JUMP_CURSORS",
+                "DTX_STEP_CURSORS", "DTX_LOAD_CURSORS", "DTX_READ_ROW"}) {
+            assertTrue(plain.contains("\t.macro\t" + list + "\n"),
+                    "DTX1 states no " + list);
+        }
+        String packed = Packager.table(packed(64, new int[] {1, 2}, 1, 960));
+        for (String list : new String[] {"DTX_SEED_CURSORS", "DTX_STEP_CURSORS",
+                "DTX_LOAD_CURSORS", "DTX_READ_ROW", "DTX_FILL_COLUMNS",
+                "DTX_REFILL_TABLE", "DTX_REFILL_BODIES"}) {
+            assertTrue(packed.contains("\t.macro\t" + list + "\n"),
+                    "DTX2 states no " + list);
+        }
     }
 
     /** A DTX2 file of {@code rows} rows and these widths, at this ring. */
@@ -132,16 +165,13 @@ final class PackagerTest {
     }
 
     @Test
-    void aPackedFormatBlockStatesThePeriodTheRingAndTheUnit() {
-        String out = Packager.assembly(packed(64, new int[] {1, 2}, 1, 960));
-        assertTrue(out.contains("\tdc.b\t'D','T','X',2"), "the variant byte");
-        assertTrue(out.contains("\tdc.w\t2\t\t; P"), "P");
-        assertTrue(out.contains("\tdc.w\t960\t\t; N"), "N");
-        assertTrue(out.contains("\tdc.b\t1,0\t\t; k, and a zero"), "k");
+    void thePackedFiguresStateThePeriodTheRingAndTheUnit() {
+        String out = Packager.table(packed(64, new int[] {1, 2}, 1, 960));
+        assertTrue(out.contains("DTX_VARIANT\tequ\t2"), "the variant");
+        assertTrue(out.contains("DTX_PERIOD\tequ\t2"), "P");
+        assertTrue(out.contains("DTX_N\t\tequ\t960"), "N");
         assertTrue(out.contains("ST4_UNIT\tequ\t1"),
                 "the decoder is built at the payload's unit");
-        assertTrue(out.contains("\tinclude\t\"ST4_wrap.S\""),
-                "the carried decoder");
     }
 
     @Test
@@ -153,10 +183,10 @@ final class PackagerTest {
                 "no rmac at " + rmac);
         byte[] image = Packager.image(table(Dtx.DTX0), rmac);
         assertEquals(0x60, image[0] & 0xFF, "the first slot is a bra.w");
-        assertEquals("DTX", new String(image, 20, 3), "the format block at 20");
-        assertEquals(0, image[23], "the variant the format block states");
-        assertEquals(28, Dtx.getLong(image, 24), "the state block's bytes");
-        int header = Dtx.getLong(image, 28);
+        assertEquals("DTX", new String(image, 24, 3), "the format block at 24");
+        assertEquals(0, image[27], "the variant the format block states");
+        assertEquals(28, Dtx.getLong(image, 28), "the state block's bytes");
+        int header = Dtx.getLong(image, 32);
         assertEquals("DTX", new String(image, header, 3),
                 "the header the format block points at");
     }
