@@ -29,65 +29,38 @@ _base:
 _fmt:
         dc.b    'D','T','X',\variant
         dc.l    DTX_STATE
-        dc.l    _table-_base
+        dc.l    0                       ; the packager writes it: the table
+                                        ; stands behind the column table,
+                                        ; whose size moves with C
         dc.w    DTX_ROWBYTES
         dc.w    \period
         dc.w    \ring
         dc.b    \unit,0
+        dc.l    _columns-_base          ; where the column table begins
 
-; DTX_metadata. Both blocks are bytes in the image, reached with one lea
-; each, so this call needs no state and may be made before init.
+; DTX_metadata. The format block is at a fixed place in the image, so one
+; lea reaches it; the table's own header is behind a column table whose size
+; moves with C, so its place is read out of the format block rather than
+; assembled in. R, C and RR then come out of the header.
+; SPEC.md 1 lays it out: R at +4, C at +8 and RR at +10.
 DTX_metadata:
         lea     _fmt(pc),a0
-        lea     _table(pc),a1
-        move.l  #DTX_ROWS,d0
-        move.w  #DTX_COLUMNS,d1
-        move.l  #DTX_REPEAT,d2
+        movea.l a0,a1
+        suba.w  #_fmt-_base,a1          ; the image's first byte
+        adda.l  8(a0),a1                ; the table's header
+        move.l  4(a1),d0                ; R
+        move.w  8(a1),d1                ; C
+        move.l  10(a1),d2               ; RR
         rts
         .endm
 
-; The table's bytes follow. Nothing stands after this label: the packager
-; appends the .dtx file to what rmac writes, so _table is where it lands and
-; the code ends on a long to put it there.
+; What follows the code. Nothing stands after this label: the packager
+; appends the column table and then the .dtx file to what rmac writes, so
+; _columns is where the first of them lands and the code ends on a long to
+; put it there. The format block states where each begins, and no
+; instruction reaches either by a displacement the assembler works out:
+; both move with C, and the code does not.
         .macro  DTX_TABLE_FOLLOWS
         .align  4
-_table:
-_payload        equ     _table+DTX_HEADER
-        .endm
-
-; The end of a table, and the repeat at RR. An advance that steps past the
-; last row jumps to RR where the table repeats, and gives $FFFFFFFF where it
-; does not, leaving the clock on the last row: the end is sticky, and a
-; further advance gives $FFFFFFFF again. The row stands in d0 and the body
-; that steps a row stands at .step.
-;
-; DTX2 states this itself rather than taking it here, since it puts the
-; caller's a6, d6 and d7 back before either exit.
-        .macro  DTX_END_OR_REPEAT
-        cmpi.l  #DTX_ROWS,d0
-        bne.s   .step
-        .if DTX_REPEAT<DTX_ROWS
-        move.l  #DTX_REPEAT,d0
-        bra.w   DTX_jump                ; the repeat is a jump
-        .else
-        moveq   #-1,d0                  ; the end, and it is sticky
-        rts
-        .endif
-        .endm
-
-; The same rule for DTX_take, which gives a1 back one past the row it wrote.
-; The repeat runs DTX_jump, and a jump moves a1.
-        .macro  DTX_TAKE_END_OR_REPEAT
-        cmpi.l  #DTX_ROWS,d0
-        bne.s   .step
-        .if DTX_REPEAT<DTX_ROWS
-        move.l  a1,-(a7)
-        move.l  #DTX_REPEAT,d0
-        bsr     DTX_jump
-        movea.l (a7)+,a1
-        rts
-        .else
-        moveq   #-1,d0                  ; the end, and it is sticky
-        rts
-        .endif
+_columns:
         .endm
