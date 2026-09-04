@@ -66,27 +66,57 @@ print("%d tables assemble to code the base table does not" % bad)
 
 print()
 print("DTX2, one blob a decoder: k and copies may move it, R, C and RR may not")
-for unit, copies in ((1, False), (2, False), (4, False), (1, True)):
-    first, ok, seen = None, True, 0
-    # every width is a whole number of units, or no budget is one
-    corpus = {1: ((64, [1, 2], None), (128, [1, 2], None), (64, [1, 2], 0),
-                  (64, [1, 2, 1], None), (64, [1, 2, 4, 2], None)),
-              2: ((64, [2, 2], None), (128, [2, 2], None), (64, [2, 2], 0),
-                  (64, [2, 4, 2], None)),
-              4: ((64, [4, 4], None), (128, [4, 4], None), (64, [4, 4], 0),
-                  (64, [4, 4, 4], None))}[unit]
-    for rows, width, rr in corpus:
-        c = code(2, rows, width, rr, 960, unit, copies)
-        seen += 1
-        if first is None:
-            first = c
-        elif c != first:
-            ok = False
-    if first is None:
-        print("    k=%d %-14s no table of the corpus fits" % (unit, ""))
-        continue
-    if not ok:
-        bad += 1
-    print("    k=%d %-14s %5d bytes over %d tables   %s"
-          % (unit, "with copies" if copies else "without copies",
-             len(first), seen, "one blob" if ok else "STILL MOVES"))
+# every width is a whole number of units, or no budget is one
+CORPUS = {1: ((64, [1, 2], None), (128, [1, 2], None), (64, [1, 2], 0),
+              (64, [1, 2, 1], None), (64, [1, 2, 4, 2], None)),
+          2: ((64, [2, 2], None), (128, [2, 2], None), (64, [2, 2], 0),
+              (64, [2, 4, 2], None)),
+          4: ((64, [4, 4], None), (128, [4, 4], None), (64, [4, 4], 0),
+              (64, [4, 4, 4], None))}
+blob = {}
+for unit in (1, 2, 4):
+    for copies in (False, True):
+        first, ok, seen = None, True, 0
+        for rows, width, rr in CORPUS[unit]:
+            c = code(2, rows, width, rr, 960, unit, copies)
+            seen += 1
+            if first is None:
+                first = c
+            elif c != first:
+                ok = False
+        if not ok:
+            bad += 1
+        blob[(unit, copies)] = first
+        print("    k=%d %-14s %5d bytes over %d tables   %s"
+              % (unit, "with copies" if copies else "without copies",
+                 len(first), seen, "one blob" if ok else "STILL MOVES"))
+
+# How many binaries a caller builds and ships. Every build the template can
+# be assembled in is here, and no two of them are the same bytes.
+print()
+apart = len(set(bytes(c) for c in blob.values()))
+print("    %d builds, %d of them different bytes" % (len(blob), apart))
+if apart != len(blob):
+    bad += 1
+    print("    TWO BUILDS ARE THE SAME BLOB: one of them is not a binary")
+
+# The copy code's size, which doc/abi.md 5 states a k.
+cost = {k: len(blob[(k, True)]) - len(blob[(k, False)]) for k in (1, 2, 4)}
+print("    the copy code: " + ", ".join("%d bytes at k=%d" % (cost[k], k)
+                                        for k in (1, 2, 4)))
+import re
+said = re.search(r"copy code, which measures (\d+) bytes more at `k` of 1\n?"
+                 r"\s*and 2 and (\d+) at `k` of 4", open("doc/abi.md").read())
+if said is None:
+    bad += 1
+    print("    doc/abi.md 5 no longer states the copy code's size")
+elif (int(said.group(1)), int(said.group(2))) != (cost[1], cost[4]):
+    bad += 1
+    print("    doc/abi.md 5 says %s and %s, not %d and %d"
+          % (said.group(1), said.group(2), cost[1], cost[4]))
+else:
+    print("    doc/abi.md 5 states both, and both measure true")
+
+print()
+print("%d checks failed" % bad if bad else "every check passed")
+sys.exit(1 if bad else 0)

@@ -449,12 +449,21 @@ than the 65535 units a 68000 decoder counts in a word.
 A column may be packed with `-c` as well, which lets a match beyond the
 ring copy from the column's own literal stream. That packs a small ring
 far smaller, and it asks one thing of the package: the decoder is built
-with its copy code, 32 bytes more measured. The packager takes the same
-word for it, and the two have
+with its copy code, which measures 32 bytes more at `k` of 1
+and 2 and 36 at `k` of 4. The packager takes the same word for it, and
+the two have
 to agree: a column packed with copies and packaged without the copy code
 reads wrong bytes, and no field of the file says which it is. The other
 way round is safe, since a decoder with the copy code reads a column
 without copies correctly, at 2.0 to 4.0% more cycles.
+
+**How many images there are.** DTX0 assembles to one, DTX1 to one, and
+DTX2 to one a build of the decoder built into it: `k` of 1, 2 or 4, each
+with the copy code and without it. Six under DTX2, eight in all, and
+`68k/test/emu/test_stable.py` builds every one of them and holds no two
+to the same bytes. Which of the six a table takes is `k`, which the
+format block gives at +18, and the word the table was packed with, which
+no field gives.
 
 The packager chooses `N` and `P` together and packs the columns for the
 `N` it chose, so no payload arrives with an `N` no `P` fits.
