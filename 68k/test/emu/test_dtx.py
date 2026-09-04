@@ -186,23 +186,27 @@ def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960):
 
 
 def package(blob):
-    """The raw image, and where every label of it stands.
+    """The raw image the packager makes, and where every label of it stands.
 
-    The packager emits the assembly and this assembles it, rather than
-    letting the packager do both: the listing rmac writes carries a symbol
-    table, and the address of ST4_resume in it is how the rig counts what
-    the decoder is asked for.
+    The image comes from the packager, which assembles 68k/DTX.S for this
+    table and appends the table's bytes. The labels come from a second run
+    of rmac over the same template and the same figures, for the listing's
+    symbol table alone: ST4_resume's address in it is how the rig counts
+    what the decoder is asked for.
     """
     work = tempfile.mkdtemp(prefix="dtx68")
     src = os.path.join(work, "t.dtx")
-    asm = os.path.join(work, "t.s")
     img = os.path.join(work, "t.bin")
     lst = os.path.join(work, "t.lst")
     with open(src, "wb") as f:
         f.write(blob)
-    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, asm, "-s"])
-    run([RMAC, "-m68000", "-fr", "+o3", "-i" + os.path.join(ROOT, "68k"),
-         "-l" + lst, "-o", img, asm])
+    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img, "-a" + RMAC])
+    run(["java", "-cp", CLASSES, "org.dtx.Packager", src,
+         os.path.join(work, "DTX_table.i"), "-s"])
+    run([RMAC, "-m68000", "-fr", "+o3", "-i" + work,
+         "-i" + os.path.join(ROOT, "68k"), "-l*" + lst,
+         "-o", os.path.join(work, "code.bin"),
+         os.path.join(ROOT, "68k", "DTX.S")])
     at = {}
     for line in open(lst):
         cell = line.split()
