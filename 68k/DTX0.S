@@ -24,9 +24,10 @@
 ; the row's bytes divide by four, a word where they are even, a byte where
 ; they are odd.
 ;
-; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here holds them: _table is the
+; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here holds them: _columns is the
 ; last label and the code ends on a long, so the packager appends the .dtx
-; file to what rmac writes and _table is where it lands.
+; file to what rmac writes and _columns is where it lands. DTX0 has no column
+; table, so under this variant the table's own header is the first byte there.
 ;
 ; TRUSTED INPUT ONLY. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call takes

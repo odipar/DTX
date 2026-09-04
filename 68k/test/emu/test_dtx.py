@@ -215,12 +215,15 @@ def package(blob, copies=False):
          os.path.join(ROOT, "68k", "DTX%d.S" % blob[3])])
     at = {}
     for line in open(lst):
+        # rmac lays its symbol table in as many columns as the page fits,
+        # so a line holds one name, address and kind or several.
         cell = line.split()
-        if len(cell) == 3 and len(cell[1]) == 16 and cell[2] in ("t", "d", "b"):
-            try:
-                at[cell[0]] = int(cell[1], 16)
-            except ValueError:
-                pass
+        for c in range(0, len(cell) - 2, 3):
+            if len(cell[c + 1]) == 16 and cell[c + 2] in ("t", "d", "b"):
+                try:
+                    at[cell[c]] = int(cell[c + 1], 16)
+                except ValueError:
+                    pass
     with open(img, "rb") as f:
         return f.read(), at
 

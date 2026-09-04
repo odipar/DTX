@@ -26,15 +26,22 @@ final class PackagerTest {
     }
 
     @Test
-    void theFiguresStateWhatTheTableStates() {
+    void theFiguresStateOnlyWhatTheImageCannotReadBack() {
+        // R, C, RR and the widths reach the code at run time, out of the
+        // table's own header and the column table, so no equate states one.
+        // What is left is the row's bytes and the state block, which the
+        // format block holds and a caller reads before there is a block to
+        // read them from.
         for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
             String out = Packager.table(table(variant));
-            assertTrue(out.contains("DTX_VARIANT\tequ\t" + variant),
-                    "the variant at DTX" + variant);
-            assertTrue(out.contains("DTX_ROWS\tequ\t4"), "R");
-            assertTrue(out.contains("DTX_COLUMNS\tequ\t3"), "C");
             assertTrue(out.contains("DTX_ROWBYTES\tequ\t4"), "the row's bytes");
-            assertTrue(out.contains("DTX_HEADER\tequ\t20"), "the header");
+            assertTrue(out.contains("DTX_STATE\tequ\t"), "the state block");
+            for (String gone : new String[] {"DTX_ROWS", "DTX_COLUMNS",
+                    "DTX_REPEAT", "DTX_VARIANT", "DTX_HEADER"}) {
+                assertTrue(!out.contains(gone + "\tequ\t"),
+                        "DTX" + variant + " states " + gone
+                                + ", so its code moves with the table");
+            }
         }
     }
 
@@ -54,18 +61,6 @@ final class PackagerTest {
     }
 
     @Test
-    void theRepeatCountIsNeverNegative() {
-        // rmac crashes on a negative .rept, conditional or not, so the row
-        // shift stays at or above zero and a flag says whether it stands.
-        Table table = Csv.table("1,2,3\n4,5,6\n", new int[] {1, 2, 4});
-        String out = Packager.table(Dtx0.write(table));
-        assertTrue(out.contains("DTX_ROWPOW\tequ\t0"),
-                "seven bytes a row is no power of two");
-        assertTrue(out.contains("DTX_ROWSHIFT\tequ\t0"),
-                "and its shift stands at zero, not -1");
-    }
-
-    @Test
     void theStateBlockGrowsWithTheWidthClasses() {
         Table one = Csv.table("1\n2\n", new int[] {1});
         Table three = Csv.table("1,2,3\n4,5,6\n", new int[] {1, 2, 4});
@@ -80,19 +75,40 @@ final class PackagerTest {
     }
 
     @Test
-    void everyListTheTemplateInvokesIsWritten() {
-        String plain = Packager.table(table(Dtx.DTX1));
-        for (String list : new String[] {"DTX_SEED_CURSORS", "DTX_JUMP_CURSORS",
-                "DTX_STEP_CURSORS", "DTX_LOAD_CURSORS", "DTX_READ_ROW"}) {
-            assertTrue(plain.contains("\t.macro\t" + list + "\n"),
-                    "DTX1 states no " + list);
+    void theFiguresStateNoMacroAtAll() {
+        // A template no longer takes a list of macro invocations, one a
+        // column or a width class: the column table states what each of them
+        // stated, and one loop reads it. So the figures are equates and
+        // nothing else, and the code they reach does not move with C.
+        for (String out : new String[] {Packager.table(table(Dtx.DTX1)),
+                Packager.table(packed(64, new int[] {1, 2}, 1, 960))}) {
+            for (String line : out.split("\n")) {
+                assertTrue(!line.trim().startsWith(".macro"),
+                        "the figures state a macro: " + line);
+            }
         }
-        String packed = Packager.table(packed(64, new int[] {1, 2}, 1, 960));
-        for (String list : new String[] {"DTX_SEED_CURSORS", "DTX_STEP_CURSORS",
-                "DTX_LOAD_CURSORS", "DTX_READ_ROW", "DTX_FILL_COLUMNS",
-                "DTX_REFILL_TABLE", "DTX_REFILL_BODIES"}) {
-            assertTrue(packed.contains("\t.macro\t" + list + "\n"),
-                    "DTX2 states no " + list);
+    }
+
+    @Test
+    void aPackedColumnTableHoldsAStreamRecordAColumn() {
+        byte[] file = packed(64, new int[] {1, 2}, 1, 960);
+        Dtx.Header header = Dtx.header(file);
+        byte[] table = Packager.columnTable(file);
+        int entries = Packager.ENTRIES + Packager.ENTRY * header.columns();
+        assertEquals(entries + Packager.STREAM * header.columns(), table.length,
+                "the records follow the read entries");
+        assertEquals(2, Dtx.getWord(table, 20), "C");
+        assertEquals(entries, Dtx.getLong(table, 24), "where the records begin");
+        assertEquals(960, Dtx.getLong(table, 28), "N");
+        for (int i = 0; i < header.columns(); i++) {
+            int at = entries + Packager.STREAM * i;
+            assertEquals(Packager.ring(header) + i * 960,
+                    Dtx.getLong(table, at + 16), "column " + i + "'s ring");
+            assertEquals(Packager.slot(header) + 32 * i,
+                    Dtx.getLong(table, at + 20), "column " + i + "'s slot");
+            assertEquals(i, Dtx.getWord(table, at + 24),
+                    "column " + i + "'s width shift");
+            assertEquals(0, Dtx.getWord(table, at + 26), "the unit's shift");
         }
     }
 
@@ -160,9 +176,10 @@ final class PackagerTest {
         byte[] file = packed(64, new int[] {1, 2}, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
-        assertEquals(32, Packager.slot(header), "the slots follow two cursors");
-        assertEquals(96, Packager.ring(header), "the rings follow two slots");
-        assertEquals(96 + 2 * 960, Packager.stateBytes(header, given),
+        assertEquals(80, Packager.slot(header),
+                "the slots follow the cursors and the five figures");
+        assertEquals(144, Packager.ring(header), "the rings follow two slots");
+        assertEquals(144 + 2 * 960, Packager.stateBytes(header, given),
                 "a ring a column");
     }
 
@@ -178,7 +195,6 @@ final class PackagerTest {
     @Test
     void thePackedFiguresStateThePeriodTheRingAndTheUnit() {
         String out = Packager.table(packed(64, new int[] {1, 2}, 1, 960));
-        assertTrue(out.contains("DTX_VARIANT\tequ\t2"), "the variant");
         assertTrue(out.contains("DTX_PERIOD\tequ\t2"), "P");
         assertTrue(out.contains("DTX_N\t\tequ\t960"), "N");
         assertTrue(out.contains("ST4_UNIT\tequ\t1"),

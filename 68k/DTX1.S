@@ -32,8 +32,15 @@
 ;   +8   4  where the width-1 class begins, from the payload
 ;   +12  4  where the width-2 class begins
 ;   +16  4  where the width-4 class begins
-;   +20  .. one entry a column, four bytes: the column's displacement from
+;   +20  2  C
+;   +22  2  P, which is 1 here
+;   +24  4  where the stream records begin. DTX2 holds those
+;   +28  4  N, which is zero here
+;   +32  .. one entry a column, four bytes: the column's displacement from
 ;           its class, and where its value stands in the row
+;
+; The header runs to 32 bytes under both variants that read one, so a read
+; reaches the entries at one displacement whichever wrote the table.
 ;
 ; TRUSTED INPUT ONLY. No call checks the table, the state block, the row
 ; number or the address a row goes to.
@@ -48,7 +55,7 @@
 DTX_COL_COUNT       equ     0               ; three words, one a width
 DTX_COL_ROWBYTES    equ     6
 DTX_COL_BASE        equ     8               ; three longs, one a width
-DTX_COL_ENTRIES     equ     20
+DTX_COL_ENTRIES     equ     32
 
 ; The state block beyond what doc/abi.md 3 states: three cursors and the
 ; three places their classes begin, so a jump reaches any row without the
@@ -58,7 +65,6 @@ DTX_CLASSBASE       equ     36
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
         DTX_IMAGE 1,1,0,0
-        include "DTX_row.S"
 
 ; -----------------------------------------------------------------------------
 ; What a value is installed with. A 68000 reaches PC relative for a source
