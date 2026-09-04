@@ -37,11 +37,13 @@ final class ConsistencyTest {
     private static final Path GLO = Path.of("doc/glossary.md");
     private static final Path TERM = Path.of("doc/terminology.md");
     private static final Path EXP = Path.of("doc/experiments.md");
+    private static final Path TOOLS = Path.of("doc/tools.md");
 
     private static final Path ABI = Path.of("doc/abi.md");
 
     private static final List<Path> DOCUMENTS =
-            List.of(Path.of("README.md"), SPEC, REQ, GLO, TERM, EXP, ABI);
+            List.of(Path.of("README.md"), SPEC, REQ, GLO, TERM, EXP, TOOLS,
+                    ABI);
 
     private static String read(Path p) throws IOException {
         return Files.readString(p);
@@ -303,6 +305,31 @@ final class ConsistencyTest {
             }
         }
         assertTrue(broken.isEmpty(), () -> String.join("\n", broken));
+    }
+
+    /**
+     * The scripts doc/tools.md gives, against the tree. A usage line is what
+     * a reader copies, so a script renamed away from the document, or one
+     * that is not executable, fails here rather than at the reader's shell.
+     */
+    @Test
+    void everyScriptToolsMdGivesIsThereAndRuns() throws IOException {
+        Matcher m = Pattern.compile("^(bin/[A-Za-z0-9._-]+)", Pattern.MULTILINE)
+                .matcher(read(TOOLS));
+        List<String> named = new ArrayList<>();
+        List<String> wrong = new ArrayList<>();
+        while (m.find()) {
+            Path script = Path.of(m.group(1));
+            named.add(m.group(1));
+            if (!Files.isRegularFile(script)) {
+                wrong.add("tools.md gives " + script + ", which is not there");
+            } else if (!Files.isExecutable(script)) {
+                wrong.add(script + " is not executable");
+            }
+        }
+        assertTrue(!named.isEmpty(), "tools.md gives no script");
+        assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
+                + "\ntools.md gives " + named);
     }
 
     @Test
