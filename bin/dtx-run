@@ -1,0 +1,23 @@
+#!/bin/sh
+# Runs one of DTX's tools out of target/classes, and builds first where a
+# source is newer than the last build. doc/tools.md states the tools; the
+# two scripts beside this one name a class and pass their arguments on.
+#
+# Paths reach the tool as the caller gave them, so a relative one is
+# relative to the caller's directory and not to this repository's.
+set -e
+
+class=$1
+shift
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+classes=$root/target/classes
+built=$classes/.built
+
+if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" -name '*.java' \
+        -newer "$built" -print -quit)" ]; then
+    (cd "$root" && mvn -q compile)
+    : > "$built"
+fi
+
+exec java -ea -cp "$classes" "$class" "$@"
