@@ -206,7 +206,7 @@ def package(blob):
     run([RMAC, "-m68000", "-fr", "+o3", "-i" + work,
          "-i" + os.path.join(ROOT, "68k"), "-l*" + lst,
          "-o", os.path.join(work, "code.bin"),
-         os.path.join(ROOT, "68k", "DTX.S")])
+         os.path.join(ROOT, "68k", "DTX%d.S" % blob[3])])
     at = {}
     for line in open(lst):
         cell = line.split()

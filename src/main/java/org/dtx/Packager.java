@@ -204,6 +204,13 @@ public final class Packager {
                 .append(", RR = ").append(header.repeat()).append('\n')
                 .append("; Every instruction is the template's; nothing here"
                         + " is one.\n\n")
+                .append("; The state block, doc/abi.md 3.\n")
+                .append(equ("DTX_ROW", ROW))
+                .append(equ("DTX_TURN", TURN))
+                .append(equ("DTX_DECODED", DECODED))
+                .append(equ("DTX_PARK", PARK))
+                .append(equ("DTX_CURSOR", CURSOR))
+                .append('\n')
                 .append(equ("DTX_VARIANT", variant))
                 .append(equ("DTX_ROWS", rows))
                 .append(equ("DTX_REPEAT", header.repeat()))
@@ -310,10 +317,16 @@ public final class Packager {
         throw new IllegalArgumentException("no class holds " + w);
     }
 
-    /** Where 68k/DTX.S and the carried decoder stand. */
+    /** Where the templates and the carried decoder stand. */
     static String carried() {
         String named = System.getenv("DTX_68K");
         return named == null ? "68k" : named;
+    }
+
+    /** The template a variant is read by: one a variant, no call in it
+     * testing which it holds. */
+    static String template(int variant) {
+        return "DTX" + variant + ".S";
     }
 
     /**
@@ -332,7 +345,8 @@ public final class Packager {
                 Process run = new ProcessBuilder(rmac.toString(), "-m68000",
                         "-fr", "+o3", "-i" + work, "-i" + carried(),
                         "-o", out.toString(),
-                        Path.of(carried(), "DTX.S").toString())
+                        Path.of(carried(),
+                                template(Dtx.header(file).variant())).toString())
                         .redirectErrorStream(true).start();
                 byte[] said = run.getInputStream().readAllBytes();
                 if (run.waitFor() != 0 || !Files.exists(out)) {
