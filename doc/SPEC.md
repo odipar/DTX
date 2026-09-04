@@ -155,8 +155,8 @@ Four bytes and `4C` divide by 4, so the first data set begins on a long
 where the payload does. The data sets follow, each beginning on a long:
 where one ends short of the next boundary, the bytes between are zero.
 
-A reader takes a column from its offset alone: how long a data set runs is
-the data set's own to state, so no offset is read against the next.
+A reader takes a column from its offset alone: a data set states how long
+it runs, so no offset is read against the next.
 
 **What an ST4 data set is.** Enough of it to find the way; the format is
 stated in full in [ST4](https://github.com/odipar/ST4).

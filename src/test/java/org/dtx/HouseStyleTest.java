@@ -66,8 +66,10 @@ final class HouseStyleTest {
             "says it",
             "says so",
             "says what to take",
-            // a format does not say; it states
+            // a format does not say, and a length is not a data set's to
+            // state: the data set states it
             "own to say",
+            "own to state",
             "set-ness",
             "takes the machine with it",
             // "consumer" is a role the specification defines, as "caller"
