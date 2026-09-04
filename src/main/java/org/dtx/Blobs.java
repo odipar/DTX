@@ -100,28 +100,50 @@ public final class Blobs {
         return code;
     }
 
-    /** Writes every build's file into the directory named first. */
+    /**
+     * Writes every build's file into each directory named.
+     *
+     * <p>More than one because more than one build reads them: the classes
+     * a jar is made of, and a plain directory a release attaches and a port
+     * in another language builds from. The files are the same bytes in each,
+     * and nothing about them is Java's.
+     */
     public static void main(String[] args) throws IOException {
-        if (args.length < 1) {
-            System.err.println("Blobs DIR [-aRMAC]");
+        List<Path> into = new ArrayList<>();
+        String rmac = "rmac";
+        for (String arg : args) {
+            if (arg.startsWith("-a")) {
+                rmac = arg.substring(2);
+            } else if (arg.startsWith("-")) {
+                System.err.println("Blobs does not read " + arg);
+                System.exit(2);
+                return;
+            } else {
+                into.add(Path.of(arg));
+            }
+        }
+        if (into.isEmpty()) {
+            System.err.println("Blobs DIR [DIR..] [-aRMAC]");
             System.exit(2);
             return;
         }
-        Path into = Path.of(args[0]);
-        String rmac = "rmac";
-        for (int i = 1; i < args.length; i++) {
-            if (args[i].startsWith("-a")) {
-                rmac = args[i].substring(2);
-            } else {
-                System.err.println("Blobs does not read " + args[i]);
-                System.exit(2);
-                return;
-            }
+        for (Path at : into) {
+            Files.createDirectories(at);
         }
-        Files.createDirectories(into);
         for (Build build : all()) {
-            byte[] code = code(build, Path.of(rmac));
-            Files.write(into.resolve(build.name()), code);
+            byte[] code;
+            try {
+                code = code(build, Path.of(rmac));
+            } catch (RuntimeException failed) {
+                throw new IllegalStateException("no code built for "
+                        + build.name() + " with an assembler at " + rmac
+                        + ": the build runs one, and -Drmac=PATH names"
+                        + " another. A release carries what it built, and a"
+                        + " caller who takes one runs no assembler.", failed);
+            }
+            for (Path at : into) {
+                Files.write(at.resolve(build.name()), code);
+            }
             System.out.printf("%-20s %5d bytes%n", build.name(), code.length);
         }
     }

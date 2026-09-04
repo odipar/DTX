@@ -64,14 +64,20 @@ class BlobTest {
     }
 
     @Test
-    void theCarriedCodeIsWhatTheTemplateAssemblesTo() {
-        Path rmac = rmac();
+    void theReleaseFilesAndTheClasspathHoldTheSameBytes() throws Exception {
+        // The build writes each file twice: into the classes a jar is made
+        // of, and into build/68k, which a release attaches and a port in
+        // another language builds from. A release that shipped other bytes
+        // than the jar would be two readers of one table.
+        Path loose = Path.of("build", "68k");
+        Assumptions.assumeTrue(Files.isDirectory(loose),
+                "no build/68k: run mvn process-classes");
         for (Blobs.Build build : Blobs.all()) {
-            assertArrayEquals(Blobs.code(build, rmac),
+            assertArrayEquals(Files.readAllBytes(loose.resolve(build.name())),
                     Packager.carriedCode(build.variant(), build.unit(),
                             build.copies()),
-                    build.name() + " is not what the template assembles to:"
-                            + " bin/dtx-blobs writes it again");
+                    build.name() + " is different bytes in build/68k and on"
+                            + " the classpath");
         }
     }
 

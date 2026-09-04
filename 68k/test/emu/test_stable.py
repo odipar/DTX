@@ -22,7 +22,10 @@ def code(variant, rows, width, rr, ring=960, unit=1, copies=False):
     csv = "\n".join(",".join(str((r * (i + 1)) % 97) for i in range(len(width)))
                     for r in range(rows)) + "\n"
     blob = T.write_table(csv, variant, width, rr, unit, ring, copies)
-    image, _ = T.package(blob, copies)
+    # rmac's own assembly, which is what this file is about: the packager's
+    # other path combines code the build already made, and would say nothing
+    # about what a template assembles to.
+    image, _ = T.package(blob, copies, assemble=True)
     # The instructions alone. The six slots are constant, the format block at
     # +24 is data that states the table, and behind the code stand the column
     # table and the table itself, both of which move with C. The format block

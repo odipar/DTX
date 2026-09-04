@@ -14,13 +14,12 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 classes=$root/target/classes
 built=$classes/.built
 
-# The carried code stands under src/main/resources, and bin/dtx-blobs
-# writes it there, so a build is stale on a newer resource as well as on a
-# newer source.
-if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" \
-        "$root/src/main/resources" -newer "$built" -print -quit \
-        2>/dev/null)" ]; then
-    (cd "$root" && mvn -q compile)
+# The code the packager combines from is built into target/classes, by the
+# step bound to process-classes, so a build runs to there and a template
+# under 68k/ dates it as a source does.
+if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" "$root/68k" \
+        -newer "$built" -print -quit 2>/dev/null)" ]; then
+    (cd "$root" && mvn -q process-classes)
     : > "$built"
 fi
 

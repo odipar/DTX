@@ -60,10 +60,10 @@ the table's bytes, reached PC relative. [abi.md](abi.md) states the six
 calls the image answers, and the state block a caller supplies.
 
 It combines rather than assembles. The code does not move with the table,
-so this repository holds it built: the tool takes the file for the build
-the table asks for, writes the five fields the table settles into the
-format block, and appends the column table and the table's bytes. No
-assembler runs, and none has to be installed to package a table.
+so it is built once and the tool takes the file for the build the table
+asks for, writes the five fields the table settles into the format block,
+and appends the column table and the table's bytes. No assembler runs,
+and a caller who takes a release installs none.
 
 ```
 bin/dtx-package in.dtx out.bin
@@ -81,27 +81,37 @@ and the column table behind it, so one variant is one code at any `R`, `C`
 or `RR`. The tool prints the image's bytes and the state block's, and the
 format block states the same figures for a caller to read out of the file.
 
-## Build the carried code
+## Build the images
 
 The eight files the packager combines from: DTX0, DTX1, and one a build of
 the decoder built into DTX2, which is a unit of 1, 2 or 4 with the copy
 code and without.
 
+The build makes them, so nothing here is run by hand. `mvn package` writes
+each of them twice, into the classes the jar is made of and into
+`build/68k`, and a release attaches the eight in `build/68k`. They are
+plain files and nothing about them is Java's: a port in another language
+builds from the same eight.
+
+This is the one step rmac is needed for. `-Drmac=PATH` names one that is
+not on the path, and a build without either fails at it, saying so. A
+caller who takes a release runs no assembler at all, which is the whole
+of the arrangement: the code is built where it is released, not where a
+table is packaged.
+
 ```
-bin/dtx-blobs src/main/resources/org/dtx/68k
+bin/dtx-blobs DIR [DIR..]
 ```
+
+writes the same eight into directories of your own.
 
 | flag | gives |
 |---|---|
 | `-aRMAC` | the assembler to run. The default is `rmac` on the path |
 
-This is the one step rmac is needed for, and a change to a template under
-[68k/](../68k) is not shipped until it is run. `BlobTest` assembles every
-build again and fails where a carried file is not what its template
-assembles to, so a template edited without this run does not pass the
-build. The table each build is assembled from is made rather than read:
-the code does not move with a table, and the five fields one would settle
-are zeroed, so a carried file states no table at all.
+The table each build is assembled from is made rather than read: the code
+does not move with a table, and the five fields one would settle are
+zeroed, so an image states no table at all until a package writes one.
 
 A DTX2 image holds the decoder carried at
 [68k/ST4_wrap.S](../68k/ST4_wrap.S), built at the unit the payload states.
