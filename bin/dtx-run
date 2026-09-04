@@ -14,9 +14,12 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 classes=$root/target/classes
 built=$classes/.built
 
-if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" -name '*.java' \
-        -newer "$built" -print -quit)" ]; then
-    (cd "$root" && mvn -q compile)
+# The code the packager combines from is built into target/classes, by the
+# step bound to process-classes, so a build runs to there and a template
+# under 68k/ dates it as a source does.
+if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" "$root/68k" \
+        -newer "$built" -print -quit 2>/dev/null)" ]; then
+    (cd "$root" && mvn -q process-classes)
     : > "$built"
 fi
 

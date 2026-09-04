@@ -189,14 +189,17 @@ def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960,
         return f.read()
 
 
-def package(blob, copies=False):
+def package(blob, copies=False, assemble=False):
     """The raw image the packager makes, and where every label of it stands.
 
-    The image comes from the packager, which assembles 68k/DTX.S for this
-    table and appends the table's bytes. The labels come from a second run
-    of rmac over the same template and the same figures, for the listing's
-    symbol table alone: ST4_resume's address in it is how the rig counts
-    what the decoder is asked for.
+    The image comes from the packager. By default it combines the code the
+    build made from 68k/DTX*.S, which is the path a caller takes; with
+    `assemble` it runs rmac over the template instead. The two give the
+    same bytes, and BlobTest holds them to that.
+
+    The labels come from a run of rmac over the same template and the same
+    figures, for the listing's symbol table alone: ST4_resume's address in
+    it is how the rig counts what the decoder is asked for.
     """
     work = tempfile.mkdtemp(prefix="dtx68")
     src = os.path.join(work, "t.dtx")
@@ -205,8 +208,8 @@ def package(blob, copies=False):
     with open(src, "wb") as f:
         f.write(blob)
     extra = ["-copies"] if copies else []
-    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img, "-a" + RMAC]
-        + extra)
+    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img]
+        + (["-a" + RMAC] if assemble else []) + extra)
     run(["java", "-cp", CLASSES, "org.dtx.Packager", src,
          os.path.join(work, "DTX_table.i"), "-s"] + extra)
     run([RMAC, "-m68000", "-fr", "+o3", "-i" + work,

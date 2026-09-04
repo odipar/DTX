@@ -55,6 +55,10 @@ ymx/test/.work/
 dotnet/bin/
 dotnet/obj/
 
+# go/internal/image/data holds its own .gitignore, as YMX's cores/data does:
+# the images there are build output and the directory itself is committed so
+# that go:embed always has one to read.
+
 # the rig's output for the real-hardware harness
 ymx/test/tune.ymx
 ymx/test/ymxdata.inc

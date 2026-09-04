@@ -1,6 +1,7 @@
 package org.dtx;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,7 +40,14 @@ public final class Packager {
     /** The format block's fields, doc/abi.md 1. */
     static final int STATE_BYTES = 4;
     static final int TABLE_AT = 8;
+    static final int ROWBYTES_AT = 12;
+    static final int PERIOD_AT = 14;
+    static final int RING_AT = 16;
+    static final int UNIT_AT = 18;
     static final int COLUMNS_AT = 20;
+
+    /** Where the carried code stands on the classpath. */
+    private static final String CARRIED = "/org/dtx/68k/";
 
     /** What one entry of the column table runs to. */
     static final int ENTRY = 4;
@@ -379,17 +387,64 @@ public final class Packager {
     }
 
     /**
-     * The raw image: rmac's assembly of 68k/DTX.S for this table, with the
-     * table's bytes behind it.
-     *
-     * @param rmac the assembler to run
+     * The file the code for one build stands in. A variant assembles to one
+     * code whatever table follows it, and under DTX2 to one a build of the
+     * decoder built into it: the unit it decodes at, with the copy code and
+     * without.
      */
-    public static byte[] image(byte[] file, Path rmac) {
-        return image(file, rmac, false);
+    public static String carriedName(int variant, int unit, boolean copies) {
+        return variant == Dtx.DTX2
+                ? "DTX2-k" + unit + (copies ? "-copies" : "") + ".bin"
+                : "DTX" + variant + ".bin";
     }
 
-    /** The same, for a table packed with copies from the literal stream. */
-    public static byte[] image(byte[] file, Path rmac, boolean copies) {
+    /**
+     * The code for one build, as the repository holds it.
+     *
+     * @throws IllegalStateException where no file of that name is carried
+     */
+    public static byte[] carriedCode(int variant, int unit, boolean copies) {
+        String name = carriedName(variant, unit, copies);
+        try (InputStream in =
+                     Packager.class.getResourceAsStream(CARRIED + name)) {
+            if (in == null) {
+                throw new IllegalStateException("no code carried at "
+                        + CARRIED + name + ": bin/dtx-blobs writes it");
+            }
+            return in.readAllBytes();
+        } catch (IOException failed) {
+            throw new UncheckedIOException(failed);
+        }
+    }
+
+    /**
+     * The five fields a combine writes, zeroed.
+     *
+     * <p>Carried code states no table. The assembler read one to build it,
+     * and what it read stands in the format block: zeroing those five is
+     * what makes the file a function of the template alone, and what makes
+     * code shipped without a combine read a state block of zero bytes rather
+     * than some other table's.
+     */
+    static void blank(byte[] code) {
+        Dtx.putLong(code, FORMAT_AT + STATE_BYTES, 0);
+        Dtx.putLong(code, FORMAT_AT + TABLE_AT, 0);
+        Dtx.putWord(code, FORMAT_AT + ROWBYTES_AT, 0);
+        Dtx.putWord(code, FORMAT_AT + PERIOD_AT, 0);
+        Dtx.putWord(code, FORMAT_AT + RING_AT, 0);
+    }
+
+    /**
+     * rmac's assembly of the variant's template for this table, the code
+     * alone.
+     *
+     * @param rmac the assembler to run
+     * @param copies whether the columns were packed with {@code st4 -c}
+     * @throws IllegalStateException where rmac fails, or where the code it
+     *     writes and the format block in it disagree on where the column
+     *     table lands
+     */
+    static byte[] code(byte[] file, Path rmac, boolean copies) {
         try {
             Path work = Files.createTempDirectory("dtx68");
             try {
@@ -407,31 +462,7 @@ public final class Packager {
                     throw new IllegalStateException(rmac + " gave "
                             + new String(said).trim());
                 }
-                byte[] code = Files.readAllBytes(out);
-                // The code ends where the format block says the column table
-                // begins: the two agree, or the image reads its own last
-                // instruction as a column.
-                int columns = Dtx.getLong(code, FORMAT_AT + COLUMNS_AT);
-                if (columns != code.length) {
-                    throw new IllegalStateException("the code runs to "
-                            + code.length + " bytes and the format block puts"
-                            + " the column table at " + columns
-                            + ": it would not land there");
-                }
-                byte[] entries = columnTable(file);
-                byte[] image = new byte[code.length + entries.length
-                        + file.length];
-                System.arraycopy(code, 0, image, 0, code.length);
-                System.arraycopy(entries, 0, image, code.length,
-                        entries.length);
-                System.arraycopy(file, 0, image, code.length + entries.length,
-                        file.length);
-                // The table stands behind both, and only the packager holds
-                // the figure: the column table's size moves with C, so the
-                // assembler could not have worked it out.
-                Dtx.putLong(image, FORMAT_AT + TABLE_AT,
-                        code.length + entries.length);
-                return image;
+                return Files.readAllBytes(out);
             } finally {
                 try (var walk = Files.walk(work)) {
                     walk.sorted(java.util.Comparator.reverseOrder())
@@ -452,6 +483,99 @@ public final class Packager {
         }
     }
 
+    /**
+     * One image: this code, the column table, the table's bytes, and the
+     * format block written to state the three.
+     *
+     * <p>The code is the same bytes whatever table follows it, so what a
+     * combine writes is the five fields the table settles. It checks the
+     * two it cannot write: the variant, and under DTX2 the unit the decoder
+     * built into the code decodes at.
+     *
+     * @throws IllegalStateException where the code is for another variant or
+     *     another unit, or where it and its format block disagree on where
+     *     the column table lands
+     */
+    static byte[] combine(byte[] code, byte[] file) {
+        Dtx.Header header = Dtx.header(file);
+        int variant = header.variant();
+        if (code[FORMAT_AT] != 'D' || code[FORMAT_AT + 1] != 'T'
+                || code[FORMAT_AT + 2] != 'X') {
+            throw new IllegalStateException(
+                    "the code opens with no format block");
+        }
+        if (code[FORMAT_AT + 3] != variant) {
+            throw new IllegalStateException("the code reads DTX"
+                    + code[FORMAT_AT + 3] + " and the table is DTX" + variant);
+        }
+        // The code ends where the format block says the column table
+        // begins: the two agree, or the image reads its own last
+        // instruction as a column.
+        int columns = Dtx.getLong(code, FORMAT_AT + COLUMNS_AT);
+        if (columns != code.length) {
+            throw new IllegalStateException("the code runs to " + code.length
+                    + " bytes and the format block puts the column table at "
+                    + columns + ": it would not land there");
+        }
+        Packed given = variant == Dtx.DTX2
+                ? packed(file, header) : new Packed(0, 0, new int[0]);
+        int unit = code[FORMAT_AT + UNIT_AT] & 0xFF;
+        if (unit != given.unit()) {
+            throw new IllegalStateException("the code decodes at a unit of "
+                    + unit + " and the table was packed at " + given.unit());
+        }
+        int rowBytes = 0;
+        for (int w : header.width()) {
+            rowBytes += w;
+        }
+        byte[] entries = columnTable(file);
+        byte[] image = new byte[code.length + entries.length + file.length];
+        System.arraycopy(code, 0, image, 0, code.length);
+        System.arraycopy(entries, 0, image, code.length, entries.length);
+        System.arraycopy(file, 0, image, code.length + entries.length,
+                file.length);
+        Dtx.putLong(image, FORMAT_AT + STATE_BYTES, variant == Dtx.DTX2
+                ? stateBytes(header, given) : stateBytes(header));
+        // The table stands behind both, and only the packager holds the
+        // figure: the column table's size moves with C, so the assembler
+        // could not have worked it out.
+        Dtx.putLong(image, FORMAT_AT + TABLE_AT, code.length + entries.length);
+        Dtx.putWord(image, FORMAT_AT + ROWBYTES_AT, rowBytes);
+        Dtx.putWord(image, FORMAT_AT + PERIOD_AT,
+                variant == Dtx.DTX2 ? period(header, given) : 1);
+        Dtx.putWord(image, FORMAT_AT + RING_AT, given.ring());
+        return image;
+    }
+
+    /** The image, combined from the code this repository carries. */
+    public static byte[] image(byte[] file) {
+        return image(file, false);
+    }
+
+    /** The same, for a table packed with copies from the literal stream. */
+    public static byte[] image(byte[] file, boolean copies) {
+        Dtx.Header header = Dtx.header(file);
+        int unit = header.variant() == Dtx.DTX2
+                ? packed(file, header).unit() : 0;
+        return combine(carriedCode(header.variant(), unit, copies), file);
+    }
+
+    /**
+     * The image, from rmac's assembly of the template rather than from the
+     * carried code. The two give the same bytes; this path is what checks
+     * that, and what a change to a template is tried through.
+     *
+     * @param rmac the assembler to run
+     */
+    public static byte[] image(byte[] file, Path rmac) {
+        return image(file, rmac, false);
+    }
+
+    /** The same, for a table packed with copies from the literal stream. */
+    public static byte[] image(byte[] file, Path rmac, boolean copies) {
+        return combine(code(file, rmac, copies), file);
+    }
+
     /** Reads the DTX file named first and writes the image named second. */
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
@@ -460,7 +584,7 @@ public final class Packager {
             System.exit(2);
             return;
         }
-        String rmac = "rmac";
+        String rmac = null;
         boolean states = false;
         boolean copies = false;
         for (int i = 2; i < args.length; i++) {
@@ -480,6 +604,8 @@ public final class Packager {
         Dtx.Header header = Dtx.header(file);
         if (states) {
             Files.writeString(Path.of(args[1]), table(file, copies));
+        } else if (rmac == null) {
+            Files.write(Path.of(args[1]), image(file, copies));
         } else {
             Files.write(Path.of(args[1]), image(file, Path.of(rmac), copies));
         }
@@ -488,7 +614,8 @@ public final class Packager {
                 ? stateBytes(header, packed(file, header)) : stateBytes(header);
         System.out.printf("%s -> DTX%d %s %d bytes, table %d bytes,"
                 + " %d rows, %d columns, state block %d bytes%n",
-                args[0], header.variant(), states ? "figures" : "image",
+                args[0], header.variant(),
+                states ? "figures" : rmac == null ? "image" : "image assembled",
                 bytes, file.length, header.rows(), header.columns(), state);
     }
 }

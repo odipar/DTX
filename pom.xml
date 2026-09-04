@@ -13,6 +13,10 @@
         <maven.compiler.target>23</maven.compiler.target>
         <maven.compiler.release>23</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- The assembler that builds the code the packager combines from.
+             Nothing else in the build runs it, and a caller who takes a
+             release runs it never. -->
+        <rmac>rmac</rmac>
         <jspecify.version>1.0.0</jspecify.version>
         <errorprone.version>2.36.0</errorprone.version>
         <nullaway.version>0.12.3</nullaway.version>
@@ -99,6 +103,24 @@
                         <configuration>
                             <executable>java</executable>
                             <commandlineArgs>-ea -cp %classpath org.dtx.Write ${args}</commandlineArgs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- The code the packager combines from, one file a
+                             build. Three directories read them: the classes
+                             the jar is made of, build/68k for a release to
+                             attach, and go/internal/image/data, which
+                             go:embed reaches only inside its own module. This is the
+                             one step rmac is needed for: name another with
+                             -Drmac=PATH. -->
+                        <id>blobs</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <commandlineArgs>-ea -cp %classpath org.dtx.Blobs ${project.build.outputDirectory}/org/dtx/68k ${project.basedir}/build/68k ${project.basedir}/go/internal/image/data -a${rmac}</commandlineArgs>
                         </configuration>
                     </execution>
                     <execution>

@@ -426,10 +426,18 @@ the cursors, refills the column whose turn it is, and takes the repeat at
 
 ## 5. What the packager resolves
 
-It holds the table and the variant at build time, assembles the
-variant's template with rmac, and emits the six slots, the format block,
-the bodies for the variant, the carried decoder under DTX2, the column
-table, and the table's bytes.
+It combines rather than assembles. One variant is one code, so the code
+is built once and held built, and packaging a table takes the file for
+the build the table asks for, writes the five fields the table settles
+into the format block, and appends the column table and the table's
+bytes. rmac runs where the code is built, not where a table is packaged.
+
+The five: the state block's bytes at +4, the table's header at +8, the
+row's bytes at +12, `P` at +14 and `N` at +16. A held file reads zero for
+each of them, so code shipped without a combine states no table rather
+than the one it happened to be built from. What it does state is the
+variant at +3, `k` at +18 and the column table's place at +20, and a
+combine checks the first two against the table rather than writing them.
 
 What it folds into the bodies is the state block's offsets and nothing
 else. Every figure the table settles it writes into the format block and

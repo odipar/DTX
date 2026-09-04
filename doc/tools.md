@@ -56,8 +56,14 @@ column 2 holds a negative value.
 ## Package
 
 A DTX file of any variant into a standalone 68000 image: the code, then
-the table's bytes, reached PC relative. [abi.md](abi.md) states the five
+the table's bytes, reached PC relative. [abi.md](abi.md) states the six
 calls the image answers, and the state block a caller supplies.
+
+It combines rather than assembles. The code does not move with the table,
+so it is built once and the tool takes the file for the build the table
+asks for, writes the five fields the table settles into the format block,
+and appends the column table and the table's bytes. No assembler runs,
+and a caller who takes a release installs none.
 
 ```
 bin/dtx-package in.dtx out.bin
@@ -65,15 +71,58 @@ bin/dtx-package in.dtx out.bin
 
 | flag | gives |
 |---|---|
-| `-aRMAC` | the assembler to run. The default is `rmac` on the path |
+| `-aRMAC` | assemble the template with this rmac rather than take the carried code. The two give the same bytes, and a template edit is tried through this one |
 | `-s` | write the figures rather than the image, for reading or for a build of your own |
 | `-copies` | the columns were packed with `-copies`, so the decoder is built with its copy code |
 
 The image holds one table and the code for that table's variant. What the
-table settles is folded into the code: `R`, `RR`, the row's bytes, each
-width as the size of a move, and every column's displacement off its class
-cursor. The tool prints the image's bytes and the state block's, and the
+table settles reaches the code at run time, out of the table's own header
+and the column table behind it, so one variant is one code at any `R`, `C`
+or `RR`. The tool prints the image's bytes and the state block's, and the
 format block states the same figures for a caller to read out of the file.
+
+## Build the images
+
+The eight files the packager combines from: DTX0, DTX1, and one a build of
+the decoder built into DTX2, which is a unit of 1, 2 or 4 with the copy
+code and without.
+
+The build makes them, so nothing here is run by hand. `mvn package` writes
+each of them three times:
+
+| into | read by |
+|---|---|
+| the classes the jar is made of | the Java packager, off the classpath |
+| `build/68k` | a release, which attaches the eight |
+| `go/internal/image/data` | `go:embed`, which reads only inside its own module |
+
+They are plain files and nothing about them is Java's, so a port in another
+language builds from the same eight. A Go executable built after the Maven
+build holds all eight and needs neither this repository nor an assembler
+beside it; one built from a tree whose build had not run holds none, and
+resolves an image through `DTX_68K` instead. The directory under `go/` holds
+a README and a `.gitignore` of its own and is committed empty of images, so
+the package compiles either way.
+
+This is the one step rmac is needed for. `-Drmac=PATH` names one that is
+not on the path, and a build without either fails at it, saying so. A
+caller who takes a release runs no assembler at all, which is the whole
+of the arrangement: the code is built where it is released, not where a
+table is packaged.
+
+```
+bin/dtx-blobs DIR [DIR..]
+```
+
+writes the same eight into directories of your own.
+
+| flag | gives |
+|---|---|
+| `-aRMAC` | the assembler to run. The default is `rmac` on the path |
+
+The table each build is assembled from is made rather than read: the code
+does not move with a table, and the five fields one would settle are
+zeroed, so an image states no table at all until a package writes one.
 
 A DTX2 image holds the decoder carried at
 [68k/ST4_wrap.S](../68k/ST4_wrap.S), built at the unit the payload states.

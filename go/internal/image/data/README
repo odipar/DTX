@@ -1,0 +1,10 @@
+The 68000 images a standalone build holds.
+
+The Maven build writes the eight here, as it writes them to build/68k and
+into the classes the jar is made of, so a Go executable built after it needs
+neither this repository nor an assembler beside it.
+
+A tree built without them holds none, and Read then gives nothing back:
+a caller resolves an image as it otherwise would, through DTX_68K.
+
+The .bin files are build output and are not committed.
