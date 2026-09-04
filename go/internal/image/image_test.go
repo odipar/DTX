@@ -1,0 +1,62 @@
+package image
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+// A build that holds the images holds all eight, and each is the bytes
+// the Maven build wrote. A tree built without them holds none, which is
+// the other whole state: half of them would be a build gone wrong.
+func TestHoldsEveryImageOrNone(t *testing.T) {
+	held := Held()
+	if held == 0 {
+		t.Skip("this build holds no images: run mvn process-classes")
+	}
+	if held != len(Builds()) {
+		t.Fatalf("holds %d images, not the %d there are", held, len(Builds()))
+	}
+	for _, build := range Builds() {
+		bytes := Read(build.Variant, build.Unit, build.Copies)
+		name := Name(build.Variant, build.Unit, build.Copies)
+		if len(bytes) < 24+24 {
+			t.Fatalf("%s is %d bytes, too few to hold a format block",
+				name, len(bytes))
+		}
+		// doc/abi.md 1: the format block stands at +24 and opens with the
+		// variant this image serves.
+		if string(bytes[24:27]) != "DTX" || int(bytes[27]) != build.Variant {
+			t.Fatalf("%s opens %q at +24, not DTX%d",
+				name, bytes[24:28], build.Variant)
+		}
+		if got := int(bytes[24+18]); got != build.Unit {
+			t.Fatalf("%s decodes at a unit of %d, not %d", name, got, build.Unit)
+		}
+	}
+}
+
+// What the executable holds and what a release attaches are the same
+// bytes: the Maven build writes both, and a release that shipped others
+// would be two readers of one table.
+func TestTheHeldImagesAreWhatTheBuildReleases(t *testing.T) {
+	if Held() == 0 {
+		t.Skip("this build holds no images: run mvn process-classes")
+	}
+	loose := filepath.Join("..", "..", "..", "build", "68k")
+	if _, err := os.Stat(loose); err != nil {
+		t.Skip("no build/68k: run mvn process-classes")
+	}
+	for _, build := range Builds() {
+		name := Name(build.Variant, build.Unit, build.Copies)
+		want, err := os.ReadFile(filepath.Join(loose, name))
+		if err != nil {
+			t.Fatalf("no %s in build/68k: %v", name, err)
+		}
+		got := Read(build.Variant, build.Unit, build.Copies)
+		if string(got) != string(want) {
+			t.Fatalf("%s is %d bytes carried and %d released",
+				name, len(got), len(want))
+		}
+	}
+}

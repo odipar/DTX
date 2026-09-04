@@ -107,11 +107,12 @@
                     </execution>
                     <execution>
                         <!-- The code the packager combines from, one file a
-                             build, into the classes the jar is made of and
-                             into build/68k, which a release attaches and a
-                             port in another language builds from. This is
-                             the one step rmac is needed for: name another
-                             with -Drmac=PATH. -->
+                             build. Three directories read them: the classes
+                             the jar is made of, build/68k for a release to
+                             attach, and go/internal/image/data, which
+                             go:embed reaches only inside its own module. This is the
+                             one step rmac is needed for: name another with
+                             -Drmac=PATH. -->
                         <id>blobs</id>
                         <phase>process-classes</phase>
                         <goals>
@@ -119,7 +120,7 @@
                         </goals>
                         <configuration>
                             <executable>java</executable>
-                            <commandlineArgs>-ea -cp %classpath org.dtx.Blobs ${project.build.outputDirectory}/org/dtx/68k ${project.basedir}/build/68k -a${rmac}</commandlineArgs>
+                            <commandlineArgs>-ea -cp %classpath org.dtx.Blobs ${project.build.outputDirectory}/org/dtx/68k ${project.basedir}/build/68k ${project.basedir}/go/internal/image/data -a${rmac}</commandlineArgs>
                         </configuration>
                     </execution>
                     <execution>

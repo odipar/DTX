@@ -88,10 +88,21 @@ the decoder built into DTX2, which is a unit of 1, 2 or 4 with the copy
 code and without.
 
 The build makes them, so nothing here is run by hand. `mvn package` writes
-each of them twice, into the classes the jar is made of and into
-`build/68k`, and a release attaches the eight in `build/68k`. They are
-plain files and nothing about them is Java's: a port in another language
-builds from the same eight.
+each of them three times:
+
+| into | read by |
+|---|---|
+| the classes the jar is made of | the Java packager, off the classpath |
+| `build/68k` | a release, which attaches the eight |
+| `go/internal/image/data` | `go:embed`, which reads only inside its own module |
+
+They are plain files and nothing about them is Java's, so a port in another
+language builds from the same eight. A Go executable built after the Maven
+build holds all eight and needs neither this repository nor an assembler
+beside it; one built from a tree whose build had not run holds none, and
+resolves an image through `DTX_68K` instead. The directory under `go/` holds
+a README and a `.gitignore` of its own and is committed empty of images, so
+the package compiles either way.
 
 This is the one step rmac is needed for. `-Drmac=PATH` names one that is
 not on the path, and a build without either fails at it, saying so. A
