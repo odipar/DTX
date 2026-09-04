@@ -54,7 +54,7 @@ final class St4Test {
                 assertEquals(0, (at - payload) % 4,
                         "a data set off a long at k=" + unit);
                 assertArrayEquals(
-                        new byte[] {0x53, 0x34, 0x04, (byte) unit},
+                        new byte[] {0x53, 0x34, 0x07, (byte) unit},
                         Example.at(file, at, 4),
                         "column " + i + "'s signature at k=" + unit);
             }

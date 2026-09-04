@@ -7,20 +7,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 
 /**
- * DTX2's layout, with a packer that stands in for ST4: a twenty-byte header
- * and the column behind it. What it packs to does not matter here, only
- * where the payload puts it.
+ * DTX2's layout, with a packer that stands in for ST4: a twenty-eight byte
+ * header and the column behind it. What it packs to does not matter here,
+ * only where the payload puts it.
  */
 final class PackedVariantTest {
 
     /** How long a stand-in data set runs for a column of {@code bytes}. */
-    private static final int ST4_HEADER = 20;
+    private static final int ST4_HEADER = 28;
 
     private static final Packer STANDIN = (column, unit, ring) -> {
         byte[] set = new byte[ST4_HEADER + column.length];
         set[0] = 'S';
         set[1] = '4';
-        set[2] = 4;
+        set[2] = 7;
         set[3] = (byte) unit;
         System.arraycopy(column, 0, set, ST4_HEADER, column.length);
         return set;
@@ -34,7 +34,7 @@ final class PackedVariantTest {
         assertEquals(960, Dtx.getWord(file, payload), "N");
         assertEquals(1, file[payload + 2], "k");
         assertEquals(0, file[payload + 3], "the byte after k");
-        assertArrayEquals(new int[] {16, 40, 72}, offsets(file));
+        assertArrayEquals(new int[] {16, 48, 88}, offsets(file));
     }
 
     @Test
@@ -45,9 +45,9 @@ final class PackedVariantTest {
             assertEquals(0, at % 4, "a data set at " + at + " is off a long");
             assertEquals('S', file[payload + at], "a data set at " + at);
         }
-        // column 0 packs to 23 bytes from offset 16, so one byte to the long
-        assertEquals(0, file[payload + 39], "the pad before the next data set");
-        assertEquals(Example.HEADER + 98, file.length);
+        // column 0 packs to 31 bytes from offset 16, so one byte to the long
+        assertEquals(0, file[payload + 47], "the pad before the next data set");
+        assertEquals(Example.HEADER + 122, file.length);
     }
 
     @Test
