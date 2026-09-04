@@ -196,7 +196,7 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
     image = package(blob)
 
     # the format block, doc/abi.md 1, at the image's byte 20
-    fmt = image[20:44]
+    fmt = image[20:20 + 20]
     assert fmt[:3] == b"DTX" and fmt[3] == kind, "the format block's variant"
     state_bytes, header_at = struct.unpack(">II", fmt[4:12])
     stated_row, p, n = struct.unpack(">HHH", fmt[12:18])

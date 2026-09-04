@@ -30,8 +30,8 @@ In this order, from the image's first byte:
 | at | bytes | holds |
 |---|---|---|
 | +0 | 20 | five `bra.w` slots, one a call |
-| +20 | 24 | the format block, on a long |
-| +44 | .. | the bodies the variant asks for |
+| +20 | 20 | the format block, on a long |
+| +40 | .. | the bodies the variant asks for |
 | .. | 324, 328 or 330 | under DTX2, ST4's wrap decoder at `k` |
 | .. | .. | the table's bytes, header and payload, on a long |
 
@@ -40,7 +40,7 @@ are numbered below, following ST4's own precedent. The dispatch is the
 whole of it: no call tests the variant, because the variant chose which
 bodies the packager emitted.
 
-**The format block**, 24 bytes on a long:
+**The format block**, 20 bytes on a long:
 
 | at | bytes | gives |
 |---|---|---|
@@ -52,7 +52,6 @@ bodies the packager emitted.
 | +16 | 2 | `N`, a ring's bytes. Zero under DTX0 and DTX1 |
 | +18 | 1 | `k`. Zero under DTX0 and DTX1 |
 | +19 | 1 | zero |
-| +20 | 4 | the state block, from the image's first byte, or zero |
 
 `R`, `C`, `RR` and the widths are not here. They stand in the table's own
 header, at the offsets SPEC.md 1 gives, and the field at +8 reaches it:

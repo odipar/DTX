@@ -26,8 +26,8 @@ public final class Packager {
     static final int PARK = 12;
     static final int CURSOR = 24;
 
-    /** What the format block runs to. */
-    static final int FORMAT = 24;
+    /** What the format block runs to, doc/abi.md 1. */
+    static final int FORMAT = 20;
 
     private Packager() {
     }
@@ -208,8 +208,7 @@ public final class Packager {
                 .append("\tdc.w\t").append(period).append("\t\t; P\n")
                 .append("\tdc.w\t").append(packed.ring()).append("\t\t; N\n")
                 .append("\tdc.b\t").append(packed.unit())
-                .append(",0\t\t; k, and a zero\n")
-                .append("\tdc.l\t0\n\n");
+                .append(",0\t\t; k, and a zero\n\n");
 
         if (variant == Dtx.DTX2) {
             out.append(packedBodies(file, header, packed, period))
