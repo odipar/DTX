@@ -14,8 +14,12 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 classes=$root/target/classes
 built=$classes/.built
 
-if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" -name '*.java' \
-        -newer "$built" -print -quit)" ]; then
+# The carried code stands under src/main/resources, and bin/dtx-blobs
+# writes it there, so a build is stale on a newer resource as well as on a
+# newer source.
+if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" \
+        "$root/src/main/resources" -newer "$built" -print -quit \
+        2>/dev/null)" ]; then
     (cd "$root" && mvn -q compile)
     : > "$built"
 fi

@@ -1,0 +1,3 @@
+#!/bin/sh
+# The code the packager carries, one file a build. doc/tools.md, Blobs.
+exec "$(dirname -- "$0")/dtx-run" org.dtx.Blobs "$@"

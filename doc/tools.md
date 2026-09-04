@@ -56,8 +56,14 @@ column 2 holds a negative value.
 ## Package
 
 A DTX file of any variant into a standalone 68000 image: the code, then
-the table's bytes, reached PC relative. [abi.md](abi.md) states the five
+the table's bytes, reached PC relative. [abi.md](abi.md) states the six
 calls the image answers, and the state block a caller supplies.
+
+It combines rather than assembles. The code does not move with the table,
+so this repository holds it built: the tool takes the file for the build
+the table asks for, writes the five fields the table settles into the
+format block, and appends the column table and the table's bytes. No
+assembler runs, and none has to be installed to package a table.
 
 ```
 bin/dtx-package in.dtx out.bin
@@ -65,15 +71,37 @@ bin/dtx-package in.dtx out.bin
 
 | flag | gives |
 |---|---|
-| `-aRMAC` | the assembler to run. The default is `rmac` on the path |
+| `-aRMAC` | assemble the template with this rmac rather than take the carried code. The two give the same bytes, and a template edit is tried through this one |
 | `-s` | write the figures rather than the image, for reading or for a build of your own |
 | `-copies` | the columns were packed with `-copies`, so the decoder is built with its copy code |
 
 The image holds one table and the code for that table's variant. What the
-table settles is folded into the code: `R`, `RR`, the row's bytes, each
-width as the size of a move, and every column's displacement off its class
-cursor. The tool prints the image's bytes and the state block's, and the
+table settles reaches the code at run time, out of the table's own header
+and the column table behind it, so one variant is one code at any `R`, `C`
+or `RR`. The tool prints the image's bytes and the state block's, and the
 format block states the same figures for a caller to read out of the file.
+
+## Build the carried code
+
+The eight files the packager combines from: DTX0, DTX1, and one a build of
+the decoder built into DTX2, which is a unit of 1, 2 or 4 with the copy
+code and without.
+
+```
+bin/dtx-blobs src/main/resources/org/dtx/68k
+```
+
+| flag | gives |
+|---|---|
+| `-aRMAC` | the assembler to run. The default is `rmac` on the path |
+
+This is the one step rmac is needed for, and a change to a template under
+[68k/](../68k) is not shipped until it is run. `BlobTest` assembles every
+build again and fails where a carried file is not what its template
+assembles to, so a template edited without this run does not pass the
+build. The table each build is assembled from is made rather than read:
+the code does not move with a table, and the five fields one would settle
+are zeroed, so a carried file states no table at all.
 
 A DTX2 image holds the decoder carried at
 [68k/ST4_wrap.S](../68k/ST4_wrap.S), built at the unit the payload states.
