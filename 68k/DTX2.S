@@ -62,24 +62,7 @@
         move.l  a1,DTX_CURSOR+\c(a6)
         .endm
 
-; A class cursor into the register a read takes it from. a0 holds the state
-; block, so the class that takes a0 is loaded last.
-        .macro  DTX_LOAD_CURSOR c,cur
-        movea.l DTX_CURSOR+\c(a0),\cur
-        .endm
-
-; One value into the row: the size its width asks for, off its class cursor.
-        .macro  DTX_VALUE width,disp,cur
-        .if \width=1
-        move.b  \disp(\cur),(a1)+
-        .endif
-        .if \width=2
-        move.w  \disp(\cur),(a1)+
-        .endif
-        .if \width=4
-        move.l  \disp(\cur),(a1)+
-        .endif
-        .endm
+        include "DTX_row.S"
 
 ; The budget one refill asks for, in units: the rows in d3 times the column's
 ; width, divided by k. Both are shifts, and both stand at or above zero.
@@ -142,32 +125,8 @@ DTX_refill\i:
 ; -----------------------------------------------------------------------------
 ; The image, doc/abi.md 1: five slots, the format block, then the bodies.
 
-_base:
-        bra.w   DTX_init
-        bra.w   DTX_metadata
-        bra.w   DTX_jump
-        bra.w   DTX_advance
-        bra.w   DTX_read
-
-_fmt:
-        dc.b    'D','T','X',2
-        dc.l    DTX_STATE
-        dc.l    _table-_base
-        dc.w    DTX_ROWBYTES
-        dc.w    DTX_PERIOD
-        dc.w    DTX_N
-        dc.b    ST4_UNIT,0
-
-; -----------------------------------------------------------------------------
-; DTX_metadata. The one call that may be made before init.
-
-DTX_metadata:
-        lea     _fmt(pc),a0
-        lea     _table(pc),a1
-        move.l  #DTX_ROWS,d0
-        move.w  #DTX_COLUMNS,d1
-        move.l  #DTX_REPEAT,d2
-        rts
+        include "DTX_image.S"
+        DTX_IMAGE 2,DTX_PERIOD,DTX_N,ST4_UNIT
 
 ; -----------------------------------------------------------------------------
 ; Every decoder seeded, every ring filled, the cursors a row below row 0.
@@ -299,12 +258,6 @@ DTX_read:
         include "ST4_wrap.S"
 
 ; -----------------------------------------------------------------------------
-; The table's bytes follow. Nothing stands after this label: the packager
-; appends the .dtx file to what rmac writes, so _table is where it lands and
-; the code ends on a long to put it there.
-
-        .align  4
-_table:
-_payload        equ     _table+DTX_HEADER
+        DTX_TABLE_FOLLOWS
 
         end

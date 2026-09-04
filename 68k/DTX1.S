@@ -59,54 +59,13 @@
         move.l  d1,DTX_CURSOR+\c(a0)
         .endm
 
-; A class cursor into the register a read takes it from. a0 holds the state
-; block, so the class that takes a0 is loaded last.
-        .macro  DTX_LOAD_CURSOR c,cur
-        movea.l DTX_CURSOR+\c(a0),\cur
-        .endm
-
-; One value into the row: the size its width asks for, off its class cursor.
-        .macro  DTX_VALUE width,disp,cur
-        .if \width=1
-        move.b  \disp(\cur),(a1)+
-        .endif
-        .if \width=2
-        move.w  \disp(\cur),(a1)+
-        .endif
-        .if \width=4
-        move.l  \disp(\cur),(a1)+
-        .endif
-        .endm
+        include "DTX_row.S"
 
 ; -----------------------------------------------------------------------------
 ; The image, doc/abi.md 1: five slots, the format block, then the bodies.
 
-_base:
-        bra.w   DTX_init
-        bra.w   DTX_metadata
-        bra.w   DTX_jump
-        bra.w   DTX_advance
-        bra.w   DTX_read
-
-_fmt:
-        dc.b    'D','T','X',1
-        dc.l    DTX_STATE
-        dc.l    _table-_base
-        dc.w    DTX_ROWBYTES
-        dc.w    1                       ; P, where nothing is packed
-        dc.w    0                       ; N
-        dc.b    0,0                     ; k, and a zero
-
-; -----------------------------------------------------------------------------
-; DTX_metadata. The one call that may be made before init.
-
-DTX_metadata:
-        lea     _fmt(pc),a0
-        lea     _table(pc),a1
-        move.l  #DTX_ROWS,d0
-        move.w  #DTX_COLUMNS,d1
-        move.l  #DTX_REPEAT,d2
-        rts
+        include "DTX_image.S"
+        DTX_IMAGE 1,1,0,0
 
 ; -----------------------------------------------------------------------------
 
@@ -126,15 +85,7 @@ DTX_jump:
 DTX_advance:
         move.l  DTX_ROW(a0),d0
         addq.l  #1,d0
-        cmpi.l  #DTX_ROWS,d0
-        bne.s   .step
-        .if DTX_REPEAT<DTX_ROWS
-        move.l  #DTX_REPEAT,d0
-        bra.w   DTX_jump                ; the repeat is a jump
-        .else
-        moveq   #-1,d0                  ; the end, and it is sticky
-        rts
-        .endif
+        DTX_END_OR_REPEAT
 .step:
         move.l  d0,DTX_ROW(a0)
         DTX_STEP_CURSORS
@@ -150,12 +101,6 @@ DTX_read:
         rts
 
 ; -----------------------------------------------------------------------------
-; The table's bytes follow. Nothing stands after this label: the packager
-; appends the .dtx file to what rmac writes, so _table is where it lands and
-; the code ends on a long to put it there.
-
-        .align  4
-_table:
-_payload        equ     _table+DTX_HEADER
+        DTX_TABLE_FOLLOWS
 
         end
