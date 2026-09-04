@@ -66,6 +66,8 @@ final class HouseStyleTest {
             "says it",
             "says so",
             "says what to take",
+            // a format does not say; it states
+            "own to say",
             "set-ness",
             "takes the machine with it",
             // "consumer" is a role the specification defines, as "caller"
@@ -170,9 +172,10 @@ final class HouseStyleTest {
      * The hits a line wrap hides. A phrase broken across two lines stands in
      * neither of them, so every paragraph is read joined as well, and what
      * the joined text holds beyond what its own lines hold is reported at
-     * the line the paragraph begins on. A table row, an indented block and a
-     * fence break a paragraph: joining those would put words side by side
-     * that no sentence puts there.
+     * the line the paragraph begins on. A line joins without its indent, or
+     * a list item's two spaces would stand inside the phrase a wrap broke. A
+     * table row, an indented block and a fence break a paragraph: joining
+     * those would put words side by side that no sentence puts there.
      */
     private static List<String> wrappedHits(Path document, List<String> lines) {
         List<String> hits = new ArrayList<>();
@@ -187,7 +190,11 @@ final class HouseStyleTest {
             }
             if (at > from) {
                 List<String> paragraph = lines.subList(from, at);
-                String joined = " " + String.join(" ", paragraph).toLowerCase();
+                StringBuilder run = new StringBuilder();
+                for (String line : paragraph) {
+                    run.append(' ').append(line.strip());
+                }
+                String joined = run.toString().toLowerCase();
                 for (String struck : STRUCK) {
                     int whole = occurrences(joined, struck);
                     int apart = 0;

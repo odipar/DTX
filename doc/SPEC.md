@@ -169,8 +169,8 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 - A reader built for one unit rejects a data set whose fourth byte gives
   another. The payload's `k` is that same unit (R5.2), so a reader may
   check the two against each other.
-- A run of bytes shorter than twenty-eight is smaller stored than packed,
-  which is ST4's own to say and not read here.
+- A run of bytes shorter than twenty-eight is smaller stored than packed.
+  ST4 states that, and no requirement here follows from it.
 
 ```
    N and k once, an offset a column, then a data set a column
