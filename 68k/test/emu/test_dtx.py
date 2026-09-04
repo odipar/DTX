@@ -20,6 +20,7 @@ import tempfile
 
 from unicorn import Uc, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN, UcError
 from unicorn.m68k_const import (
+    UC_CPU_M68K_M68000,
     UC_M68K_REG_A0, UC_M68K_REG_A1, UC_M68K_REG_A2, UC_M68K_REG_A3,
     UC_M68K_REG_A4, UC_M68K_REG_A5, UC_M68K_REG_A6, UC_M68K_REG_A7,
     UC_M68K_REG_D0, UC_M68K_REG_D1, UC_M68K_REG_D2, UC_M68K_REG_D3,
@@ -30,6 +31,7 @@ from unicorn.m68k_const import (
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 CLASSES = os.path.join(ROOT, "target", "classes")
 RMAC = os.environ.get("RMAC", "rmac")
+ST4 = os.environ.get("ST4", "st4")
 
 IMAGE = 0x10000          # the packaged image
 STATE = 0x30000          # the state block the caller supplies
@@ -88,7 +90,7 @@ def run(argv):
     return done.stdout
 
 
-def write_table(csv, variant, widths=None, repeat=None):
+def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960):
     """A .dtx file of `csv`, through the Java writer."""
     work = tempfile.mkdtemp(prefix="dtx68")
     text, out = os.path.join(work, "t.csv"), os.path.join(work, "t.dtx")
@@ -99,6 +101,8 @@ def write_table(csv, variant, widths=None, repeat=None):
         argv.append("-w" + ",".join(str(w) for w in widths))
     if repeat is not None:
         argv.append("-r%d" % repeat)
+    if variant == 2:
+        argv += ["-k%d" % unit, "-m%d" % ring, "-p" + ST4]
     run(argv)
     with open(out, "rb") as f:
         return f.read()
@@ -121,6 +125,9 @@ def package(blob):
 class Machine:
     def __init__(self, image, state_bytes):
         self.mu = Uc(UC_ARCH_M68K, UC_MODE_BIG_ENDIAN)
+        # A plain 68000, not the ColdFire Unicorn defaults to: ColdFire
+        # dropped adda.w, which ST4's match path takes on its first call.
+        self.mu.ctl_set_cpu_model(UC_CPU_M68K_M68000)
         for at, size in ((IMAGE, 0x10000), (STATE, 0x10000), (STACK, 0x10000),
                          (DONE & ~0xFFF, 0x1000)):
             self.mu.mem_map(at & ~0xFFF, size)
@@ -176,9 +183,16 @@ class Machine:
 
 # --------------------------------------------------------------------------
 
-def check(name, csv, variant, widths=None, repeat=None):
-    blob = write_table(csv, variant, widths, repeat)
-    kind, rows, columns, rr, width, _, row_bytes, want = read_dtx(blob)
+def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
+    blob = write_table(csv, variant, widths, repeat, unit, ring)
+    if variant == 2:
+        # The table is the same under every variant (R1.3), so what a row
+        # holds is read out of the plain file, by the reader in this rig.
+        plain = write_table(csv, 1, widths, repeat)
+        _, rows, columns, rr, width, _, row_bytes, want = read_dtx(plain)
+        kind = 2
+    else:
+        kind, rows, columns, rr, width, _, row_bytes, want = read_dtx(blob)
     image = package(blob)
 
     # the format block, doc/abi.md 1, at the image's byte 20
@@ -187,7 +201,16 @@ def check(name, csv, variant, widths=None, repeat=None):
     state_bytes, header_at = struct.unpack(">II", fmt[4:12])
     stated_row, p, n = struct.unpack(">HHH", fmt[12:18])
     assert stated_row == row_bytes, "the format block's row bytes"
-    assert p == 1 and n == 0 and fmt[18] == 0, "P, N and k under a plain variant"
+    if kind == 2:
+        assert p >= columns, "P is at least C"
+        assert n == ring and fmt[18] == unit, "N and k the payload states"
+        for w in set(width):
+            assert n % (p * w) == 0, "N divides by P times %d" % w
+            assert n >= 2 * p * w, "N is at least twice P times %d" % w
+            assert (p * w) % unit == 0, "the budget of a %d byte column" % w
+    else:
+        assert p == 1 and n == 0 and fmt[18] == 0, \
+            "P, N and k under a plain variant"
     assert image[header_at:header_at + 3] == b"DTX", "the header the block points at"
 
     m = Machine(image, state_bytes)
@@ -252,8 +275,8 @@ def check(name, csv, variant, widths=None, repeat=None):
             assert m.row(got["a1"], row_bytes) == want[r + 1], \
                 "the row after a jump and an advance"
 
-    print("  %-46s DTX%d  R=%-5d C=%-3d row=%-3d state=%-3d image=%d"
-          % (name, kind, rows, columns, row_bytes, state_bytes, len(image)))
+    print("  %-40s DTX%d  R=%-5d C=%-3d row=%-3d P=%-4d state=%-6d image=%d"
+          % (name, kind, rows, columns, row_bytes, p, state_bytes, len(image)))
 
 
 TABLES = [
@@ -273,6 +296,28 @@ TABLES = [
 ]
 
 
+# Tables a DTX2 image is made of: P is at least C and at most R, and N
+# divides by P times every width, so C stays small beside R.
+def numbers(rows, columns, span=251):
+    return "\n".join(",".join(str((r * (i + 1)) % span) for i in range(columns))
+                     for r in range(rows)) + "\n"
+
+
+PACKED = [
+    ("one byte a row", numbers(64, 1), [1], None, 1, 960),
+    ("two columns, one and two bytes", numbers(64, 2), [1, 2], None, 1, 960),
+    ("three columns", numbers(48, 3), [1, 2, 1], None, 1, 960),
+    ("a four byte column", numbers(64, 3), [1, 2, 4], None, 1, 960),
+    ("k of 2", numbers(64, 2), [2, 2], None, 2, 960),
+    ("k of 4", numbers(64, 2), [4, 4], None, 4, 960),
+    ("a table that repeats", numbers(64, 2), [1, 1], 16, 1, 960),
+    ("a repeat at row 0", numbers(48, 2), [1, 1], 0, 1, 960),
+    ("R not a multiple of P", numbers(50, 3), [1, 1, 1], None, 1, 960),
+    ("a small ring", numbers(64, 2), [1, 1], None, 1, 64),
+    ("a long table", numbers(600, 2), [1, 2], None, 1, 960),
+]
+
+
 def main():
     if not os.path.isdir(CLASSES):
         raise SystemExit("run `mvn compile` first: no " + CLASSES)
@@ -284,7 +329,14 @@ def main():
                 check(name, csv, variant, widths, repeat)
             except AssertionError as wrong:
                 bad += 1
-                print("  %-46s FAILED: %s" % (name, wrong))
+                print("  %-40s FAILED: %s" % (name, wrong))
+    print("DTX2")
+    for name, csv, widths, repeat, unit, ring in PACKED:
+        try:
+            check(name, csv, 2, widths, repeat, unit, ring)
+        except AssertionError as wrong:
+            bad += 1
+            print("  %-40s FAILED: %s" % (name, wrong))
     if bad:
         raise SystemExit("%d checks failed" % bad)
     print("every check passed")

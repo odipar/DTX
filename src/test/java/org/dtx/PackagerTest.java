@@ -61,21 +61,87 @@ final class PackagerTest {
                 slots, "the slots, doc/abi.md 1");
     }
 
-    @Test
-    void aPackedTableIsNotPackagedYet() {
-        Table table = Csv.table("1\n2\n", new int[] {1});
-        byte[] two = Dtx2.write(table, (column, unit, ring) -> {
-            byte[] set = new byte[28 + column.length];
+    /** A DTX2 file of {@code rows} rows and these widths, at this ring. */
+    private static byte[] packed(int rows, int[] width, int unit, int ring) {
+        byte[][] column = new byte[width.length][];
+        for (int i = 0; i < width.length; i++) {
+            column[i] = new byte[rows * width[i]];
+        }
+        Table table = Table.of(rows, rows, width, column);
+        return Dtx2.write(table, (bytes, k, n) -> {
+            byte[] set = new byte[28 + bytes.length];
             set[0] = 'S';
             set[1] = '4';
             set[2] = 7;
-            set[3] = (byte) unit;
-            System.arraycopy(column, 0, set, 28, column.length);
+            set[3] = (byte) k;
+            Dtx.putLong(set, 8, 28);
+            Dtx.putLong(set, 12, 28 + bytes.length);
+            Dtx.putLong(set, 16, 28 + bytes.length);
+            System.arraycopy(bytes, 0, set, 28, bytes.length);
             return set;
-        }, 1, 960);
-        assertEquals("the variant is 0 or 1, not 2",
+        }, unit, ring);
+    }
+
+    @Test
+    void thePeriodIsTheSmallestThatHoldsEveryRule() {
+        byte[] file = packed(64, new int[] {1, 2}, 1, 960);
+        Dtx.Header header = Dtx.header(file);
+        assertEquals(2, Packager.period(header, Packager.packed(file, header)),
+                "P is C where C meets the rules");
+        byte[] three = packed(48, new int[] {1, 2, 1}, 1, 960);
+        Dtx.Header at3 = Dtx.header(three);
+        assertEquals(3, Packager.period(at3, Packager.packed(three, at3)),
+                "P is C at three columns of two widths");
+    }
+
+    @Test
+    void aRingTheWidthsDoNotDivideIsRefused() {
+        // A ring of six bytes: every period needs 2P times the widest
+        // column, so P is at most one, and P is at least C of two.
+        byte[] file = packed(64, new int[] {1, 2}, 1, 6);
+        Dtx.Header header = Dtx.header(file);
+        String said = assertThrows(IllegalArgumentException.class,
+                () -> Packager.period(header, Packager.packed(file, header)))
+                .getMessage();
+        assertTrue(said != null && said.startsWith(
+                "no period from C of 2 to R of 64"), "a ring no period divides");
+    }
+
+    @Test
+    void aTableTooWideForA68000DisplacementIsRefused() {
+        int[] wide = new int[40];
+        java.util.Arrays.fill(wide, 1);
+        byte[] file = packed(64, wide, 1, 960);
+        Dtx.Header header = Dtx.header(file);
+        assertEquals("a read reaches column 39 at 37440, past the 32767 a"
+                + " 68000 displacement holds: C is at most 35 at N of 960",
                 assertThrows(IllegalArgumentException.class,
-                        () -> Packager.assembly(two)).getMessage());
+                        () -> Packager.period(header,
+                                Packager.packed(file, header))).getMessage());
+    }
+
+    @Test
+    void aPackedStateBlockHoldsASlotAndARingAColumn() {
+        byte[] file = packed(64, new int[] {1, 2}, 1, 960);
+        Dtx.Header header = Dtx.header(file);
+        Packager.Packed given = Packager.packed(file, header);
+        assertEquals(32, Packager.slot(header), "the slots follow two cursors");
+        assertEquals(96, Packager.ring(header), "the rings follow two slots");
+        assertEquals(96 + 2 * 960, Packager.stateBytes(header, given),
+                "a ring a column");
+    }
+
+    @Test
+    void aPackedFormatBlockStatesThePeriodTheRingAndTheUnit() {
+        String out = Packager.assembly(packed(64, new int[] {1, 2}, 1, 960));
+        assertTrue(out.contains("\tdc.b\t'D','T','X',2"), "the variant byte");
+        assertTrue(out.contains("\tdc.w\t2\t\t; P"), "P");
+        assertTrue(out.contains("\tdc.w\t960\t\t; N"), "N");
+        assertTrue(out.contains("\tdc.b\t1,0\t\t; k, and a zero"), "k");
+        assertTrue(out.contains("ST4_UNIT\tequ\t1"),
+                "the decoder is built at the payload's unit");
+        assertTrue(out.contains("\tinclude\t\"ST4_wrap.S\""),
+                "the carried decoder");
     }
 
     @Test
