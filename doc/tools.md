@@ -60,7 +60,7 @@ the table's bytes, reached PC relative. [abi.md](abi.md) states the six
 calls the image answers, and the state block a caller supplies.
 
 It combines rather than assembles. The code does not move with the table,
-so it is built once and the tool takes the file for the build the table
+so it is built once and the tool takes the image for the build the table
 asks for, writes the five fields the table settles into the format block,
 and appends the column table and the table's bytes. No assembler runs,
 and a caller who takes a release installs none.
@@ -68,6 +68,18 @@ and a caller who takes a release installs none.
 ```
 bin/dtx-package in.dtx out.bin
 ```
+
+Two tools do it, and a table packaged either way is the same file. The one
+above is the jar's; the other is a Go executable holding the eight images
+inside it, so it needs neither this repository nor a runtime beside it:
+
+```
+go build -o dtx-package ./cmd/dtx-package    # under go/
+./dtx-package in.dtx out.bin [-copies]
+```
+
+`test/test_parity.py` packages a corpus both ways and holds the two to the
+same bytes.
 
 | flag | gives |
 |---|---|
@@ -202,6 +214,18 @@ up only in the count.
 It needs `mvn compile`, [rmac](http://rmac.is-slick.com) on the path or at
 `$RMAC`, `pip install unicorn`, and an ST4 packer at `$ST4` for the packed
 tables.
+
+```
+python3 test/test_parity.py
+```
+
+**The two packagers.** A corpus through the jar and through the Go
+executable, held to the same bytes. Fourteen tables, which reach every
+image the packager picks from: DTX0, DTX1, and DTX2 at each unit with the
+copy code and without. One table has one image, whichever tool a caller
+took.
+
+It needs `mvn package`, Go on the path, and an ST4 packer at `$ST4`.
 
 ## Through Maven
 
