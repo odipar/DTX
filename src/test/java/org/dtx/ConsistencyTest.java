@@ -90,7 +90,8 @@ final class ConsistencyTest {
                 + "\nits headings are " + headings);
     }
 
-    /** Every row of the glossary's table, its term and where it points. */
+    /** Every row of the glossary's table: its term, what it states, and
+     * where it points. */
     private static List<String[]> glossaryRows(String glo) {
         List<String[]> out = new ArrayList<>();
         for (String line : glo.split("\n")) {
@@ -99,7 +100,8 @@ final class ConsistencyTest {
             }
             String[] cells = line.split("\\|");
             if (cells.length >= 4) {
-                out.add(new String[] {cells[1].trim(), cells[3].trim()});
+                out.add(new String[] {cells[1].trim(), cells[2].trim(),
+                                      cells[3].trim()});
             }
         }
         return out;
@@ -191,6 +193,48 @@ final class ConsistencyTest {
         }
     }
 
+    /**
+     * The ST4 figures, in each of the four sentences that state one. SPEC.md
+     * 2.3 gives the size of an ST4 header and the version byte of a data
+     * set's first long, its stored against packed bullet gives the size
+     * again, and the glossary's ST4 header row gives both. Both figures move
+     * when ST4 moves, so a move that reaches one sentence and leaves another
+     * fails here.
+     */
+    @Test
+    void everyDocumentStatesTheSameSt4Figures() throws IOException {
+        String spec = read(SPEC);
+        Matcher first = Pattern.compile("first long is `\\$53 \\$34 "
+                + "\\$([0-9A-F]{2}) k`: `'S'`, `'4'`, the ST4 format"
+                + " version\\s+(\\d+), and the unit").matcher(spec);
+        assertTrue(first.find(), "SPEC.md 2.3 states no ST4 signature");
+        Matcher opens = Pattern.compile("ST4 header is ([a-z-]+) bytes")
+                .matcher(spec);
+        assertTrue(opens.find(), "SPEC.md 2.3 states no ST4 header size");
+        String bytes = opens.group(1);
+        String signature = "`$53 $34 $" + first.group(1) + " k`";
+        String term = "";
+        for (String[] row : glossaryRows(read(GLO))) {
+            if (row[0].equals("ST4 header")) {
+                term = row[1];
+            }
+        }
+        assertTrue(!term.isEmpty(), "the glossary holds no ST4 header row");
+
+        List<String> wrong = new ArrayList<>();
+        int third = Integer.parseInt(first.group(1), 16);
+        if (third != Integer.parseInt(first.group(2))) {
+            wrong.add("the signature's third byte gives version " + third
+                    + ", and the sentence beside it reads " + first.group(2));
+        }
+        states(wrong, spec, "shorter than " + bytes + " is smaller stored",
+                "2.3's run that is smaller stored than packed");
+        states(wrong, term, bytes + " bytes", "the glossary's ST4 header size");
+        states(wrong, term, signature, "the glossary's ST4 signature");
+        assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
+                + "\nSPEC.md 2.3 states " + bytes + " bytes and " + signature);
+    }
+
     @Test
     void theGlossaryIsInOrder() throws IOException {
         List<String[]> rows = glossaryRows(read(GLO));
@@ -217,7 +261,7 @@ final class ConsistencyTest {
         }
         List<String> bad = new ArrayList<>();
         for (String[] row : glossaryRows(read(GLO))) {
-            String where = row[1];
+            String where = row[2];
             if (where.startsWith("terminology.md,")) {
                 String named = where.substring("terminology.md,".length())
                         .trim().toLowerCase();

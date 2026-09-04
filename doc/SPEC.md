@@ -161,16 +161,16 @@ the data set's own to state, so no offset is read against the next.
 **What an ST4 data set is.** Enough of it to find the way; the format is
 stated in full in [ST4](https://github.com/odipar/ST4).
 
-- Its first long is `$53 $34 $04 k`: `'S'`, `'4'`, the ST4 format version
-  4, and the unit `k`.
-- Its ST4 header is twenty bytes, and a data set begins on a long so a
-  reader takes that header a long at a time. That is why DTX2 aligns its
-  data sets (R5.9).
+- Its first long is `$53 $34 $07 k`: `'S'`, `'4'`, the ST4 format version
+  7, and the unit `k`.
+- Its ST4 header is twenty-eight bytes, and a data set begins on a long
+  so a reader takes that header a long at a time. That is why DTX2 aligns
+  its data sets (R5.9).
 - A reader built for one unit rejects a data set whose fourth byte gives
   another. The payload's `k` is that same unit (R5.2), so a reader may
   check the two against each other.
-- A run of bytes shorter than twenty is smaller stored than packed, which
-  is ST4's own to say and not read here.
+- A run of bytes shorter than twenty-eight is smaller stored than packed,
+  which is ST4's own to say and not read here.
 
 ```
    N and k once, an offset a column, then a data set a column

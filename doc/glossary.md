@@ -22,7 +22,7 @@ same change (requirements.md, R0.6 to R0.9).
 | row | One step of a table: `C` values, with nothing in it about what any of them is for. | terminology.md, tables, rows and columns |
 | `RR` | The row a table repeats to once the last row is done. | terminology.md, tables, rows and columns |
 | ST4 | The packer a DTX2 column is packed with, specified in its own repository. | requirements.md R5, SPEC.md 2.3 |
-| ST4 header | The twenty bytes an ST4 data set opens with, its first long `$53 $34 $04 k`. | SPEC.md 2.3 |
+| ST4 header | The twenty-eight bytes an ST4 data set opens with, its first long `$53 $34 $07 k`. | SPEC.md 2.3 |
 | table | What yields rows: `R` of them, `C` columns wide, repeating at `RR`. | terminology.md, tables, rows and columns |
 | unit | The width ST4 packs whole numbers of: 1, 2 or 4 bytes. | SPEC.md 2.3 |
 | variant | One way of laying a table's rows out in bytes. DTX0 row by row, DTX1 column by column, DTX2 column by column and packed. | terminology.md, the variants |
