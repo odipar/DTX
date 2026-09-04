@@ -1,0 +1,3 @@
+#!/bin/sh
+# Comma separated text into a DTX file of any variant. doc/tools.md, Write.
+exec "$(dirname -- "$0")/dtx-run" org.dtx.Write "$@"

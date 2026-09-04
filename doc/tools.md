@@ -1,11 +1,16 @@
 # tools
 
+Each tool is a script under `bin/`. A script builds first where a source is
+newer than the last build, and then runs the tool out of `target/classes`.
+Paths reach the tool as the caller gave them, so a relative one is relative
+to the caller's directory and not to this repository's.
+
 ## Write
 
 A DTX file of any variant out of comma separated text.
 
 ```
-mvn -q compile exec:exec@write -Dargs="in.csv out.dtx -v2 -k1 -m960 -pst4"
+bin/dtx-write in.csv out.dtx -v2 -k1 -m960 -pst4
 ```
 
 | flag | gives |
@@ -54,7 +59,7 @@ variant (R1.3), so what comes out holds the same rows, widths, `R` and `RR`
 as what went in.
 
 ```
-mvn -q compile exec:exec@rewrite -Dargs="in.dtx out.dtx -k1 -m960 -pst4"
+bin/dtx-rewrite in.dtx out.dtx -k1 -m960 -pst4
 ```
 
 | flag | gives |
@@ -65,3 +70,13 @@ mvn -q compile exec:exec@rewrite -Dargs="in.dtx out.dtx -k1 -m960 -pst4"
 
 Rewrite keeps no packer of its own. `-p` names the one ST4's own repository
 builds, and a column reaches it as a file.
+
+## Through Maven
+
+Each tool has a Maven execution as well, which takes its arguments as one
+string and builds every time:
+
+```
+mvn -q compile exec:exec@write -Dargs="in.csv out.dtx -v2"
+mvn -q compile exec:exec@rewrite -Dargs="in.dtx out.dtx -k1"
+```
