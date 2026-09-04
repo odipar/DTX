@@ -110,16 +110,23 @@ builds, and a column reaches it as a file.
 python3 68k/test/emu/test_dtx.py
 ```
 
-Packages every table of a corpus at each variant, assembles it with rmac,
-and runs the image on a plain 68000 under emulation: every row through
-advance and read, a jump to every row forward and backward, the repeat, the
-end and a read before the first advance. It holds `d6`, `d7` and `a6`
-across every call and a guard band past the row.
+Two kinds of check.
 
-What a row should hold is read out of the `.dtx` file by a reader written
-in the rig itself, which shares no code with the one under test. A DTX2
-image is held to the plain file of the same table, which every variant
-holds alike (R1.3).
+**The calls.** Every table of a corpus is packaged at each variant,
+assembled with rmac, and run on a plain 68000 under emulation: every row
+through advance and read, a jump to every row forward and backward, the
+repeat, the end and a read before the first advance. It holds `d6`, `d7`
+and `a6` across every call and a guard band past the row.
+
+**The round trip.** The same text through Write, through Package and
+through the 68000 at DTX0, DTX1 and DTX2, held to the rows the text states
+and to one another (R1.3). What a row should hold is worked out in the rig
+itself, from the text, by a reader that shares no code with the one under
+test, so neither the writer nor the 68000 is checked against itself. Under
+DTX2 it counts what the decoder is asked for as well, and holds that to the
+calls ST4_wrap's assumption 5 allows: a stopping rule that lets a column
+run one call past its end marker changes no byte a reader gives, and shows
+up only in the count.
 
 It needs `mvn compile`, [rmac](http://rmac.is-slick.com) on the path or at
 `$RMAC`, `pip install unicorn`, and an ST4 packer at `$ST4` for the packed
