@@ -36,6 +36,18 @@ public final class Packager {
     /** Where it stands: behind the six slots. */
     static final int FORMAT_AT = 24;
 
+    /** The format block's fields, doc/abi.md 1. */
+    static final int STATE_BYTES = 4;
+    static final int TABLE_AT = 8;
+    static final int COLUMNS_AT = 20;
+
+    /** What one entry of the column table runs to. */
+    static final int ENTRY = 4;
+
+    /** What the column table's own header runs to: counts, the row's bytes
+     * and where each width class begins. */
+    static final int ENTRIES = 20;
+
     private Packager() {
     }
 
@@ -123,7 +135,11 @@ public final class Packager {
         if (header.variant() == Dtx.DTX0) {
             return CURSOR + 4;
         }
-        return CURSOR + 4 * classes(header.width()).length;
+        // DTX1 holds three cursors and the three places their classes
+        // begin, whatever widths the table states, so its block does not
+        // move with C either.
+        return header.variant() == Dtx.DTX1
+                ? 48 : CURSOR + 4 * classes(header.width()).length;
     }
 
     /** The state block a packaged DTX2 reader takes, in bytes. */
@@ -344,6 +360,79 @@ public final class Packager {
         throw new IllegalArgumentException("no class holds " + w);
     }
 
+    /**
+     * The column table the image holds behind its code: one entry a column,
+     * grouped by width so each of a read's three loops walks a run of them.
+     *
+     * <p>Under DTX1 an entry is four bytes: the column's displacement from
+     * the base of its width class, and where its value stands in the row.
+     * The reader takes both as words off an index register, so one loop a
+     * width serves any number of columns and no code stands a column.
+     */
+    static byte[] columnTable(byte[] file) {
+        Dtx.Header header = Dtx.header(file);
+        if (header.variant() == Dtx.DTX0) {
+            // A DTX0 row is one run of bytes: no loop walks a column, so
+            // there is nothing a column table would say.
+            return new byte[0];
+        }
+        int[] width = header.width();
+        int[] at = Dtx1.offsets(header.rows(), width);
+        int[] count = counts(width);
+        int[] base = bases(header);
+        int rowBytes = 0;
+        for (int w : width) {
+            rowBytes += w;
+        }
+        byte[] out = new byte[ENTRIES + ENTRY * width.length];
+        for (int c = 0; c < 3; c++) {
+            Dtx.putWord(out, 2 * c, count[c]);
+            Dtx.putLong(out, 8 + 4 * c, base[c]);
+        }
+        Dtx.putWord(out, 6, rowBytes);
+        int wrote = ENTRIES;
+        for (int c = 0; c < 3; c++) {
+            int w = c == 0 ? 1 : c == 1 ? 2 : 4;
+            int row = 0;
+            for (int i = 0; i < width.length; i++) {
+                if (width[i] == w) {
+                    Dtx.putWord(out, wrote, at[i] - base[c]);
+                    Dtx.putWord(out, wrote + 2, row);
+                    wrote += ENTRY;
+                }
+                row += width[i];
+            }
+        }
+        return out;
+    }
+
+    /** How many columns of each width a table holds, in the order 1, 2, 4. */
+    static int[] counts(int[] width) {
+        int[] out = new int[3];
+        for (int w : width) {
+            out[w == 1 ? 0 : w == 2 ? 1 : 2]++;
+        }
+        return out;
+    }
+
+    /** Where each width class's first column begins in the payload. */
+    static int[] bases(Dtx.Header header) {
+        int[] width = header.width();
+        int[] at = Dtx1.offsets(header.rows(), width);
+        int[] out = new int[3];
+        for (int c = 0; c < 3; c++) {
+            int w = c == 0 ? 1 : c == 1 ? 2 : 4;
+            out[c] = 0;
+            for (int i = 0; i < width.length; i++) {
+                if (width[i] == w) {
+                    out[c] = at[i];
+                    break;
+                }
+            }
+        }
+        return out;
+    }
+
     /** Where the templates and the carried decoder stand. */
     static String carried() {
         String named = System.getenv("DTX_68K");
@@ -386,19 +475,29 @@ public final class Packager {
                             + new String(said).trim());
                 }
                 byte[] code = Files.readAllBytes(out);
-                // The format block states where the table stands, and the
-                // table is appended here: the two agree or the image would
-                // read its own code as a header.
-                int table = Dtx.getLong(code, FORMAT_AT + 8);
-                if (table != code.length) {
+                // The code ends where the format block says the column table
+                // begins: the two agree, or the image reads its own last
+                // instruction as a column.
+                int columns = Dtx.getLong(code, FORMAT_AT + COLUMNS_AT);
+                if (columns != code.length) {
                     throw new IllegalStateException("the code runs to "
                             + code.length + " bytes and the format block puts"
-                            + " the table at " + table
+                            + " the column table at " + columns
                             + ": it would not land there");
                 }
-                byte[] image = new byte[code.length + file.length];
+                byte[] entries = columnTable(file);
+                byte[] image = new byte[code.length + entries.length
+                        + file.length];
                 System.arraycopy(code, 0, image, 0, code.length);
-                System.arraycopy(file, 0, image, code.length, file.length);
+                System.arraycopy(entries, 0, image, code.length,
+                        entries.length);
+                System.arraycopy(file, 0, image, code.length + entries.length,
+                        file.length);
+                // The table stands behind both, and only the packager holds
+                // the figure: the column table's size moves with C, so the
+                // assembler could not have worked it out.
+                Dtx.putLong(image, FORMAT_AT + TABLE_AT,
+                        code.length + entries.length);
                 return image;
             } finally {
                 try (var walk = Files.walk(work)) {

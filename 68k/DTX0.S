@@ -129,12 +129,16 @@ init_ready:
 ; The payload's first byte in a1 and the header in a2, worked out rather than
 ; assembled in: what the header runs to moves with C.
 DTX_payload:
-        lea     _table(pc),a2
+        lea     _fmt(pc),a2
+        movea.l a2,a1
+        suba.w  #_fmt-_base,a1
+        adda.l  8(a2),a1                ; where the table's header stands
+        movea.l a1,a2
         moveq   #0,d1
         move.w  8(a2),d1                ; C
         addi.l  #14+3,d1
         andi.l  #-4,d1
-        lea     0(a2,d1.l),a1
+        adda.l  d1,a1                   ; the payload
         rts
 
 ; -----------------------------------------------------------------------------

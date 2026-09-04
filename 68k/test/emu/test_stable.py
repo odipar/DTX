@@ -23,9 +23,13 @@ def code(variant, rows, width, rr, ring=960, unit=1, copies=False):
                     for r in range(rows)) + "\n"
     blob = T.write_table(csv, variant, width, rr, unit, ring, copies)
     image, _ = T.package(blob, copies)
-    # The instructions alone: the six slots are constant, the format block
-    # at +24 is data that states the table, and the table follows the code.
-    return image[44:len(image) - len(blob)]
+    # The instructions alone. The six slots are constant, the format block at
+    # +24 is data that states the table, and behind the code stand the column
+    # table and the table itself, both of which move with C. The format block
+    # says where the first of them begins, at +20 of it.
+    import struct
+    columns = struct.unpack(">I", image[24 + 20:24 + 24])[0]
+    return image[48:columns]
 
 TABLES = [
     ("R=64  C=2 widths 1,1  no repeat", 64, [1, 1], None),

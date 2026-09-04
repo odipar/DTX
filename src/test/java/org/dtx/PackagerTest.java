@@ -71,9 +71,11 @@ final class PackagerTest {
         Table three = Csv.table("1,2,3\n4,5,6\n", new int[] {1, 2, 4});
         assertEquals(28, Packager.stateBytes(Dtx.header(Dtx0.write(three))),
                 "DTX0 holds one cursor whatever the widths");
-        assertEquals(28, Packager.stateBytes(Dtx.header(Dtx1.write(one))),
+        // DTX1 holds three cursors and three class bases at any width, so
+        // its block does not move with C either.
+        assertEquals(48, Packager.stateBytes(Dtx.header(Dtx1.write(one))),
                 "DTX1 with one width class");
-        assertEquals(36, Packager.stateBytes(Dtx.header(Dtx1.write(three))),
+        assertEquals(48, Packager.stateBytes(Dtx.header(Dtx1.write(three))),
                 "DTX1 with three width classes");
     }
 

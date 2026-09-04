@@ -26,9 +26,10 @@
 ; leaves those three alone, and they are the only registers that stand across
 ; an ST4_resume. Read takes the block in a0 and parks nothing.
 ;
-; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here holds them: _table is the
-; last label and the code ends on a long, so the packager appends the .dtx
-; file to what rmac writes and _table is where it lands.
+; WHAT FOLLOWS THE CODE. The packager appends the column table and then the
+; .dtx file to what rmac writes, and the format block says where each begins.
+; This variant's code still stands a column: one template a variant is done,
+; and one blob a variant is not, so R, C and RR still move it.
 ;
 ; TRUSTED INPUT ONLY. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call
@@ -102,12 +103,17 @@
 
 ; One column's decoder seeded and its ring filled with P rows. ST4_init takes
 ; a0 = stream A, a1 = the first ring byte, a2 = B, a4 = C, a5 = D and d3.w = N.
+;
+; The payload stands behind a column table whose size moves with C, so its
+; place is not a displacement the assembler works out: DTX_seed leaves it in
+; d6, which ST4 does not touch, and every stream is reached off it.
         .macro  DTX_FILL i,wshift,kshift,streamA,streamB,streamC,streamD
-        lea     _payload+\streamA(pc),a0
+        movea.l d6,a3
+        lea     \streamA(a3),a0
         lea     DTX_RING+(\i*DTX_N)(a6),a1
-        lea     _payload+\streamB(pc),a2
-        lea     _payload+\streamC(pc),a4
-        lea     _payload+\streamD(pc),a5
+        lea     \streamB(a3),a2
+        lea     \streamC(a3),a4
+        lea     \streamD(a3),a5
         move.w  #DTX_N,d3
         bsr     ST4_init
         move.l  #DTX_PERIOD,d3
@@ -143,6 +149,24 @@ DTX_refill\i:
         DTX_IMAGE 2,DTX_PERIOD,DTX_N,ST4_UNIT
 
 ; -----------------------------------------------------------------------------
+; DTX_payload. The payload's first byte in a1. The table stands behind a
+; column table whose size moves with C, so where it begins is read out of the
+; format block rather than assembled in.
+
+DTX_payload:
+        lea     _fmt(pc),a2
+        movea.l a2,a1
+        suba.w  #_fmt-_base,a1
+        adda.l  8(a2),a1
+        movea.l a1,a2
+        moveq   #0,d1
+        move.w  8(a2),d1
+        addi.l  #14+3,d1
+        andi.l  #-4,d1
+        adda.l  d1,a1
+        rts
+
+; -----------------------------------------------------------------------------
 ; Every decoder seeded, every ring filled, the cursors a row below row 0.
 ; Init takes it, and so does a jump that runs from row 0.
 
@@ -150,6 +174,8 @@ DTX_seed:
         move.l  #-1,DTX_ROW(a6)
         clr.w   DTX_TURN(a6)
         move.l  #DTX_PERIOD,DTX_DECODED(a6)
+        bsr     DTX_payload             ; the payload in d6, which ST4 keeps
+        move.l  a1,d6
         DTX_FILL_COLUMNS
         DTX_SEED_CURSORS
         rts
