@@ -1,6 +1,6 @@
 // Package pack combines a DTX table with the 68000 image that reads it.
 //
-// One variant is one code, so nothing here assembles: it takes the image for
+// One build is one code, so nothing here assembles: it takes the image for
 // the build the table needs, writes the five fields the table gives
 // into the format block, and appends the column table and the table's bytes.
 // doc/abi.md defines the image, the format block and the column table.
@@ -33,17 +33,19 @@ const (
 	PeriodAt   = 14
 	RingAt     = 16
 	UnitAt     = 18
+	WidthAt    = 19
 	ColumnsAt  = 20
 )
 
-// The column table: its header, one read entry a column, and under DTX2 one
-// stream record a column.
-const (
-	Entry      = 4
-	Entries    = 32
-	Stream     = 32
-	PackedHead = 80
-)
+// Stream is what one stream record runs to, one a column under DTX2.
+const Stream = 16
+
+// PackedHead is what a packed reader's state block contains before its
+// decoder states.
+const PackedHead = 56
+
+// Plain is the state block DTX0 and DTX1 take: the head, and one cursor.
+const Plain = Cursor + 4
 
 // Copies is the flags bit at payload byte 3 that marks every column was
 // packed with copies from its own literal stream, R5.10.
@@ -61,58 +63,6 @@ func ReadPacked(file []byte, header dtx.Header) (Packed, error) {
 	return dtx.ReadPacked(file, header)
 }
 
-// Classes gives the widths among these, in the order 1, 2, 4.
-func Classes(width []int) []int {
-	var out []int
-	for _, w := range []int{1, 2, 4} {
-		for _, held := range width {
-			if held == w {
-				out = append(out, w)
-				break
-			}
-		}
-	}
-	return out
-}
-
-// Counts gives how many columns are in each width class.
-func Counts(width []int) [3]int {
-	var out [3]int
-	for _, w := range width {
-		switch w {
-		case 1:
-			out[0]++
-		case 2:
-			out[1]++
-		default:
-			out[2]++
-		}
-	}
-	return out
-}
-
-// first gives the column of w bytes that stands first, or -1.
-func first(width []int, w int) int {
-	for i, held := range width {
-		if held == w {
-			return i
-		}
-	}
-	return -1
-}
-
-// Bases gives where each width class's first column begins in the payload.
-func Bases(header dtx.Header) [3]int {
-	at := dtx.Offsets(header.Rows, header.Width)
-	var out [3]int
-	for c, w := range [3]int{1, 2, 4} {
-		if i := first(header.Width, w); i >= 0 {
-			out[c] = at[i]
-		}
-	}
-	return out
-}
-
 // Decoders gives where the decoder states stand in the state block, doc/abi.md 3.
 func Decoders(header dtx.Header) int {
 	return PackedHead
@@ -120,191 +70,83 @@ func Decoders(header dtx.Header) int {
 
 // Ring gives where the rings stand in the state block.
 func Ring(header dtx.Header) int {
-	return Decoders(header) + 32*header.Columns()
-}
-
-// RingOf gives where a width class's ring begins in the state block.
-func RingOf(header dtx.Header, c, n int) int {
-	w := [3]int{1, 2, 4}[c]
-	if i := first(header.Width, w); i >= 0 {
-		return Ring(header) + i*n
-	}
-	return Ring(header)
+	return Decoders(header) + 32*header.Columns
 }
 
 // StateBytes gives the state block a plain reader of this table takes.
+//
+// The same under DTX0 and DTX1, and the same at every C: every column is one
+// width, so one cursor walks them all.
 func StateBytes(header dtx.Header) int {
-	if header.Variant == dtx.DTX0 {
-		return Cursor + 4
-	}
-	// DTX1 has three cursors and the three places their classes begin,
-	// at any widths the table defines, so its block does not move with C.
-	if header.Variant == dtx.DTX1 {
-		return 48
-	}
-	return Cursor + 4*len(Classes(header.Width))
+	return Plain
 }
 
 // PackedStateBytes gives the state block a packaged DTX2 reader takes.
 func PackedStateBytes(header dtx.Header, given Packed) int {
-	return Ring(header) + given.Ring*header.Columns()
+	return Ring(header) + given.Ring*header.Columns
 }
 
 // Period gives the period a table of these takes, the smallest that meets
 // every rule of doc/abi.md 4, or an error naming the rule none meets.
 func Period(header dtx.Header, given Packed) (int, error) {
-	width := header.Width
 	rows := header.Rows
+	width := header.Width
 	n := given.Ring
 	k := given.Unit
-	columns := len(width)
-	widest := 0
-	for _, w := range width {
-		if w > widest {
-			widest = w
-		}
-	}
-	if (columns-1)*n > 32767 {
-		return 0, fmt.Errorf("a read reaches column %d at %d, past the 32767"+
-			" a 68000 displacement holds: C is at most %d at N of %d",
-			columns-1, (columns-1)*n, 32767/n+1, n)
-	}
-	if k == 0 || rows%k != 0 {
-		return 0, fmt.Errorf("R is %d, which does not divide by k of %d",
-			rows, k)
+	columns := header.Columns
+	if k == 0 || rows*width%k != 0 {
+		return 0, fmt.Errorf("a column is %d times %d bytes, which does not"+
+			" divide by k of %d", rows, width, k)
 	}
 	for p := columns; p <= rows; p++ {
-		if n < 2*p*widest {
+		budget := p * width / k
+		if n < 2*p*width {
 			break
 		}
-		holds := true
-		for _, w := range width {
-			budget := p * w / k
-			holds = holds && n%(p*w) == 0 && (p*w)%k == 0 &&
-				budget >= 1 && budget <= 65535
-		}
-		if holds {
+		if n%(p*width) == 0 && p*width%k == 0 &&
+			budget >= 1 && budget <= 65535 {
 			return p, nil
 		}
 	}
-	return 0, fmt.Errorf("no period from C of %d to R of %d holds N of %d and"+
-		" k of %d: N divides by P times every width, is at least twice that,"+
-		" and every budget is a whole number of units", columns, rows, n, k)
+	return 0, fmt.Errorf("no period from C of %d to R of %d meets N of %d and"+
+		" k of %d: N divides by P times the width, is at least twice that,"+
+		" and the budget is a whole number of units", columns, rows, n, k)
 }
 
-// shift gives log2 of of where it is a power of two, or -1.
-func shift(of int) int {
-	for s := 0; s < 32; s++ {
-		if 1<<s == of {
-			return s
-		}
-	}
-	return -1
-}
-
-// ColumnTable gives the table behind the image's code: a header, one
-// read entry a column grouped by width so each of a read's three loops walks
-// a run of them, and under DTX2 one stream record a column.
+// ColumnTable gives the table behind the image's code: one stream record a
+// column, four longs each, and nothing else.
 //
-// DTX0 does not have one: a DTX0 row is one run of bytes, so no loop walks a
-// column.
+// DTX0 and DTX1 do not have one. Every column is one width, so a cursor and
+// a stride walk them all: what a plain read takes is arithmetic on R, C and
+// the width.
 func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
-	if header.Variant == dtx.DTX0 {
+	if header.Variant != dtx.DTX2 {
 		return nil, nil
 	}
-	width := header.Width
-	at := dtx.Offsets(header.Rows, width)
-	count := Counts(width)
-	base := Bases(header)
-	packed := header.Variant == dtx.DTX2
-	var given Packed
-	period := 1
-	if packed {
-		var err error
-		if given, err = ReadPacked(file, header); err != nil {
-			return nil, err
-		}
-		if period, err = Period(header, given); err != nil {
-			return nil, err
-		}
+	given, err := ReadPacked(file, header)
+	if err != nil {
+		return nil, err
 	}
-	n := given.Ring
-	records := Entries + Entry*len(width)
-	size := records
-	if packed {
-		size += Stream * len(width)
-	}
-	out := make([]byte, size)
-	for c := 0; c < 3; c++ {
-		dtx.PutWord(out, 2*c, count[c])
-		// Under DTX2 a class begins at its first column's ring in the state
-		// block, not at its column's place in the payload.
-		if packed {
-			dtx.PutLong(out, 8+4*c, RingOf(header, c, n))
-		} else {
-			dtx.PutLong(out, 8+4*c, base[c])
-		}
-	}
-	dtx.PutWord(out, 6, header.RowBytes())
-	dtx.PutWord(out, 20, len(width))
-	dtx.PutWord(out, 22, period)
-	dtx.PutLong(out, 24, records)
-	dtx.PutLong(out, 28, n)
-	wrote := Entries
-	for _, w := range [3]int{1, 2, 4} {
-		begins := first(width, w)
-		row := 0
-		for i, held := range width {
-			if held == w {
-				if packed {
-					dtx.PutWord(out, wrote, (i-begins)*n)
-				} else {
-					dtx.PutWord(out, wrote, at[i]-base[classOf(w)])
-				}
-				dtx.PutWord(out, wrote+2, row)
-				wrote += Entry
-			}
-			row += held
-		}
-	}
-	if packed {
-		payload := header.Length
-		kshift := shift(given.Unit)
-		for i, w := range width {
-			rec := records + Stream*i
-			set := given.At[i]
-			dtx.PutLong(out, rec, set+28)
-			dtx.PutLong(out, rec+4, set+dtx.GetLong(file, payload+set+8))
-			dtx.PutLong(out, rec+8, set+dtx.GetLong(file, payload+set+12))
-			dtx.PutLong(out, rec+12, set+dtx.GetLong(file, payload+set+16))
-			dtx.PutLong(out, rec+16, Ring(header)+i*n)
-			dtx.PutLong(out, rec+20, Decoders(header)+32*i)
-			dtx.PutWord(out, rec+24, shift(w))
-			dtx.PutWord(out, rec+26, kshift)
-		}
+	payload := header.Length()
+	out := make([]byte, Stream*header.Columns)
+	for i := 0; i < header.Columns; i++ {
+		rec := Stream * i
+		set := given.At[i]
+		dtx.PutLong(out, rec, set+28)
+		dtx.PutLong(out, rec+4, set+dtx.GetLong(file, payload+set+8))
+		dtx.PutLong(out, rec+8, set+dtx.GetLong(file, payload+set+12))
+		dtx.PutLong(out, rec+12, set+dtx.GetLong(file, payload+set+16))
 	}
 	return out, nil
-}
-
-// classOf gives where a width stands among the three classes.
-func classOf(w int) int {
-	switch w {
-	case 1:
-		return 0
-	case 2:
-		return 1
-	default:
-		return 2
-	}
 }
 
 // Combine gives one image: this code, the column table, the table's bytes,
 // and the format block written to define the three.
 //
 // The code is the same bytes any table that follows it, so what a combine
-// writes is the five fields the table gives. It checks the two it cannot
-// write: the variant, and under DTX2 the unit the decoder built into the
-// code decodes at.
+// writes is the five fields the table gives. It checks the three it cannot
+// write: the variant, the width the code reads values at, and under DTX2 the
+// unit the decoder built into the code decodes at.
 func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 	if len(code) < FormatAt+Format {
 		return nil, fmt.Errorf("code of %d bytes does not contain a format block",
@@ -336,6 +178,11 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 		return nil, fmt.Errorf("the code decodes at a unit of %d and the"+
 			" table was packed at %d", unit, given.Unit)
 	}
+	width := int(code[FormatAt+WidthAt])
+	if header.Variant != dtx.DTX0 && width != header.Width {
+		return nil, fmt.Errorf("the code reads values of %d bytes and the"+
+			" table's are %d", width, header.Width)
+	}
 	entries, err := ColumnTable(file, header)
 	if err != nil {
 		return nil, err
@@ -365,10 +212,10 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 
 // Image gives the image for this table, from the code this build contains.
 //
-// Which of the eight it takes is the file's to define: the variant, and under
-// DTX2 the unit its data sets are packed at and whether they contain copies
-// from the literal stream (R5.10). No word from a caller enters it, so no
-// word can differ from the bytes.
+// Which of the twenty-two it takes is the file's to define: the variant, the
+// width every value takes, and under DTX2 the unit its data sets are packed
+// at and whether they contain copies from the literal stream (R5.10). No
+// word from a caller enters it, so no word can differ from the bytes.
 func Image(file []byte) ([]byte, error) {
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
@@ -382,7 +229,7 @@ func Image(file []byte) ([]byte, error) {
 		}
 		unit, copies = given.Unit, given.Copies
 	}
-	code, err := image.Code(header.Variant, unit, copies)
+	code, err := image.Code(header.Variant, header.Width, unit, copies)
 	if err != nil {
 		return nil, err
 	}
@@ -407,9 +254,9 @@ func equ(name string, value int) string {
 }
 
 // Figures gives what one table gives, as a template reads it: the equates,
-// and no instruction. Every figure a loop counts with reaches the
-// code at run time instead, out of the table's own header and the column
-// table (doc/tools.md).
+// and no instruction. R, C and RR reach the code at run time instead, out of
+// the table's own header, and what is left is the width, the row's bytes and
+// the state block (doc/tools.md).
 func Figures(file []byte) (string, error) {
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
@@ -432,16 +279,17 @@ func Figures(file []byte) (string, error) {
 	}
 	var out strings.Builder
 	fmt.Fprintf(&out, "; What org.dtx.Packager writes of one table, for"+
-		" 68k/DTX.S to read.\n; DTX%d, R = %d, C = %d, RR = %d\n"+
+		" 68k/DTX.S to read.\n; DTX%d, R = %d, C = %d, W = %d, RR = %d\n"+
 		"; Every instruction is the template's; nothing here is one.\n\n"+
 		"; The state block, doc/abi.md 3.\n",
-		variant, header.Rows, header.Columns(), header.Repeat)
+		variant, header.Rows, header.Columns, header.Width, header.Repeat)
 	out.WriteString(equ("DTX_ROW", Row))
 	out.WriteString(equ("DTX_TURN", Turn))
 	out.WriteString(equ("DTX_DECODED", Decoded))
 	out.WriteString(equ("DTX_PARK", Park))
 	out.WriteString(equ("DTX_CURSOR", Cursor))
 	out.WriteString("\n")
+	out.WriteString(equ("DTX_WIDTH", header.Width))
 	out.WriteString(equ("DTX_ROWBYTES", header.RowBytes()))
 	out.WriteString(equ("DTX_STATE", state))
 	if variant == dtx.DTX2 {

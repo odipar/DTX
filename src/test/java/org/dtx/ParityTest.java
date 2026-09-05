@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
  * The three trees against each other, byte for byte.
  *
  * <p>One input has one output. Java, Go and C# write the same DTX files,
- * rewrite them the same way, build the same eight images and combine the
+ * rewrite them the same way, build the same twenty-two images and combine the
  * same packages, so a caller who takes any one of them has the same bytes
  * at every step.
  *
@@ -131,15 +131,17 @@ class ParityTest {
         Path text = work().resolve("t.csv");
         Files.writeString(text, "# a comment, and a blank line\n\n"
                 + Rig.numbers(64, 3));
-        record Case(String name, int variant, int[] width,
+        record Case(String name, int variant, int width,
                 @Nullable Integer repeat, int unit, int ring, boolean copies) {}
         for (Case one : List.of(
-                new Case("DTX0, widths given", 0, new int[] {1, 2, 4}, null, 1, 960, false),
-                new Case("DTX1, a repeat", 1, new int[] {1, 2, 4}, 32, 1, 960, false),
-                new Case("DTX2, k of 1", 2, new int[] {1, 2, 4}, null, 1, 960, false),
-                new Case("DTX2, k of 2", 2, new int[] {2, 4, 2}, null, 2, 960, false),
-                new Case("DTX2, k of 4", 2, new int[] {4, 4, 4}, null, 4, 960, false),
-                new Case("DTX2, with copies", 2, new int[] {1, 2, 4}, null, 1, 960, true))) {
+                new Case("DTX0, a width given", 0, 2, null, 1, 960, false),
+                new Case("DTX1, a repeat", 1, 1, 32, 1, 960, false),
+                new Case("DTX1, four byte values", 1, 4, null, 1, 960, false),
+                new Case("DTX2, k of 1", 2, 1, null, 1, 960, false),
+                new Case("DTX2, k of 2 at a width of 2", 2, 2, null, 2, 960, false),
+                new Case("DTX2, k of 4 at a width of 4", 2, 4, null, 4, 960, false),
+                new Case("DTX2, k of 1 at a width of 4", 2, 4, null, 1, 960, false),
+                new Case("DTX2, with copies", 2, 2, null, 1, 960, true))) {
             List<String> argv = new ArrayList<>();
             argv.add(text.toString());
             argv.add(OUT);
@@ -154,10 +156,10 @@ class ParityTest {
         Path work = work();
         Path plain = work.resolve("plain.dtx");
         Files.write(plain, Rig.write(work, Rig.numbers(64, 3), 1,
-                new int[] {1, 2, 4}, null, 1, 960, false));
+                2, null, 1, 960, false));
         Path packed = work.resolve("packed.dtx");
         Files.write(packed, Rig.write(work, Rig.numbers(64, 3), 2,
-                new int[] {1, 2, 4}, null, 1, 960, false));
+                2, null, 1, 960, false));
         record Case(String name, Path in, List<String> flags, String out) {}
         for (Case one : List.of(
                 new Case("DTX1 to DTX2, k of 1", plain, List.of("-v2", "-k1", "-m960"), "r.dtx"),
@@ -176,7 +178,7 @@ class ParityTest {
     }
 
     @Test
-    void everyTreeBuildsTheSameEightImages() throws IOException {
+    void everyTreeBuildsTheSameImages() throws IOException {
         Path work = work();
         Map<String, Path> into = new LinkedHashMap<>();
         for (String tree : List.of("java", "go", "cs")) {
@@ -211,17 +213,20 @@ class ParityTest {
     void everyTreePackagesTheSameImage() throws IOException {
         Path work = work();
         record Case(String name, int variant, int rows, int columns,
-                int[] width, @Nullable Integer repeat, int unit, int ring,
+                int width, @Nullable Integer repeat, int unit, int ring,
                 boolean copies) {}
         for (Case one : List.of(
-                new Case("DTX0", 0, 64, 3, new int[] {1, 2, 4}, null, 1, 960, false),
-                new Case("DTX0, one column", 0, 9, 1, new int[] {1}, null, 1, 960, false),
-                new Case("DTX1", 1, 64, 3, new int[] {1, 2, 4}, null, 1, 960, false),
-                new Case("DTX1, one row", 1, 1, 2, new int[] {1, 4}, null, 1, 960, false),
-                new Case("DTX2, k of 1", 2, 64, 3, new int[] {1, 2, 4}, null, 1, 960, false),
-                new Case("DTX2, k of 4", 2, 64, 2, new int[] {4, 4}, null, 4, 960, false),
-                new Case("DTX2, with copies", 2, 64, 2, new int[] {1, 2}, null, 1, 960, true),
-                new Case("DTX2, a ring of 480", 2, 64, 2, new int[] {1, 2}, null, 1, 480, false))) {
+                new Case("DTX0", 0, 64, 3, 2, null, 1, 960, false),
+                new Case("DTX0, one column", 0, 9, 1, 1, null, 1, 960, false),
+                new Case("DTX1", 1, 64, 3, 2, null, 1, 960, false),
+                new Case("DTX1, one row", 1, 1, 2, 4, null, 1, 960, false),
+                new Case("DTX1, one byte values", 1, 64, 3, 1, null, 1, 960, false),
+                new Case("DTX2, k of 1", 2, 64, 3, 1, null, 1, 960, false),
+                new Case("DTX2, k of 4", 2, 64, 2, 4, null, 4, 960, false),
+                new Case("DTX2, k of 4 at a width of 1", 2, 64, 2, 1, null, 4, 960, false),
+                new Case("DTX2, with copies", 2, 64, 2, 2, null, 1, 960, true),
+                new Case("DTX2, twenty columns", 2, 64, 20, 2, null, 1, 960, false),
+                new Case("DTX2, a ring of 480", 2, 64, 2, 2, null, 1, 480, false))) {
             Path src = work.resolve("p.dtx");
             Files.write(src, Rig.write(work, Rig.numbers(one.rows(), one.columns()),
                     one.variant(), one.width(), one.repeat(), one.unit(),

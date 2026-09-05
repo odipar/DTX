@@ -4,9 +4,9 @@ package org.dtx;
  * The header every variant shares, and the numbers the variants take.
  *
  * <p>{@code doc/SPEC.md} section 1: {@code DTX}, the variant, {@code R},
- * {@code C}, {@code RR}, a width a column, and zero bytes up to the next
- * long, so the payload begins on one. Every field of more than one byte is
- * most significant byte first.
+ * {@code C}, {@code RR}, the width every value takes, and one zero byte, so
+ * the payload begins on a long. Every field of more than one byte is most
+ * significant byte first.
  */
 public final class Dtx {
 
@@ -22,12 +22,10 @@ public final class Dtx {
     /** The variant byte of a table laid out column by column and packed. */
     public static final int DTX2 = 2;
 
-    private Dtx() {
-    }
+    /** What a header runs to, under every variant and every {@code C}. */
+    public static final int HEADER = 16;
 
-    /** What a header runs to: 14 plus {@code C}, up to the next long. */
-    public static int headerLength(int columns) {
-        return align(14 + columns, 4);
+    private Dtx() {
     }
 
     /** {@code at} up to the next multiple of {@code to}. */
@@ -37,15 +35,13 @@ public final class Dtx {
 
     /** The header of {@code table} under {@code variant}. */
     public static byte[] header(int variant, Table table) {
-        byte[] out = new byte[headerLength(table.columns())];
+        byte[] out = new byte[HEADER];
         System.arraycopy(MAGIC, 0, out, 0, MAGIC.length);
         out[3] = (byte) variant;
         putLong(out, 4, table.rows());
         putWord(out, 8, table.columns());
         putLong(out, 10, table.repeat());
-        for (int i = 0; i < table.columns(); i++) {
-            out[14 + i] = (byte) table.width(i);
-        }
+        out[14] = (byte) table.width();
         return out;
     }
 
@@ -54,16 +50,21 @@ public final class Dtx {
      *
      * @param variant the byte at offset 3
      * @param rows {@code R}
+     * @param columns {@code C}
      * @param repeat {@code RR}
-     * @param width one entry a column
-     * @param length what the header runs to, the payload's first byte
+     * @param width the bytes every value takes
      */
-    public record Header(int variant, int rows, int repeat, int[] width,
-            int length) {
+    public record Header(int variant, int rows, int columns, int repeat,
+            int width) {
 
-        /** {@code C}, the column count. */
-        public int columns() {
-            return width.length;
+        /** What the header runs to, the payload's first byte. */
+        public int length() {
+            return HEADER;
+        }
+
+        /** A row's bytes: {@code C} values of {@code W} bytes. */
+        public int rowBytes() {
+            return columns * width;
         }
     }
 
@@ -74,7 +75,7 @@ public final class Dtx {
      *     does not open with {@code DTX}, or breaks a bound R6 sets
      */
     public static Header header(byte[] file) {
-        if (file.length < 16) {
+        if (file.length < HEADER) {
             throw new IllegalArgumentException(
                     "a file of " + file.length
                             + " bytes does not contain a header");
@@ -88,6 +89,7 @@ public final class Dtx {
         int rows = getLong(file, 4);
         int columns = getWord(file, 8);
         int repeat = getLong(file, 10);
+        int width = file[14] & 0xFF;
         if (rows < 1) {
             throw new IllegalArgumentException("R is 1 upward, not " + rows);
         }
@@ -97,20 +99,11 @@ public final class Dtx {
         if (repeat < 0 || repeat > rows) {
             throw new IllegalArgumentException("RR is 0 to R, not " + repeat);
         }
-        int length = headerLength(columns);
-        if (file.length < length) {
-            throw new IllegalArgumentException("a file of " + file.length
-                    + " bytes is short of a header of " + length);
+        if (width != 1 && width != 2 && width != 4) {
+            throw new IllegalArgumentException("the width is 1, 2 or 4 bytes,"
+                    + " not " + width);
         }
-        int[] width = new int[columns];
-        for (int i = 0; i < columns; i++) {
-            width[i] = file[14 + i] & 0xFF;
-            if (width[i] != 1 && width[i] != 2 && width[i] != 4) {
-                throw new IllegalArgumentException("column " + i + " is "
-                        + width[i] + " bytes wide, not 1, 2 or 4");
-            }
-        }
-        return new Header(file[3] & 0xFF, rows, repeat, width, length);
+        return new Header(file[3] & 0xFF, rows, columns, repeat, width);
     }
 
     /**

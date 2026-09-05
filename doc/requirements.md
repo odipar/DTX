@@ -30,15 +30,15 @@ before what it describes, and what things are called comes before both.
 
 ## R1. What DTX is
 
-- **R1.1** A table of `R` rows and `C` columns, a column of a fixed width,
-  and a row `RR` it repeats to once the last row is done. R6 bounds all
-  four.
+- **R1.1** A table of `R` rows and `C` columns, every value of one fixed
+  width, and a row `RR` it repeats to once the last row is done. R6 bounds
+  all four.
 - **R1.2** A format, not an engine. The table is data; a compile step or a
   calling convention is a reader's, and a reader is written against the
   format rather than named by it.
 - **R1.3** How the rows are laid out is a variant's (R2). The table does
-  not change with the variant: the same `R`, `C` and `RR`, the same column
-  widths, and the same rows in the same order.
+  not change with the variant: the same `R`, `C` and `RR`, the same width,
+  and the same rows in the same order.
 - **R1.4** Nothing about what a column contains. A format built on this one
   defines that in its own repository.
 
@@ -62,10 +62,10 @@ before what it describes, and what things are called comes before both.
   unpacking nothing and keeping nothing between one row and the next, and
   a writer puts a row down the same way.
 - **R3.3** Finding a row, or a column within one, is arithmetic on `R`,
-  `C` and the widths. An index is absent.
-- **R3.4** Nothing padded inside the payload. A value falls where the
-  widths put it, so a two or four byte column may fall on an odd offset,
-  where a 68000 takes it as bytes.
+  `C` and the width. An index is absent.
+- **R3.4** Nothing padded inside the payload. A value falls where the width
+  puts it, so at a width of 1 and an odd `C` a row may fall on an odd
+  offset, where a 68000 takes its values as bytes.
 - **R3.5** A whole row in one run of bytes. That is what DTX0 is for.
 
 ## R4. DTX1
@@ -73,9 +73,9 @@ before what it describes, and what things are called comes before both.
 - **R4.1** The rows laid out column by column.
 - **R4.2** The rows as they stand and found by arithmetic, as R3.2 and
   R3.3 have DTX0's.
-- **R4.3** A column begins on a word, so every value of a two or four byte
-  column sits where a 68000 reads it as one. DTX1 has this over DTX0, at a
-  byte a column.
+- **R4.3** A column begins on a word, so every value sits where a 68000
+  reads it as one. DTX1 has this over DTX0, at a byte a column where the
+  width is 1 and `R` odd, and at nothing where the width is 2 or 4.
 - **R4.4** A column's values together, so a reader takes one column
   without touching the others. That is what DTX1 is for.
 
@@ -94,9 +94,11 @@ before what it describes, and what things are called comes before both.
   every data set was packed for the `N` the payload defines.
 - **R5.5** A reader's rings are all that one size, so they stand at a
   fixed stride from one another and one cursor arithmetic runs every
-  column.
-- **R5.6** `R` divides by `k`. ST4 packs whole units, so a column that is
-  not a whole number of them unpacks to more bytes than it has.
+  column. Every column is one width (R6.3), so one cursor does: column
+  `i`'s value for a row stands `i` rings past column 0's.
+- **R5.6** `R` times the width divides by `k`. ST4 packs whole units, so a
+  column that is not a whole number of them unpacks to more bytes than it
+  has.
 - **R5.7** The same table in fewer bytes than DTX1, once it has rows
   enough for the packing to cost less than it saves. That is what DTX2 is
   for. What the packing costs does not grow with `R`, where what it saves
@@ -117,7 +119,9 @@ otherwise.
 
 - **R6.1** `R` is 1 upward.
 - **R6.2** `C` is 1 to 256.
-- **R6.3** A column's width is 1, 2 or 4 bytes, and no other.
+- **R6.3** One width a table: every value of it takes 1, 2 or 4 bytes, and
+  a column of another width is another table. A reader built for one width
+  reads a table of that width.
 - **R6.4** `RR` names a row of the table, 0 to `R` minus one, or is `R`
   itself where the table does not repeat.
 - **R6.5** A reader given a table that breaks any of these, or R5.6, or a
@@ -135,8 +139,8 @@ What R1 to R6 do not yet define. Each is open, and none of it is fixed by
 - What a reader reports of a table it will not read. R6.5 has it report and
   not read further, and leaves what it reports to SPEC.md, which has not
   written it.
-- Whether a variant may contain columns of more than one kind, some packed and
-  some plain.
+- Whether a variant may contain columns of more than one kind, some packed
+  and some plain, or of more than one width.
 - What checks a reader written elsewhere against this repository's. The
   Java, Go and C# trees write the same bytes and a test compares them, and
   the 68000 reader is compared with the text a table came from under

@@ -49,11 +49,11 @@ public static class Tools
         }
         string[] named = args[..2];
         int variant = -1, repeat = -1, unit = 1, ring = 960;
-        string widths = "", packer = "", copies = "";
+        string width = "", packer = "", copies = "";
         foreach (string arg in args[2..])
         {
             if (arg.StartsWith("-v", StringComparison.Ordinal)) variant = Number(arg[2..]);
-            else if (arg.StartsWith("-w", StringComparison.Ordinal)) widths = arg[2..];
+            else if (arg.StartsWith("-w", StringComparison.Ordinal)) width = arg[2..];
             else if (arg.StartsWith("-r", StringComparison.Ordinal)) repeat = Number(arg[2..]);
             else if (arg.StartsWith("-k", StringComparison.Ordinal)) unit = Number(arg[2..]);
             else if (arg.StartsWith("-m", StringComparison.Ordinal)) ring = Number(arg[2..]);
@@ -79,9 +79,9 @@ public static class Tools
         Table table;
         if (IsDtx(in_))
         {
-            if (widths.Length != 0)
+            if (width.Length != 0)
             {
-                Console.Error.WriteLine($"-w{widths} gives text its widths,"
+                Console.Error.WriteLine($"-w{width} gives text its width,"
                         + $" and {named[0]} is a DTX file with its own");
                 return 2;
             }
@@ -98,10 +98,11 @@ public static class Tools
         else
         {
             string text = Encoding.UTF8.GetString(in_);
-            int[] width = widths.Length == 0 ? Csv.Widths(text) : Widths(widths);
-            int given = repeat < 0 ? Csv.Repeat(text) : repeat;
-            table = given < 0
-                    ? Csv.TableAt(text, width) : Csv.TableAt(text, width, given);
+            int given = width.Length == 0
+                    ? Csv.Width(text) : Number(width.Trim());
+            int at = repeat < 0 ? Csv.Repeat(text) : repeat;
+            table = at < 0
+                    ? Csv.TableAt(text, given) : Csv.TableAt(text, given, at);
             if (variant < 0)
             {
                 variant = Format.Dtx0;
@@ -117,16 +118,11 @@ public static class Tools
                     $"the variant is 0, 1 or 2, not {variant}"),
         };
         File.WriteAllBytes(named[1], out_);
-        StringBuilder drawn = new();
-        for (int i = 0; i < table.Columns; i++)
-        {
-            drawn.Append(i == 0 ? "" : ",").Append(table.Width(i));
-        }
         string packing = !toText && variant == Format.Dtx2
                 ? $", k={unit}, N={ring}" : "";
         Console.WriteLine($"{named[0]} -> {(toText ? "text" : $"DTX{variant}")}"
                 + $" {out_.Length} bytes, {table.Rows} rows, {table.Columns}"
-                + $" columns, widths {drawn}, RR={table.Repeat}{packing}");
+                + $" columns, width {table.Width}, RR={table.Repeat}{packing}");
         return 0;
     }
 
@@ -143,19 +139,7 @@ public static class Tools
         {
             column[i] = table.Column(i);
         }
-        return Table.Of(table.Rows, repeat, table.Widths(), column);
-    }
-
-    /// <summary>The widths -w gives, one a column.</summary>
-    private static int[] Widths(string given)
-    {
-        string[] cell = given.Split(',');
-        int[] width = new int[cell.Length];
-        for (int i = 0; i < cell.Length; i++)
-        {
-            width[i] = Number(cell[i].Trim());
-        }
-        return width;
+        return Table.Of(table.Rows, repeat, table.Width, column);
     }
 
     /// <summary>A DTX file into a standalone 68000 image.</summary>
@@ -212,12 +196,13 @@ public static class Tools
     }
 
     /// <summary>
-    /// The eight 68000 images the packager combines from, one file a build.
+    /// The twenty-two 68000 images the packager combines from, one file a
+    /// build.
     ///
     /// <para>The table each is assembled from is made here rather than read:
-    /// the code does not move with a table, and Pack.Blank zeroes the five
-    /// fields the one used did give, so what comes out is a function of the
-    /// template alone.</para>
+    /// the code does not move with a table's shape, and Pack.Blank zeroes
+    /// the five fields the one used did give, so what comes out is a
+    /// function of the template alone.</para>
     /// </summary>
     public static int Blobs(string[] args)
     {
@@ -252,7 +237,8 @@ public static class Tools
         {
             byte[] code = Pack.Code(Seed(build), rmac, templates);
             Pack.Blank(code);
-            string name = Images.Name(build.Variant, build.Unit, build.Copies);
+            string name = Images.Name(build.Variant, build.Width, build.Unit,
+                    build.Copies);
             foreach (string at in into)
             {
                 File.WriteAllBytes(Path.Combine(at, name), code);
@@ -265,19 +251,19 @@ public static class Tools
     /// <summary>
     /// A table that fixes the figures one build's assembly reads. Any
     /// table of the kind does, since the code does not move with it: this
-    /// one is 64 rows of two columns, at a ring of 960 where it is packed.
+    /// one is 64 rows of two columns, at the build's width, and at a ring of
+    /// 960 where it is packed.
     /// </summary>
     private static byte[] Seed(Images.Build build)
     {
-        int[] width = build.Variant == Format.Dtx2
-                ? new[] { build.Unit, build.Unit } : new[] { 1, 2, 4 };
         const int rows = 64;
-        byte[][] column = new byte[width.Length][];
-        for (int i = 0; i < width.Length; i++)
+        const int columns = 2;
+        byte[][] column = new byte[columns][];
+        for (int i = 0; i < columns; i++)
         {
-            column[i] = new byte[rows * width[i]];
+            column[i] = new byte[rows * build.Width];
         }
-        Table table = Table.Of(rows, rows, width, column);
+        Table table = Table.Of(rows, rows, build.Width, column);
         return build.Variant switch
         {
             Format.Dtx0 => Variants.WriteDtx0(table),

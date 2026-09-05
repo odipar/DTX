@@ -7,10 +7,10 @@
 #   COMMIT=e39c110 release/manifest.sh VERSION DIR
 #
 # The images are read out of the zip that packs them and listed one a line
-# with the three figures that identify one: the variant, the unit its
-# decoder decodes at, and whether that decoder has the copy code. The zips
-# are listed by what each contains. The source commit is HEAD unless COMMIT
-# gives the commit DIR was built from.
+# with the four figures that identify one: the variant, the width every
+# value of a table takes, the unit its decoder decodes at, and whether that
+# decoder has the copy code. The zips are listed by what each contains. The
+# source commit is HEAD unless COMMIT gives the commit DIR was built from.
 set -e
 VERSION=$1
 DIR=$2
@@ -45,23 +45,29 @@ MANIFEST="$DIR/MANIFEST.txt"
     echo "doc/abi.md is the calling convention; doc/tools.md the tools"
     echo
     echo "the images, in $IMAGES"
-    echo "name  bytes  sha256  variant  k  copies"
+    echo "name  bytes  sha256  variant  w  k  copies"
     for image in "$unpacked"/*.bin; do
         name=$(basename "$image")
-        # DTX0 and DTX1 do not have a decoder, so neither a unit nor copies.
+        # The name gives the width as -wW and the unit as -kK. DTX0's code
+        # does not move with the width, and DTX0 and DTX1 do not have a
+        # decoder, so those columns read - rather than a figure.
+        w=$(echo "$name" | sed -n 's/.*-w\([0-9]*\)-.*/\1/p')
+        k=$(echo "$name" | sed -n 's/.*-k\([0-9]*\)-.*/\1/p')
+        [ -n "$w" ] || w=-
+        [ -n "$k" ] || k=-
         case "$name" in
-            DTX2-k*-copies-*) variant=2; k=$(echo "$name" | sed 's/.*-k\([0-9]*\)-copies.*/\1/'); copies=yes ;;
-            DTX2-k*)          variant=2; k=$(echo "$name" | sed 's/.*-k\([0-9]*\)-v.*/\1/'); copies=no ;;
-            DTX0-*)           variant=0; k=-; copies=- ;;
-            DTX1-*)           variant=1; k=-; copies=- ;;
-            *)                variant=-; k=-; copies=- ;;
+            DTX2-w*-copies-*) variant=2; copies=yes ;;
+            DTX2-w*)          variant=2; copies=no ;;
+            DTX0-*)           variant=0; copies=- ;;
+            DTX1-w*)          variant=1; copies=- ;;
+            *)                variant=-; copies=- ;;
         esac
-        echo "$name  $(size "$image")  $(sha "$image")  $variant  $k  $copies"
+        echo "$name  $(size "$image")  $(sha "$image")  $variant  $w  $k  $copies"
     done
     echo
     echo "the zips"
     echo "name  bytes  sha256  contents"
-    echo "$IMAGES  $(size "$DIR/$IMAGES")  $(sha "$DIR/$IMAGES")  the eight images"
+    echo "$IMAGES  $(size "$DIR/$IMAGES")  $(sha "$DIR/$IMAGES")  the twenty-two images"
     for zip in "$DIR"/dtx-tools-*.zip; do
         name=$(basename "$zip")
         platform=$(echo "$name" | sed "s/^dtx-tools-//; s/-v$VERSION\.zip$//")

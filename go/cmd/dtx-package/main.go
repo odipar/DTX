@@ -1,9 +1,9 @@
 // Command dtx-package turns a DTX file into a standalone 68000 image.
 //
-// It combines rather than assembles: the code does not move with the table,
-// so this executable contains the eight images built once and takes the one the
-// table needs. No assembler runs. doc/tools.md defines the tool and
-// doc/abi.md the six calls into the image.
+// It combines rather than assembles: the code does not move with the table's
+// shape, so this executable contains the twenty-two images built once and
+// takes the one the table needs. No assembler runs. doc/tools.md defines the
+// tool and doc/abi.md the six calls into the image.
 //
 //	dtx-package in.dtx out.bin
 package main
@@ -95,6 +95,6 @@ func run(args []string) error {
 	fmt.Printf("%s -> DTX%d image %d bytes, table %d bytes, %d rows,"+
 		" %d columns, state block %d bytes\n",
 		named[0], header.Variant, len(out), len(file), header.Rows,
-		header.Columns(), state)
+		header.Columns, state)
 	return nil
 }

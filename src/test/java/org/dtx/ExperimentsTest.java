@@ -66,7 +66,7 @@ class ExperimentsTest {
     void whereDtx2BecomesTheSmallerOfTheTwo() throws IOException {
         for (String[] row : rows(doc(), "Where DTX2 becomes the smaller of the two")) {
             int r = Integer.parseInt(row[0]);
-            Table table = Csv.table(numbers(r, 3), new int[] {1, 2, 4});
+            Table table = Csv.table(numbers(r, 3), 1);
             int one = Dtx1.write(table).length;
             int two = Dtx2.write(table, new St4(), 1, 960).length;
             assertEquals(Integer.parseInt(row[1]), one, "DTX1 at R of " + r);
@@ -76,7 +76,7 @@ class ExperimentsTest {
 
     @Test
     void copiesFromTheLiteralStreamAtASmallRing() throws IOException {
-        Table table = Csv.table(repeating(), new int[] {1, 2});
+        Table table = Csv.table(repeating(), 2);
         for (String[] row : rows(doc(), "Copies from the literal stream, at a small ring")) {
             byte[] file = switch (row[0]) {
                 case "DTX1" -> Dtx1.write(table);

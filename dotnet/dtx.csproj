@@ -2,7 +2,7 @@
 
   <!-- The C# tree: DTX's own code under dtx/, and under nt4/ a carried copy
        of ST4's C# packer, so a DTX2 file is written with no packer beside
-       this one. doc/tools.md states the tools; LICENSE states the copy. -->
+       this one. doc/tools.md defines the tools; LICENSE names the copy. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -16,9 +16,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The eight 68000 images, as go:embed takes them in the Go tree. A
-         tree whose build has not run holds none, and Images.Read then gives
-         nothing back. -->
+    <!-- The twenty-two 68000 images, as go:embed takes them in the Go tree.
+         A tree whose build has not run does not contain one, and Images.Read
+         then gives nothing back. -->
     <EmbeddedResource Include="../build/68k/*.bin" Condition="Exists('../build/68k')" />
   </ItemGroup>
 

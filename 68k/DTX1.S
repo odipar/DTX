@@ -9,38 +9,22 @@
 ; template a variant: this file reads only DTX1, so no call in it tests which
 ; variant it contains.
 ;
-; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR and the widths reach it at
-; run time rather than at assembly time, so every DTX1 image contains the same
-; instructions and the column table and the table behind them are what differ.
-; What that costs is a read-only image: the code writes to itself at init, so
-; it stands in RAM and a 68030 caller flushes the instruction cache after
-; DTX_init.
+; THE CODE DOES NOT MOVE WITH THE TABLE. R, C and RR reach it at run time
+; rather than at assembly time, so every DTX1 image of one width contains the
+; same instructions and the table behind them is what differs. What that
+; costs is a read-only image: the code writes to itself at init, so it stands
+; in RAM and a 68030 caller flushes the instruction cache after DTX_init.
 ;
-; DTX1 lays a column's values together, so one cursor a width class walks
-; them and every column of that width stands at a displacement from it. There
-; is one loop a width, not one a column: a read runs the byte columns, then
-; the word columns, then the long ones, taking each column's displacement and
-; its place in the row out of the column table.
+; THE WIDTH DOES MOVE THE CODE. Every value of a table is one width (R6.3),
+; and it reaches the assembler as an equate, so a read moves a value in one
+; instruction. One build a width is what that costs, and the packager takes
+; the build the table's header names.
 ;
-; THE COLUMN TABLE stands behind the code, and the format block defines where.
-; The packager writes it, grouped by width so each loop walks a run:
-;
-;   +0   2  the width-1 columns
-;   +2   2  the width-2 columns
-;   +4   2  the width-4 columns
-;   +6   2  the row's bytes
-;   +8   4  where the width-1 class begins, from the payload
-;   +12  4  where the width-2 class begins
-;   +16  4  where the width-4 class begins
-;   +20  2  C
-;   +22  2  P, which is 1 here
-;   +24  4  where the stream records begin. DTX2 has those
-;   +28  4  N, which is zero here
-;   +32  .. one entry a column, four bytes: the column's displacement from
-;           its class, and where its value stands in the row
-;
-; The header runs to 32 bytes under both variants that read one, so a read
-; reaches the entries at one displacement under either variant.
+; DTX1 lays a column's values together and every column is the same length,
+; so the columns stand at one stride and a read walks them with one cursor:
+; the value of column i for the row the clock stands on is the cursor plus i
+; strides. The image does not have a column table or an entry a column: the
+; stride, the row's bytes and C are arithmetic on R, C and the width.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to.
@@ -51,20 +35,9 @@
 
         include "DTX_table.i"
 
-; The column table's own header.
-DTX_COL_COUNT       equ     0               ; three words, one a width
-DTX_COL_ROWBYTES    equ     6
-DTX_COL_BASE        equ     8               ; three longs, one a width
-DTX_COL_ENTRIES     equ     32
-
-; The state block beyond what doc/abi.md 3 defines: three cursors and the
-; three places their classes begin, so a jump reaches any row without the
-; column table.
-DTX_CLASSBASE       equ     36
-
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
-        DTX_IMAGE 1,1,0,0
+        DTX_IMAGE 1,1,0,0,DTX_WIDTH
 
 ; -----------------------------------------------------------------------------
 ; What a value is installed with. A 68000 reaches PC relative for a source
@@ -83,8 +56,9 @@ DTX_CLASSBASE       equ     36
 
 ; -----------------------------------------------------------------------------
 ; DTX_payload. The payload's first byte in a1 and the table's header in a2.
-; The table stands behind a column table whose size moves with C, so where it
-; begins is read out of the format block rather than assembled in.
+; Where the table stands is read out of the format block; the header is 16
+; bytes under every variant and every C (SPEC.md 1), so the payload is 16
+; past it.
 
 DTX_payload:
         lea     _fmt(pc),a2
@@ -92,23 +66,12 @@ DTX_payload:
         suba.w  #_fmt-_base,a1
         adda.l  8(a2),a1
         movea.l a1,a2                   ; the header
-        moveq   #0,d1
-        move.w  8(a2),d1                ; C
-        addi.l  #14+3,d1
-        andi.l  #-4,d1
-        adda.l  d1,a1                   ; the payload
-        rts
-
-; The column table's first byte in a3.
-DTX_columns:
-        lea     _fmt(pc),a3
-        adda.l  20(a3),a3               ; the field, while a3 is still the block
-        suba.w  #_fmt-_base,a3          ; and the offset counts from _base
+        adda.w  #16,a1                  ; the payload
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_init. It installs the counts, the row's bytes, R and RR, and leaves
-; every class cursor a row below row 0.
+; DTX_init. It installs R, RR, the count a read walks and the stride between
+; two columns, and leaves the cursor a row below row 0.
 
 DTX_init:
         move.l  #-1,DTX_ROW(a0)
@@ -116,8 +79,6 @@ DTX_init:
         clr.l   DTX_DECODED(a0)
 
         bsr     DTX_payload             ; a1 the payload, a2 the header
-        bsr     DTX_columns             ; a3 the column table
-
         move.l  4(a2),d3                ; R
         move.l  10(a2),d5               ; RR
         DTX_INSTALL_L d3,advance_rows
@@ -127,63 +88,50 @@ DTX_init:
         DTX_INSTALL_L d5,advance_repeat
         DTX_INSTALL_L d5,take_repeat
 
-        move.w  DTX_COL_ROWBYTES(a3),d2
-        DTX_INSTALL_W d2,read_over
-        DTX_INSTALL_W d2,take_over
+; The columns a read walks, one less: a dbf counts that way.
+        move.w  8(a2),d0                ; C
+        subq.w  #1,d0
+        DTX_INSTALL_W d0,read_count
+        DTX_INSTALL_W d0,take_count
 
-; The counts, one a width, into the six loops that walk them. A count of
-; zero leaves its loop with -1 in the counter, and the branch below it
-; skips the loop.
-        move.w  DTX_COL_COUNT+0(a3),d0
-        subq.w  #1,d0
-        DTX_INSTALL_W d0,read_bytes
-        DTX_INSTALL_W d0,take_bytes
-        move.w  DTX_COL_COUNT+2(a3),d0
-        subq.w  #1,d0
-        DTX_INSTALL_W d0,read_words
-        DTX_INSTALL_W d0,take_words
-        move.w  DTX_COL_COUNT+4(a3),d0
-        subq.w  #1,d0
-        DTX_INSTALL_W d0,read_longs
-        DTX_INSTALL_W d0,take_longs
+; The stride from one column to the next: R times the width, up to a word
+; (R4.3). A width of 2 or 4 makes that even already.
+        move.l  d3,d2
+        .if     DTX_WIDTH>1
+        add.l   d2,d2
+        .endif
+        .if     DTX_WIDTH>2
+        add.l   d2,d2
+        .endif
+        .if     DTX_WIDTH=1
+        addq.l  #1,d2
+        andi.l  #-2,d2
+        .endif
+        DTX_INSTALL_L d2,read_stride
+        DTX_INSTALL_L d2,take_stride
 
-; Where each class begins, and a cursor a row below row 0.
-        move.l  a1,d4
-        move.l  DTX_COL_BASE+0(a3),d0
-        add.l   d4,d0
-        move.l  d0,DTX_CLASSBASE+0(a0)
-        subq.l  #1,d0
-        move.l  d0,DTX_CURSOR+0(a0)
-        move.l  DTX_COL_BASE+4(a3),d0
-        add.l   d4,d0
-        move.l  d0,DTX_CLASSBASE+4(a0)
-        subq.l  #2,d0
-        move.l  d0,DTX_CURSOR+4(a0)
-        move.l  DTX_COL_BASE+8(a3),d0
-        add.l   d4,d0
-        move.l  d0,DTX_CLASSBASE+8(a0)
-        subq.l  #4,d0
-        move.l  d0,DTX_CURSOR+8(a0)
+; The cursor a row below row 0, so the advance into row 0 steps like any
+; other advance.
+        suba.w  #DTX_WIDTH,a1
+        move.l  a1,DTX_CURSOR(a0)
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_jump. A class cursor is where its class begins plus the row times its
-; width, which is a shift a width.
+; DTX_jump. The cursor is the payload plus the row times the width, which is
+; a shift a width.
 
 DTX_jump:
         move.l  d0,DTX_ROW(a0)
         move.l  d0,d1
-        add.l   DTX_CLASSBASE+0(a0),d1
-        move.l  d1,DTX_CURSOR+0(a0)
-        move.l  d0,d1
+        .if     DTX_WIDTH>1
         add.l   d1,d1
-        add.l   DTX_CLASSBASE+4(a0),d1
-        move.l  d1,DTX_CURSOR+4(a0)
-        move.l  d0,d1
+        .endif
+        .if     DTX_WIDTH>2
         add.l   d1,d1
-        add.l   d1,d1
-        add.l   DTX_CLASSBASE+8(a0),d1
-        move.l  d1,DTX_CURSOR+8(a0)
+        .endif
+        bsr     DTX_payload
+        adda.l  d1,a1
+        move.l  a1,DTX_CURSOR(a0)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -204,67 +152,25 @@ advance_end:
         rts
 advance_next:
         move.l  d0,DTX_ROW(a0)
-        addq.l  #1,DTX_CURSOR+0(a0)
-        addq.l  #2,DTX_CURSOR+4(a0)
-        addq.l  #4,DTX_CURSOR+8(a0)
+        addq.l  #DTX_WIDTH,DTX_CURSOR(a0)
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_read. One loop a width, over the run of entries of that width.
+; DTX_read. One loop over the columns: a value, then a stride to the next
+; column's. The row goes down column 0 first, which is the row as DTX0 lays
+; it out (SPEC.md 2.1), and a1 ends one past it.
 
 DTX_read:
         tst.l   DTX_ROW(a0)
-        bmi.w   read_none
-        bsr     DTX_columns
-        lea     DTX_COL_ENTRIES(a3),a3
-        movea.l DTX_CURSOR+0(a0),a2
-read_bytes:
-        move.w  #0,d0                   ; installed: the width-1 columns, less one
-        bmi.s   read_word_class
-read_byte_loop:
-        move.w  (a3)+,d1
-        move.w  (a3)+,d2
-        move.b  0(a2,d1.w),0(a1,d2.w)
-        dbf     d0,read_byte_loop
-read_word_class:
-        movea.l DTX_CURSOR+4(a0),a2
-read_words:
-        move.w  #0,d0                   ; installed: the width-2 columns, less one
-        bmi.s   read_long_class
-read_word_loop:
-        move.w  (a3)+,d1
-        move.w  (a3)+,d2
-        btst    #0,d2                   ; odd in the row: bytes, or a 68000
-        bne.s   read_word_odd            ; takes an address error
-        move.w  0(a2,d1.w),0(a1,d2.w)
-        dbf     d0,read_word_loop
-        bra.s   read_long_class
-read_word_odd:
-        move.b  0(a2,d1.w),0(a1,d2.w)
-        move.b  1(a2,d1.w),1(a1,d2.w)
-        dbf     d0,read_word_loop
-read_long_class:
-        movea.l DTX_CURSOR+8(a0),a2
-read_longs:
-        move.w  #0,d0                   ; installed: the width-4 columns, less one
-        bmi.s   read_done
-read_long_loop:
-        move.w  (a3)+,d1
-        move.w  (a3)+,d2
-        btst    #0,d2                   ; odd in the row: bytes, as above
-        bne.s   read_long_odd
-        move.l  0(a2,d1.w),0(a1,d2.w)
-        dbf     d0,read_long_loop
-        bra.s   read_done
-read_long_odd:
-        move.b  0(a2,d1.w),0(a1,d2.w)
-        move.b  1(a2,d1.w),1(a1,d2.w)
-        move.b  2(a2,d1.w),2(a1,d2.w)
-        move.b  3(a2,d1.w),3(a1,d2.w)
-        dbf     d0,read_long_loop
-read_done:
-read_over:
-        adda.w  #0,a1                   ; installed: the row's bytes
+        bmi.s   read_none
+        movea.l DTX_CURSOR(a0),a2
+read_count:
+        move.w  #0,d0                   ; installed: C, less one
+read_loop:
+        DTX_VALUE (a2),(a1)+
+read_stride:
+        adda.l  #0,a2                   ; installed: the stride
+        dbf     d0,read_loop
 read_none:
         rts
 
@@ -274,56 +180,14 @@ read_none:
 DTX_take:
         tst.l   DTX_ROW(a0)
         bmi.w   DTX_advance             ; no row: step to row 0 without a write
-        bsr     DTX_columns
-        lea     DTX_COL_ENTRIES(a3),a3
-        movea.l DTX_CURSOR+0(a0),a2
-take_bytes:
-        move.w  #0,d0                   ; installed: the width-1 columns, less one
-        bmi.s   take_word_class
-take_byte_loop:
-        move.w  (a3)+,d1
-        move.w  (a3)+,d2
-        move.b  0(a2,d1.w),0(a1,d2.w)
-        dbf     d0,take_byte_loop
-take_word_class:
-        movea.l DTX_CURSOR+4(a0),a2
-take_words:
-        move.w  #0,d0                   ; installed: the width-2 columns, less one
-        bmi.s   take_long_class
-take_word_loop:
-        move.w  (a3)+,d1
-        move.w  (a3)+,d2
-        btst    #0,d2                   ; odd in the row: bytes, or a 68000
-        bne.s   take_word_odd            ; takes an address error
-        move.w  0(a2,d1.w),0(a1,d2.w)
-        dbf     d0,take_word_loop
-        bra.s   take_long_class
-take_word_odd:
-        move.b  0(a2,d1.w),0(a1,d2.w)
-        move.b  1(a2,d1.w),1(a1,d2.w)
-        dbf     d0,take_word_loop
-take_long_class:
-        movea.l DTX_CURSOR+8(a0),a2
-take_longs:
-        move.w  #0,d0                   ; installed: the width-4 columns, less one
-        bmi.s   take_done
-take_long_loop:
-        move.w  (a3)+,d1
-        move.w  (a3)+,d2
-        btst    #0,d2                   ; odd in the row: bytes, as above
-        bne.s   take_long_odd
-        move.l  0(a2,d1.w),0(a1,d2.w)
-        dbf     d0,take_long_loop
-        bra.s   take_done
-take_long_odd:
-        move.b  0(a2,d1.w),0(a1,d2.w)
-        move.b  1(a2,d1.w),1(a1,d2.w)
-        move.b  2(a2,d1.w),2(a1,d2.w)
-        move.b  3(a2,d1.w),3(a1,d2.w)
-        dbf     d0,take_long_loop
-take_done:
-take_over:
-        adda.w  #0,a1                   ; installed: the row's bytes
+        movea.l DTX_CURSOR(a0),a2
+take_count:
+        move.w  #0,d0                   ; installed: C, less one
+take_loop:
+        DTX_VALUE (a2),(a1)+
+take_stride:
+        adda.l  #0,a2                   ; installed: the stride
+        dbf     d0,take_loop
         move.l  DTX_ROW(a0),d0
         addq.l  #1,d0
 take_rows:
@@ -344,9 +208,7 @@ take_over_end:
         rts
 take_next:
         move.l  d0,DTX_ROW(a0)
-        addq.l  #1,DTX_CURSOR+0(a0)
-        addq.l  #2,DTX_CURSOR+4(a0)
-        addq.l  #4,DTX_CURSOR+8(a0)
+        addq.l  #DTX_WIDTH,DTX_CURSOR(a0)
         rts
 
 ; -----------------------------------------------------------------------------

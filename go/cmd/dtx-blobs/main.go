@@ -1,13 +1,16 @@
 // Command dtx-blobs builds the 68000 images the packager combines from, one
 // file a build. doc/tools.md defines the tool.
 //
-// Eight of them: DTX0, DTX1, and one a build of the decoder built into DTX2,
-// which is a unit of 1, 2 or 4 with the copy code and without. This is the
-// one step an assembler is needed for.
+// Twenty-two of them. DTX0 reads a row as one run of bytes, so its code does
+// not move with the width and one file is every DTX0 table's. DTX1 moves a
+// value a column, so it has one a width. DTX2 has one a width and a build of
+// the decoder built into it, which is a unit of 1, 2 or 4 with the copy code
+// and without. This is the one step an assembler is needed for.
 //
 // The table each is assembled from is made here rather than read: the code
-// does not move with a table, and pack.Blank zeroes the five fields the one
-// used did give, so what comes out is a function of the template alone.
+// does not move with a table's shape, and pack.Blank zeroes the five fields
+// the one used did give, so what comes out is a function of the template
+// alone.
 //
 //	dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 package main
@@ -29,9 +32,9 @@ import (
 // tool. The Java and C# trees print the same text.
 const help = `dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 
-Builds the eight images from the 68k/ templates with rmac and writes them
-into each DIR: DTX0, DTX1, and DTX2 at a unit of 1, 2 and 4, with the copy
-code and without.
+Builds the twenty-two images from the 68k/ templates with rmac and writes
+them into each DIR: DTX0, DTX1 at each width, and DTX2 at each width and a
+unit of 1, 2 and 4, with the copy code and without.
 
   -aRMAC       the assembler (rmac, on the path)
   -tTEMPLATES  the directory the templates are read from (68k, or what
@@ -41,7 +44,7 @@ code and without.
 Examples
 
   dtx-blobs build/68k
-      the eight images into build/68k, with the rmac on the path
+      the twenty-two images into build/68k, with the rmac on the path
   dtx-blobs build/68k go/internal/image/data -a/usr/local/bin/rmac
       into two directories, with that rmac
 
@@ -88,18 +91,15 @@ func (h plain) Pack(column []byte, unit, ring int) ([]byte, error) {
 
 // seed gives a table that fixes the figures one build's assembly reads.
 // Any table of the kind does, since the code does not move with it: this
-// one is 64 rows of two columns, at a ring of 960 where the build is packed.
+// one is 64 rows of two columns at the build's width, at a ring of 960 where
+// the build is packed.
 func seed(build image.Build) ([]byte, error) {
-	width := []int{1, 2, 4}
-	if build.Variant == dtx.DTX2 {
-		width = []int{build.Unit, build.Unit}
+	const rows, columns = 64, 2
+	column := make([][]byte, columns)
+	for i := range column {
+		column[i] = make([]byte, rows*build.Width)
 	}
-	const rows = 64
-	column := make([][]byte, len(width))
-	for i, w := range width {
-		column[i] = make([]byte, rows*w)
-	}
-	table, err := dtx.NewTable(rows, rows, width, column)
+	table, err := dtx.NewTable(rows, rows, build.Width, column)
 	if err != nil {
 		return nil, err
 	}
@@ -152,11 +152,10 @@ func run(args []string) error {
 		if err != nil {
 			return fmt.Errorf("no code built for %s with an assembler at %s"+
 				" and templates at %s: %w",
-				image.Name(build.Variant, build.Unit, build.Copies),
-				rmac, templates, err)
+				build.Name(), rmac, templates, err)
 		}
 		pack.Blank(code)
-		name := image.Name(build.Variant, build.Unit, build.Copies)
+		name := build.Name()
 		for _, at := range into {
 			if err := os.WriteFile(filepath.Join(at, name), code, 0o644); err != nil {
 				return err

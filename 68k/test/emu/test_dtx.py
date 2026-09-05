@@ -72,24 +72,21 @@ def read_dtx(blob):
     assert blob[:3] == b"DTX", "the file does not open with DTX"
     variant = blob[3]
     rows, columns, repeat = struct.unpack(">IHI", blob[4:14])
-    width = list(blob[14:14 + columns])
-    length = (14 + columns + 3) // 4 * 4
+    width = blob[14]
+    length = 16
     payload = blob[length:]
-    row_bytes = sum(width)
+    row_bytes = columns * width
     out = []
     if variant == 0:
         for r in range(rows):
             out.append(payload[r * row_bytes:(r + 1) * row_bytes])
     elif variant == 1:
-        at, next_at = [], 0
-        for w in width:
-            next_at = (next_at + 1) // 2 * 2
-            at.append(next_at)
-            next_at += rows * w
+        stride = (rows * width + 1) // 2 * 2
         for r in range(rows):
             row = b""
-            for i, w in enumerate(width):
-                row += payload[at[i] + r * w:at[i] + r * w + w]
+            for i in range(columns):
+                at = i * stride + r * width
+                row += payload[at:at + width]
             out.append(row)
     else:
         raise AssertionError("this rig reads DTX0 and DTX1, not %d" % variant)
@@ -131,30 +128,28 @@ def fits(value, width):
     return -(1 << (8 * width - 1)) <= value <= (1 << (8 * width)) - 1
 
 
-def csv_widths(values):
-    """The narrowest width of 1, 2 and 4 that takes every value a column."""
-    out = []
-    for i in range(len(values[0])):
-        taken = 1
-        for row in values:
-            while not fits(row[i], taken):
-                assert taken != 4, "column %d does not take a width" % i
+def csv_width(values):
+    """The narrowest width of 1, 2 and 4 that takes every value of the table."""
+    taken = 1
+    for row in values:
+        for one in row:
+            while not fits(one, taken):
+                assert taken != 4, "%d does not take a width" % one
                 taken = 2 if taken == 1 else 4
-        out.append(taken)
-    return out
+    return taken
 
 
-def csv_rows(csv, widths=None):
+def csv_rows(csv, width=None):
     """What each row of `csv` is, as the bytes a read writes out."""
     values = csv_values(csv)
-    width = widths or csv_widths(values)
+    width = width or csv_width(values)
     out = []
     for row in values:
         bytes_out = b""
-        for i, w in enumerate(width):
-            assert fits(row[i], w), \
-                "%d does not fit %d bytes" % (row[i], w)
-            bytes_out += (row[i] & ((1 << (8 * w)) - 1)).to_bytes(w, "big")
+        for one in row:
+            assert fits(one, width), \
+                "%d does not fit %d bytes" % (one, width)
+            bytes_out += (one & ((1 << (8 * width)) - 1)).to_bytes(width, "big")
         out.append(bytes_out)
     return width, out
 
@@ -169,7 +164,7 @@ def run(argv):
     return done.stdout
 
 
-def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960,
+def write_table(csv, variant, width=None, repeat=None, unit=1, ring=960,
                 copies=False):
     """A .dtx file of `csv`, through the Java writer."""
     work = tempfile.mkdtemp(prefix="dtx68")
@@ -177,8 +172,8 @@ def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960,
     with open(text, "w") as f:
         f.write(csv)
     argv = ["java", "-cp", CLASSES, "org.dtx.Write", text, out, "-v%d" % variant]
-    if widths:
-        argv.append("-w" + ",".join(str(w) for w in widths))
+    if width:
+        argv.append("-w%d" % width)
     if repeat is not None:
         argv.append("-r%d" % repeat)
     if variant == 2:
@@ -322,12 +317,12 @@ class Machine:
 
 # --------------------------------------------------------------------------
 
-def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
-    blob = write_table(csv, variant, widths, repeat, unit, ring)
+def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
+    blob = write_table(csv, variant, width, repeat, unit, ring)
     if variant == 2:  # noqa: the plain file gives a row's values
         # The table is the same under every variant (R1.3), so what a row
         # is, is read out of the plain file, by the reader in this rig.
-        plain = write_table(csv, 1, widths, repeat)
+        plain = write_table(csv, 1, width, repeat)
         _, rows, columns, rr, width, _, row_bytes, want = read_dtx(plain)
         kind = 2
     else:
@@ -343,13 +338,15 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
     if kind == 2:
         assert p >= columns, "P is at least C"
         assert n == ring and fmt[18] == unit, "N and k the payload defines"
-        for w in set(width):
-            assert n % (p * w) == 0, "N divides by P times %d" % w
-            assert n >= 2 * p * w, "N is at least twice P times %d" % w
-            assert (p * w) % unit == 0, "the budget of a %d byte column" % w
+        assert fmt[19] == width, "the width the code was built for"
+        assert n % (p * width) == 0, "N divides by P times the width"
+        assert n >= 2 * p * width, "N is at least twice P times the width"
+        assert (p * width) % unit == 0, "the budget is a whole number of units"
     else:
         assert p == 1 and n == 0 and fmt[18] == 0, \
             "P, N and k under a plain variant"
+        assert fmt[19] == (0 if kind == 0 else width), \
+            "the width the code was built for"
     assert image[header_at:header_at + 3] == b"DTX", "the header the block points at"
 
     m = Machine(image, state_bytes)
@@ -437,24 +434,27 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
             % (r, got["d0"], want_row)
     assert one == two, "a take gives what a read and an advance give"
 
-    print("  %-40s DTX%d  R=%-5d C=%-3d row=%-3d P=%-4d state=%-6d image=%d"
-          % (name, kind, rows, columns, row_bytes, p, state_bytes, len(image)))
+    print("  %-40s DTX%d  R=%-5d C=%-3d W=%d row=%-3d P=%-4d state=%-6d image=%d"
+          % (name, kind, rows, columns, width, row_bytes, p, state_bytes,
+             len(image)))
 
 
 TABLES = [
-    ("one column of one byte", "1\n2\n3\n4\n5\n", [1], None),
-    ("three widths, an odd row", "1,300,-2\n2,301,-1\n3,302,0\n", [1, 2, 1], None),
-    ("a row that divides by four", "1,2\n3,4\n5,6\n7,8\n", [2, 2], None),
-    ("a four byte column", "1,2,3\n4,5,6\n", [1, 2, 4], None),
-    ("every width, widest first", "1,2,3\n4,5,6\n", [4, 2, 1], None),
-    ("a table that repeats", "1\n2\n3\n4\n5\n6\n", [1], 2),
-    ("a repeat at row 0", "10\n20\n30\n40\n", [1], 0),
-    ("one row", "7,8\n", [1, 4], None),
+    ("one column of one byte", "1\n2\n3\n4\n5\n", 1, None),
+    ("an odd row count, one byte", "1,3,2\n2,4,1\n3,5,0\n", 1, None),
+    ("two byte values", "1,300\n2,301\n3,302\n", 2, None),
+    ("four byte values", "1,2,3\n4,5,6\n", 4, None),
+    ("a table that repeats", "1\n2\n3\n4\n5\n6\n", 1, 2),
+    ("a repeat at row 0", "10\n20\n30\n40\n", 1, 0),
+    ("one row", "7,8\n", 4, None),
     ("a wide row", ",".join(str(i) for i in range(20)) + "\n"
                    + ",".join(str(i + 1) for i in range(20)) + "\n",
-     [1] * 20, None),
+     1, None),
+    ("twenty columns of four bytes",
+     ",".join(str(i * 70000) for i in range(20)) + "\n"
+     + ",".join(str(i * 70001) for i in range(20)) + "\n", 4, None),
     ("a long table", "\n".join("%d,%d" % (i % 251, i % 65521)
-                              for i in range(300)) + "\n", [1, 2], None),
+                              for i in range(300)) + "\n", 2, None),
 ]
 
 
@@ -467,9 +467,9 @@ def numbers(rows, columns, span=251):
 # The round trip: text, through the writer, through the packager, through a
 # 68000, and back to the rows the text defines.
 
-def rows_through_68k(csv, variant, widths, repeat, unit, ring, copies=False):
+def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     """Every row a packaged reader of this variant gives, and its image."""
-    blob = write_table(csv, variant, widths, repeat, unit, ring, copies)
+    blob = write_table(csv, variant, width, repeat, unit, ring, copies)
     image, at = package(blob)
     fmt = image[24:24 + 20]
     assert fmt[:3] == b"DTX" and fmt[3] == variant, "the format block"
@@ -494,19 +494,20 @@ def rows_through_68k(csv, variant, widths, repeat, unit, ring, copies=False):
     return out, blob, image, (resumes[0] if resumes else 0), p
 
 
-def roundtrip(name, csv, widths=None, repeat=None, unit=1, ring=960,
+def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
               copies=False):
     """The text against every variant, and every variant against the rest."""
-    width, want = csv_rows(csv, widths)
+    width, want = csv_rows(csv, width)
+    columns = len(csv_values(csv)[0])
     given, sizes, asked = {}, [], ""
     for variant in (0, 1, 2):
         got, blob, image, resumes, p = rows_through_68k(
-            csv, variant, widths, repeat, unit, ring,
+            csv, variant, width, repeat, unit, ring,
             copies and variant == 2)
         if variant == 2:
             # ST4_wrap assumption 5: a column takes ceil(O/budget) calls and
             # no more. One at init and one a period while rows remain.
-            due = len(width) * -(-len(want) // p)
+            due = columns * -(-len(want) // p)
             assert resumes == due, \
                 "the decoder was asked %d times, not the %d ST4_wrap allows" \
                 % (resumes, due)
@@ -527,28 +528,29 @@ def roundtrip(name, csv, widths=None, repeat=None, unit=1, ring=960,
         sizes.append(len(image))
     assert given[0] == given[1], "DTX0 and DTX1 give different rows"
     assert given[1] == given[2], "DTX1 and DTX2 give different rows"
-    print("  %-32s R=%-5d C=%-2d widths=%-8s images %s%s"
-          % (name, len(want), len(width),
-             ",".join(str(w) for w in width),
+    print("  %-32s R=%-5d C=%-2d W=%d images %s%s"
+          % (name, len(want), columns, width,
              "/".join(str(s) for s in sizes), asked))
 
 
 ROUND = [
-    ("one column of one byte", numbers(64, 1), [1], None, 1, 960),
-    ("three widths", numbers(64, 3), [1, 2, 1], None, 1, 960),
-    ("a four byte column", numbers(64, 3), [1, 2, 4], None, 1, 960),
-    ("every width, widest first", numbers(64, 3), [4, 2, 1], None, 1, 960),
-    ("k of 2", numbers(64, 2), [2, 2], None, 2, 960),
-    ("k of 4", numbers(64, 2), [4, 4], None, 4, 960),
-    ("a table that repeats", numbers(64, 2), [1, 1], 16, 1, 960),
-    ("the widths inferred", numbers(64, 2), None, None, 1, 960),
+    ("one column of one byte", numbers(64, 1), 1, None, 1, 960),
+    ("three columns of one byte", numbers(64, 3), 1, None, 1, 960),
+    ("two byte values", numbers(64, 3), 2, None, 1, 960),
+    ("four byte values", numbers(64, 3), 4, None, 1, 960),
+    ("k of 2", numbers(64, 2), 2, None, 2, 960),
+    ("k of 4", numbers(64, 2), 4, None, 4, 960),
+    ("k of 4 at a width of 1", numbers(64, 2), 1, None, 4, 960),
+    ("a table that repeats", numbers(64, 2), 1, 16, 1, 960),
+    ("the width inferred", numbers(64, 2), None, None, 1, 960),
     ("negatives and hexadecimal",
      "".join("-%d,$%X\n" % (r % 128, (r * 7) % 65536) for r in range(64)),
-     [1, 2], None, 1, 960),
+     2, None, 1, 960),
     ("a comment and a blank line",
-     "# what follows is a table\n\n" + numbers(64, 2), [1, 1], None, 1, 960),
-    ("R not a multiple of P", numbers(50, 3), [1, 1, 1], None, 1, 960),
-    ("a long table", numbers(300, 2), [1, 2], None, 1, 960),
+     "# what follows is a table\n\n" + numbers(64, 2), 1, None, 1, 960),
+    ("R not a multiple of P", numbers(50, 3), 1, None, 1, 960),
+    ("twenty columns", numbers(64, 20), 2, None, 1, 960),
+    ("a long table", numbers(300, 2), 2, None, 1, 960),
 ]
 
 # A column that repeats a pattern further back than the ring reaches: what
@@ -559,17 +561,20 @@ REPEATING = "\n".join("%d,%d" % (r % 37, (r % 37) * 7) for r in range(512)) + "\
 # Tables a DTX2 image is made of: P is at least C and at most R, and N
 # divides by P times every width, so C stays small beside R.
 PACKED = [
-    ("one byte a row", numbers(64, 1), [1], None, 1, 960),
-    ("two columns, one and two bytes", numbers(64, 2), [1, 2], None, 1, 960),
-    ("three columns", numbers(48, 3), [1, 2, 1], None, 1, 960),
-    ("a four byte column", numbers(64, 3), [1, 2, 4], None, 1, 960),
-    ("k of 2", numbers(64, 2), [2, 2], None, 2, 960),
-    ("k of 4", numbers(64, 2), [4, 4], None, 4, 960),
-    ("a table that repeats", numbers(64, 2), [1, 1], 16, 1, 960),
-    ("a repeat at row 0", numbers(48, 2), [1, 1], 0, 1, 960),
-    ("R not a multiple of P", numbers(50, 3), [1, 1, 1], None, 1, 960),
-    ("a small ring", numbers(64, 2), [1, 1], None, 1, 64),
-    ("a long table", numbers(600, 2), [1, 2], None, 1, 960),
+    ("one byte a row", numbers(64, 1), 1, None, 1, 960),
+    ("two columns of one byte", numbers(64, 2), 1, None, 1, 960),
+    ("three columns of two bytes", numbers(48, 3), 2, None, 1, 960),
+    ("four byte values", numbers(64, 3), 4, None, 1, 960),
+    ("k of 2", numbers(64, 2), 2, None, 2, 960),
+    ("k of 4", numbers(64, 2), 4, None, 4, 960),
+    ("k of 4 at a width of 1", numbers(64, 2), 1, None, 4, 960),
+    ("k of 1 at a width of 4", numbers(64, 2), 4, None, 1, 960),
+    ("a table that repeats", numbers(64, 2), 1, 16, 1, 960),
+    ("a repeat at row 0", numbers(48, 2), 1, 0, 1, 960),
+    ("R not a multiple of P", numbers(50, 3), 1, None, 1, 960),
+    ("a small ring", numbers(64, 2), 1, None, 1, 64),
+    ("twenty columns", numbers(64, 20), 2, None, 1, 960),
+    ("a long table", numbers(600, 2), 2, None, 1, 960),
 ]
 
 
@@ -968,22 +973,20 @@ class Cycles:
 
 CALLS = ("init", "advance", "read", "take", "jump to row 0", "jump to row 63",
          "code, bytes")
-# The two example tables, each at DTX0, DTX1 and DTX2 at k of 1, 2 and 4: the
-# widths a column has under each.
-THREE = [(0, 1, [1, 2, 4]), (1, 1, [1, 2, 4]), (2, 1, [1, 2, 4]),
-         (2, 2, [2, 2, 2]), (2, 4, [4, 4, 4])]
-TWENTY_WIDE = ([1, 2, 4] * 7)[:20]
-TWENTY = [(0, 1, TWENTY_WIDE), (1, 1, TWENTY_WIDE), (2, 1, TWENTY_WIDE),
-          (2, 2, [2] * 20), (2, 4, [4] * 20)]
-EXAMPLES = (("three columns", THREE), ("twenty columns", TWENTY))
+# The two example tables, both of 64 rows at a ring of 960 bytes and a width
+# of 2: one of three columns and one of twenty. Each is read under DTX0,
+# DTX1, and DTX2 at a unit of 1, 2 and 4.
+BUILDS = [(0, 1), (1, 1), (2, 1), (2, 2), (2, 4)]
+EXAMPLES = (("three columns", 3), ("twenty columns", 20))
+WIDTH = 2
 
 
-def measured(variant, unit, widths):
+def measured(variant, width, unit, columns):
     """The column of a call table one image gives, in cycles."""
-    blob = write_table(numbers(64, len(widths)), variant, widths, None, unit, 960)
+    blob = write_table(numbers(64, columns), variant, width, None, unit, 960)
     image, _ = package(blob)
     state = struct.unpack(">I", image[28:32])[0]
-    columns = struct.unpack(">I", image[44:48])[0]
+    code = struct.unpack(">I", image[44:48])[0]
     m = Machine(image, state)
     cycles = Cycles(m)
     init = cycles.call(m, "init")
@@ -998,7 +1001,7 @@ def measured(variant, unit, widths):
             else "%d-%d" % (min(advance), max(advance)),
             "read": str(read), "take": str(take),
             "jump to row 0": str(jump0), "jump to row 63": str(jump63),
-            "code, bytes": str(columns - 48)}
+            "code, bytes": str(code - 48)}
 
 
 def copy_cost(unit):
@@ -1006,9 +1009,9 @@ def copy_cost(unit):
     without copies, by the decoder without the copy code and by the one with
     it. The packager takes the decoder the payload's flag names, so the flag
     is set on a copy of the file to get the second."""
-    blob = write_table(numbers(64, 3), 2, [unit] * 3, None, unit, 960)
+    blob = write_table(numbers(64, 3), 2, WIDTH, None, unit, 960)
     flagged = bytearray(blob)
-    flagged[(14 + 3 + 3) // 4 * 4 + 3] |= 1
+    flagged[16 + 3] |= 1
     out = []
     for file in (blob, bytes(flagged)):
         image, _ = package(file)
@@ -1022,20 +1025,14 @@ def copy_cost(unit):
 
 
 def performance_tables():
-    """The tables doc/performance.md lists: the example tables in columns,
-    the call tables, and the copy code's cost, each as Markdown."""
+    """The tables doc/performance.md lists: what every call costs on the two
+    example tables, what a read costs at each width, and what the copy code
+    costs, each as Markdown."""
     out = []
-    for name, example in EXAMPLES:
-        out.append("### %s\n" % name.capitalize())
-        out.append("| column | DTX0, DTX1, DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |")
-        out.append("|---|---|---|---|")
-        for i in range(len(example[0][2])):
-            out.append("| c%d | %d | %d | %d |" % (i, example[2][2][i],
-                                                 example[3][2][i], example[4][2][i]))
-        out.append("")
     calls = {}
-    for name, example in EXAMPLES:
-        got = [measured(variant, unit, widths) for variant, unit, widths in example]
+    for name, columns in EXAMPLES:
+        got = [measured(variant, WIDTH, unit, columns)
+               for variant, unit in BUILDS]
         calls[name] = got
         out.append("### %s\n" % name.capitalize())
         out.append("| call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |")
@@ -1043,46 +1040,47 @@ def performance_tables():
         for call in CALLS:
             out.append("| %s | %s |" % (call, " | ".join(one[call] for one in got)))
         out.append("")
+    reads = {}
+    out.append("| width | DTX0 | DTX1 | DTX2 k=1 |")
+    out.append("|---|---|---|---|")
+    for width in (1, 2, 4):
+        row = [measured(variant, width, unit, 20)["read"]
+               for variant, unit in ((0, 1), (1, 1), (2, 1))]
+        reads[width] = row
+        out.append("| %d | %s |" % (width, " | ".join(row)))
+    out.append("")
+    costs = {}
     out.append("| k | without | with | more |")
     out.append("|---|---|---|---|")
-    costs = {}
     for unit in (1, 2, 4):
         without, with_ = copy_cost(unit)
         costs[unit] = (without, with_)
         out.append("| %d | %d | %d | %d |" % (unit, without, with_, with_ - without))
-    return "\n".join(out), calls, costs
+    return "\n".join(out), calls, reads, costs
 
 
 def performance():
     """doc/performance.md against the machine, cell by cell."""
     doc = open(os.path.join(ROOT, "doc", "performance.md")).read()
-    widths, listed, costs = [], [], {}
+    listed, said_reads, said_costs = [], {}, {}
+    under = None
     for line in doc.splitlines():
+        if not line.startswith("|"):
+            under = None
+            continue
         cell = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cell) == 4 and cell[0].startswith("c") and cell[0][1:].isdigit():
-            widths.append([int(c) for c in cell[1:]])
+        if cell[0] == "width":
+            under = said_reads
+        elif cell[0] == "k":
+            under = said_costs
         elif len(cell) == 6 and cell[0] in CALLS:
             listed.append(cell)
-        elif len(cell) == 4 and cell[0] in ("1", "2", "4"):
-            costs[int(cell[0])] = [int(c) for c in cell[1:]]
-    tables, calls, measured_costs = performance_tables()
-    at = 0
+        elif under is not None and cell[0] in ("1", "2", "4"):
+            under[int(cell[0])] = cell[1:]
+    tables, calls, reads, costs = performance_tables()
     cells = 0
-    for name, example in EXAMPLES:
-        columns = len(example[0][2])
-        assert len(widths) >= at + columns, \
-            "doc/performance.md lists %d columns of %s, not %d" % (
-                len(widths) - at, name, columns)
-        for i in range(columns):
-            said = widths[at + i]
-            is_ = [example[2][2][i], example[3][2][i], example[4][2][i]]
-            assert said == is_, "doc/performance.md gives c%d of %s widths %s," \
-                " the rig measures %s" % (i, name, said, is_)
-        at += columns
-    assert len(widths) == at, "doc/performance.md lists %d columns, not %d" % (
-        len(widths), at)
     at = 0
-    for name, example in EXAMPLES:
+    for name, _ in EXAMPLES:
         rows = listed[at:at + len(CALLS)]
         assert [row[0] for row in rows] == list(CALLS), \
             "doc/performance.md's %s table does not list the seven calls" % name
@@ -1096,10 +1094,16 @@ def performance():
         at += len(CALLS)
     assert len(listed) == at, "doc/performance.md lists %d call rows, not %d" % (
         len(listed), at)
-    for unit, (without, with_) in measured_costs.items():
-        assert costs.get(unit) == [without, with_, with_ - without], \
+    for width, row in reads.items():
+        assert said_reads.get(width) == row, \
+            "doc/performance.md gives %s for a read at a width of %d; the rig" \
+            " counts %s" % (said_reads.get(width), width, row)
+        cells += 3
+    for unit, (without, with_) in costs.items():
+        want = [str(without), str(with_), str(with_ - without)]
+        assert said_costs.get(unit) == want, \
             "doc/performance.md gives %s for the copy code at k of %d; the rig" \
-            " counts %s" % (costs.get(unit), unit, [without, with_, with_ - without])
+            " counts %s" % (said_costs.get(unit), unit, want)
         cells += 3
     print("  %d cells of doc/performance.md, each the figure the rig counts"
           % cells)
@@ -1111,23 +1115,23 @@ def main():
     bad = 0
     for variant in (0, 1):
         print("DTX%d" % variant)
-        for name, csv, widths, repeat in TABLES:
+        for name, csv, width, repeat in TABLES:
             try:
-                check(name, csv, variant, widths, repeat)
+                check(name, csv, variant, width, repeat)
             except AssertionError as wrong:
                 bad += 1
                 print("  %-40s FAILED: %s" % (name, wrong))
     print("DTX2")
-    for name, csv, widths, repeat, unit, ring in PACKED:
+    for name, csv, width, repeat, unit, ring in PACKED:
         try:
-            check(name, csv, 2, widths, repeat, unit, ring)
+            check(name, csv, 2, width, repeat, unit, ring)
         except AssertionError as wrong:
             bad += 1
             print("  %-40s FAILED: %s" % (name, wrong))
     print("the round trip: text, writer, packager, 68000, back to the text")
-    for name, csv, widths, repeat, unit, ring in ROUND:
+    for name, csv, width, repeat, unit, ring in ROUND:
         try:
-            roundtrip(name, csv, widths, repeat, unit, ring)
+            roundtrip(name, csv, width, repeat, unit, ring)
         except AssertionError as wrong:
             bad += 1
             print("  %-34s FAILED: %s" % (name, wrong))
@@ -1136,7 +1140,7 @@ def main():
                                ("a small ring, copies", 64, True),
                                ("a ring the pattern fits, copies", 128, True)):
         try:
-            roundtrip(name, REPEATING, [1, 2], None, 1, ring, copies)
+            roundtrip(name, REPEATING, 2, None, 1, ring, copies)
         except AssertionError as wrong:
             bad += 1
             print("  %-32s FAILED: %s" % (name, wrong))

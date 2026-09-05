@@ -4,48 +4,38 @@ package org.dtx;
  * DTX1, column by column: {@code C} columns, each its {@code R}
  * values in row order.
  *
- * <p>A column begins on a word, so where the column before it ends odd a
- * zero byte stands between them (R4.3). Every value of a two or four byte
- * column then sits where a 68000 reads it as one, at a byte a column.
+ * <p>A column begins on a word, so under a width of 1 and an odd {@code R} a
+ * zero byte stands between one column and the next (R4.3). Under a width of
+ * 2 or 4 a column is a whole number of words already and nothing stands
+ * between them. Every column is the same length, so they lie at one stride
+ * and a reader steps from one to the next by adding it.
  */
 public final class Dtx1 {
 
     private Dtx1() {
     }
 
-    /** Where column {@code i} begins, from the start of the payload. */
-    static int[] offsets(int rows, int[] width) {
-        int[] at = new int[width.length];
-        int next = 0;
-        for (int i = 0; i < width.length; i++) {
-            next = Dtx.align(next, 2);
-            at[i] = next;
-            next += rows * width[i];
-        }
-        return at;
+    /** The stride from one column to the next: {@code R} times the width,
+     * up to a word. */
+    static int stride(int rows, int width) {
+        return Dtx.align(rows * width, 2);
     }
 
-    /** What a DTX1 payload runs to, for {@code rows} of these widths. */
-    static int payloadLength(int rows, int[] width) {
-        int[] at = offsets(rows, width);
-        int last = width.length - 1;
-        return at[last] + rows * width[last];
+    /** What a DTX1 payload runs to, for {@code rows} of this width. */
+    static int payloadLength(int rows, int columns, int width) {
+        return (columns - 1) * stride(rows, width) + rows * width;
     }
 
     /** {@code table} as a DTX1 file. */
     public static byte[] write(Table table) {
-        int[] width = new int[table.columns()];
-        for (int i = 0; i < width.length; i++) {
-            width[i] = table.width(i);
-        }
         byte[] head = Dtx.header(Dtx.DTX1, table);
-        int[] at = offsets(table.rows(), width);
+        int stride = stride(table.rows(), table.width());
         byte[] out = new byte[head.length
-                + payloadLength(table.rows(), width)];
+                + payloadLength(table.rows(), table.columns(), table.width())];
         System.arraycopy(head, 0, out, 0, head.length);
-        for (int i = 0; i < width.length; i++) {
+        for (int i = 0; i < table.columns(); i++) {
             byte[] column = table.column(i);
-            System.arraycopy(column, 0, out, head.length + at[i],
+            System.arraycopy(column, 0, out, head.length + i * stride,
                     column.length);
         }
         return out;
@@ -63,19 +53,20 @@ public final class Dtx1 {
             throw new IllegalArgumentException(
                     "variant " + header.variant() + " is not DTX1");
         }
-        int payload = payloadLength(header.rows(), header.width());
+        int width = header.width();
+        int payload = payloadLength(header.rows(), header.columns(), width);
         if (file.length - header.length() < payload) {
             throw new IllegalArgumentException("a payload of "
                     + (file.length - header.length()) + " bytes is short of "
                     + payload);
         }
-        int[] at = offsets(header.rows(), header.width());
+        int stride = stride(header.rows(), width);
         byte[][] column = new byte[header.columns()][];
         for (int i = 0; i < header.columns(); i++) {
-            column[i] = new byte[header.rows() * header.width()[i]];
-            System.arraycopy(file, header.length() + at[i], column[i], 0,
+            column[i] = new byte[header.rows() * width];
+            System.arraycopy(file, header.length() + i * stride, column[i], 0,
                     column[i].length);
         }
-        return Table.of(header.rows(), header.repeat(), header.width(), column);
+        return Table.of(header.rows(), header.repeat(), width, column);
     }
 }

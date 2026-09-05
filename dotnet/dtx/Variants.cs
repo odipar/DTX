@@ -7,29 +7,32 @@ public static class Variants
     /// table as a DTX0 file: R rows, each column 0 through column C
     /// minus one in order, with nothing between them.
     ///
-    /// <para>A value falls where the widths put it, so a two or four byte
-    /// column can fall on an odd offset and a reader takes it as bytes
-    /// (R3.4).</para>
+    /// <para>A value falls where the width puts it, so at a width of 1 a row
+    /// can begin on an odd offset and a reader takes it as bytes (R3.4). At
+    /// a width of 2 or 4 every value stands on its own boundary.</para>
     /// </summary>
     public static byte[] WriteDtx0(Table table)
     {
         byte[] head = table.Header(Format.Dtx0);
-        byte[] out_ = new byte[head.Length + table.Rows * table.RowBytes];
+        int width = table.Width;
+        int row = table.RowBytes;
+        byte[] out_ = new byte[head.Length + table.Rows * row];
         head.CopyTo(out_, 0);
-        int at = head.Length;
-        for (int n = 0; n < table.Rows; n++)
+        for (int i = 0; i < table.Columns; i++)
         {
-            for (int i = 0; i < table.Columns; i++)
+            byte[] column = table.Column(i);
+            for (int n = 0; n < table.Rows; n++)
             {
-                int w = table.Width(i);
-                Array.Copy(table.Column(i), n * w, out_, at, w);
-                at += w;
+                Array.Copy(column, n * width, out_,
+                        head.Length + n * row + i * width, width);
             }
         }
         return out_;
     }
 
     /// <summary>The table in a DTX0 file.</summary>
+    /// <exception cref="ArgumentException">where the file is not DTX0, or is
+    /// short of the rows its header defines</exception>
     public static Table ReadDtx0(byte[] file)
     {
         Header header = Format.ReadHeader(file);
@@ -37,7 +40,9 @@ public static class Variants
         {
             throw new ArgumentException($"variant {header.Variant} is not DTX0");
         }
-        int payload = header.Rows * header.RowBytes;
+        int width = header.Width;
+        int row = header.RowBytes;
+        int payload = header.Rows * row;
         if (file.Length - header.Length < payload)
         {
             throw new ArgumentException($"a payload of"
@@ -46,49 +51,52 @@ public static class Variants
         byte[][] column = new byte[header.Columns][];
         for (int i = 0; i < column.Length; i++)
         {
-            column[i] = new byte[header.Rows * header.Width[i]];
-        }
-        int at = header.Length;
-        for (int n = 0; n < header.Rows; n++)
-        {
-            for (int i = 0; i < header.Columns; i++)
+            column[i] = new byte[header.Rows * width];
+            for (int n = 0; n < header.Rows; n++)
             {
-                int w = header.Width[i];
-                Array.Copy(file, at, column[i], n * w, w);
-                at += w;
+                Array.Copy(file, header.Length + n * row + i * width,
+                        column[i], n * width, width);
             }
         }
-        return Table.Of(header.Rows, header.Repeat, header.Width, column);
-    }
-
-    /// <summary>What a DTX1 payload runs to.</summary>
-    public static int PayloadLengthDtx1(int rows, int[] width)
-    {
-        int[] at = Format.Offsets(rows, width);
-        int last = width.Length - 1;
-        return at[last] + rows * width[last];
+        return Table.Of(header.Rows, header.Repeat, width, column);
     }
 
     /// <summary>
-    /// table as a DTX1 file: column by column, each column beginning on a
-    /// word so a wide value is read whole.
+    /// The stride from one column to the next: R times the width, up to a
+    /// word.
+    /// </summary>
+    public static int Stride(int rows, int width) =>
+            Format.Align(rows * width, 2);
+
+    /// <summary>What a DTX1 payload runs to, for rows of this width.</summary>
+    public static int PayloadLengthDtx1(int rows, int columns, int width) =>
+            (columns - 1) * Stride(rows, width) + rows * width;
+
+    /// <summary>
+    /// table as a DTX1 file: C columns, each its R values in row order.
+    ///
+    /// <para>A column begins on a word, so at a width of 1 and an odd R a
+    /// zero byte stands between one column and the next (R4.3). Every column
+    /// is the same length, so they lie at one stride and a reader steps from
+    /// one to the next by adding it.</para>
     /// </summary>
     public static byte[] WriteDtx1(Table table)
     {
         byte[] head = table.Header(Format.Dtx1);
-        int[] width = table.Widths();
-        int[] at = Format.Offsets(table.Rows, width);
-        byte[] out_ = new byte[head.Length + PayloadLengthDtx1(table.Rows, width)];
+        int stride = Stride(table.Rows, table.Width);
+        byte[] out_ = new byte[head.Length
+                + PayloadLengthDtx1(table.Rows, table.Columns, table.Width)];
         head.CopyTo(out_, 0);
-        for (int i = 0; i < width.Length; i++)
+        for (int i = 0; i < table.Columns; i++)
         {
-            byte[] column = table.Column(i);
-            column.CopyTo(out_, head.Length + at[i]);
+            table.Column(i).CopyTo(out_, head.Length + i * stride);
         }
         return out_;
     }
 
     /// <summary>The table in a DTX1 file.</summary>
+    /// <exception cref="ArgumentException">where the file is not DTX1, or is
+    /// short of the columns its header defines</exception>
     public static Table ReadDtx1(byte[] file)
     {
         Header header = Format.ReadHeader(file);
@@ -96,20 +104,22 @@ public static class Variants
         {
             throw new ArgumentException($"variant {header.Variant} is not DTX1");
         }
-        int payload = PayloadLengthDtx1(header.Rows, header.Width);
+        int width = header.Width;
+        int payload = PayloadLengthDtx1(header.Rows, header.Columns, width);
         if (file.Length - header.Length < payload)
         {
             throw new ArgumentException($"a payload of"
                     + $" {file.Length - header.Length} bytes is short of {payload}");
         }
-        int[] at = Format.Offsets(header.Rows, header.Width);
+        int stride = Stride(header.Rows, width);
         byte[][] column = new byte[header.Columns][];
         for (int i = 0; i < column.Length; i++)
         {
-            column[i] = new byte[header.Rows * header.Width[i]];
-            Array.Copy(file, header.Length + at[i], column[i], 0, column[i].Length);
+            column[i] = new byte[header.Rows * width];
+            Array.Copy(file, header.Length + i * stride, column[i], 0,
+                    column[i].Length);
         }
-        return Table.Of(header.Rows, header.Repeat, header.Width, column);
+        return Table.Of(header.Rows, header.Repeat, width, column);
     }
 
     /// <summary>
@@ -132,6 +142,9 @@ public static class Variants
     }
 
     /// <summary>table as a DTX2 file, every column packed at one unit.</summary>
+    /// <exception cref="ArgumentException">where unit or ring is outside
+    /// what the payload can define, or a column's bytes do not divide by
+    /// unit</exception>
     public static byte[] WriteDtx2(Table table, IPacker packer, int unit, int ring)
     {
         if (unit != 1 && unit != 2 && unit != 4)
@@ -143,10 +156,11 @@ public static class Variants
             throw new ArgumentException(
                     $"N is 1 to {Format.MaxRing}, not {ring}");
         }
-        if (table.Rows % unit != 0)
+        if (table.Rows * table.Width % unit != 0)
         {
-            throw new ArgumentException(
-                    $"R is {table.Rows}, which does not divide by k of {unit}");
+            throw new ArgumentException($"a column is {table.Rows} times"
+                    + $" {table.Width} bytes, which does not divide by k of"
+                    + $" {unit}");
         }
         byte[][] set = new byte[table.Columns][];
         for (int i = 0; i < set.Length; i++)
@@ -183,7 +197,7 @@ public static class Variants
     /// <summary>
     /// The DTX2 file of the table in a DTX file of any variant. The table
     /// is the same under every variant (R1.3), so what comes back has the
-    /// same rows, widths, R and RR as what went in, and a DTX2 file comes
+    /// same rows, width, R and RR as what went in, and a DTX2 file comes
     /// back packed at the unit and ring given here.
     /// </summary>
     public static byte[] Dtx2From(byte[] file, IPacker packer, int unit, int ring)
@@ -196,7 +210,7 @@ public static class Variants
     /// </summary>
     /// <exception cref="ArgumentException">where the file is not DTX2, a
     /// data set does not open with the payload's own unit (R5.2), or a
-    /// column unpacks to other than R times its width</exception>
+    /// column unpacks to other than R times the width</exception>
     public static Table ReadDtx2(byte[] file)
     {
         Header header = Format.ReadHeader(file);
@@ -222,7 +236,7 @@ public static class Variants
             byte[] out_ = Nt4.Decompressor.Decode(set.Control, set.Literal,
                     set.ByteOffsets, set.WordOffsets, set.Unit, set.Size,
                     set.Window, set.Rewind).Output;
-            int bytes = header.Rows * header.Width[i];
+            int bytes = header.Rows * header.Width;
             if (out_.Length != bytes)
             {
                 throw new ArgumentException($"column {i} unpacks to"

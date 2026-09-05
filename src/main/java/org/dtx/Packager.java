@@ -31,9 +31,6 @@ public final class Packager {
     static final int PARK = 12;
     static final int CURSOR = 24;
 
-    /** What the format block runs to, doc/abi.md 1. */
-    static final int FORMAT = 20;
-
     /** Where it stands: behind the six slots. */
     static final int FORMAT_AT = 24;
 
@@ -44,43 +41,22 @@ public final class Packager {
     static final int PERIOD_AT = 14;
     static final int RING_AT = 16;
     static final int UNIT_AT = 18;
+    static final int WIDTH_AT = 19;
     static final int COLUMNS_AT = 20;
 
     /** Where the carried code stands on the classpath. */
     private static final String CARRIED = "/org/dtx/68k/";
 
-    /** What one entry of the column table runs to. */
-    static final int ENTRY = 4;
-
-    /** What the column table's own header runs to: counts, the row's bytes
-     * and where each width class begins. */
-    static final int ENTRIES = 32;
-
     /** What one stream record runs to, one a column under DTX2. */
-    static final int STREAM = 32;
+    static final int STREAM = 16;
 
     /** What a packed reader's state block contains before its decoder states. */
-    static final int PACKED_HEAD = 80;
+    static final int PACKED_HEAD = 56;
+
+    /** The state block DTX0 and DTX1 take: the head, and one cursor. */
+    static final int PLAIN = CURSOR + 4;
 
     private Packager() {
-    }
-
-    /** The widths among these, in the order 1, 2, 4. */
-    private static int[] classes(int[] width) {
-        List<Integer> out = new ArrayList<>();
-        for (int w : new int[] {1, 2, 4}) {
-            for (int one : width) {
-                if (one == w) {
-                    out.add(w);
-                    break;
-                }
-            }
-        }
-        int[] taken = new int[out.size()];
-        for (int i = 0; i < taken.length; i++) {
-            taken[i] = out.get(i);
-        }
-        return taken;
     }
 
     /**
@@ -127,55 +103,40 @@ public final class Packager {
      * @throws IllegalArgumentException naming the rule no period meets
      */
     static int period(Dtx.Header header, Packed packed) {
-        int[] width = header.width();
         int rows = header.rows();
+        int width = header.width();
         int n = packed.ring();
         int k = packed.unit();
-        int columns = width.length;
-        int widest = 0;
-        for (int w : width) {
-            widest = Math.max(widest, w);
-        }
-        if ((long) (columns - 1) * n > 32767) {
-            throw new IllegalArgumentException("a read reaches column "
-                    + (columns - 1) + " at " + (long) (columns - 1) * n
-                    + ", past the 32767 a 68000 displacement holds:"
-                    + " C is at most " + (32767 / n + 1) + " at N of " + n);
-        }
-        if (rows % k != 0) {
-            throw new IllegalArgumentException(
-                    "R is " + rows + ", which does not divide by k of " + k);
+        int columns = header.columns();
+        if ((long) rows * width % k != 0) {
+            throw new IllegalArgumentException("a column is " + rows
+                    + " times " + width + " bytes, which does not divide by"
+                    + " k of " + k);
         }
         for (int p = columns; p <= rows; p++) {
-            if (n < 2 * p * widest) {
+            long budget = (long) p * width / k;
+            if (n < 2 * p * width) {
                 break;
             }
-            boolean meets = true;
-            for (int w : width) {
-                long budget = (long) p * w / k;
-                meets &= n % (p * w) == 0 && (long) p * w % k == 0
-                        && budget >= 1 && budget <= 65535;
-            }
-            if (meets) {
+            if (n % (p * width) == 0 && (long) p * width % k == 0
+                    && budget >= 1 && budget <= 65535) {
                 return p;
             }
         }
         throw new IllegalArgumentException("no period from C of " + columns
-                + " to R of " + rows + " holds N of " + n + " and k of " + k
-                + ": N divides by P times every width, is at least twice"
-                + " that, and every budget is a whole number of units");
+                + " to R of " + rows + " meets N of " + n + " and k of " + k
+                + ": N divides by P times the width, is at least twice that,"
+                + " and the budget is a whole number of units");
     }
 
-    /** The state block a plain reader of this table takes, in bytes. */
+    /**
+     * The state block a plain reader of this table takes, in bytes.
+     *
+     * <p>The same under DTX0 and DTX1, and the same at every {@code C}:
+     * every column is one width, so one cursor walks them all.
+     */
     public static int stateBytes(Dtx.Header header) {
-        if (header.variant() == Dtx.DTX0) {
-            return CURSOR + 4;
-        }
-        // DTX1 has three cursors and the three places their classes
-        // begin, at any widths the table defines, so its block does not
-        // move with C either.
-        return header.variant() == Dtx.DTX1
-                ? 48 : CURSOR + 4 * classes(header.width()).length;
+        return PLAIN;
     }
 
     /** The state block a packaged DTX2 reader takes, in bytes. */
@@ -219,12 +180,9 @@ public final class Packager {
             throw new IllegalArgumentException(
                     "the variant is 0, 1 or 2, not " + variant);
         }
-        int[] width = header.width();
+        int width = header.width();
         int rows = header.rows();
-        int rowBytes = 0;
-        for (int w : width) {
-            rowBytes += w;
-        }
+        int rowBytes = header.rowBytes();
         Packed packed = variant == Dtx.DTX2
                 ? packed(file, header) : new Packed(0, 0, false, new int[0]);
         int period = variant == Dtx.DTX2 ? period(header, packed) : 1;
@@ -239,7 +197,8 @@ public final class Packager {
         out.append("; What org.dtx.Packager writes of one table, for"
                         + " 68k/DTX.S to read.\n")
                 .append("; DTX").append(variant).append(", R = ").append(rows)
-                .append(", C = ").append(width.length)
+                .append(", C = ").append(header.columns())
+                .append(", W = ").append(width)
                 .append(", RR = ").append(header.repeat()).append('\n')
                 .append("; Every instruction is the template's; nothing here"
                         + " is one.\n\n")
@@ -250,6 +209,7 @@ public final class Packager {
                 .append(equ("DTX_PARK", PARK))
                 .append(equ("DTX_CURSOR", CURSOR))
                 .append('\n')
+                .append(equ("DTX_WIDTH", width))
                 .append(equ("DTX_ROWBYTES", rowBytes))
                 .append(equ("DTX_STATE", variant == Dtx.DTX2
                         ? stateBytes(header, packed) : stateBytes(header)));
@@ -268,123 +228,36 @@ public final class Packager {
     }
 
     /**
-     * The column table behind the image's code: one entry a column,
-     * grouped by width so each of a read's three loops walks a run of them.
+     * The column table behind the image's code: under DTX2 one stream record
+     * a column, four longs at a stride of 16. The plain variants do not have
+     * one.
      *
-     * <p>Under DTX1 an entry is four bytes: the column's displacement from
-     * the base of its width class, and where its value stands in the row.
-     * The reader takes both as words off an index register, so one loop a
-     * width reads any number of columns and no code stands a column.
+     * <p>A record gives where the column's four ST4 streams begin, from the
+     * payload. Its ring and its decoder state are strides rather than
+     * fields: every ring is {@code N} bytes and every decoder state 32, so
+     * column {@code i}'s stand {@code i} strides past column 0's.
      */
     static byte[] columnTable(byte[] file) {
         Dtx.Header header = Dtx.header(file);
-        if (header.variant() == Dtx.DTX0) {
-            // A DTX0 row is one run of bytes: no loop walks a column, so no
-            // column table is written.
+        if (header.variant() != Dtx.DTX2) {
+            // Every column is one width, so a cursor and a stride walk them
+            // all: what a plain read takes is arithmetic on R, C and the
+            // width, and no column table is written.
             return new byte[0];
         }
-        int[] width = header.width();
-        int[] at = Dtx1.offsets(header.rows(), width);
-        int[] count = counts(width);
-        int[] base = bases(header);
-        int rowBytes = 0;
-        for (int w : width) {
-            rowBytes += w;
-        }
-        boolean packed = header.variant() == Dtx.DTX2;
-        Packed given = packed
-                ? packed(file, header) : new Packed(0, 0, false, new int[0]);
-        int n = given.ring();
-        int records = ENTRIES + ENTRY * width.length;
-        byte[] out = new byte[records + (packed ? STREAM * width.length : 0)];
-        for (int c = 0; c < 3; c++) {
-            Dtx.putWord(out, 2 * c, count[c]);
-            // Under DTX2 a class begins at its first column's ring in the
-            // state block, not at its column's place in the payload.
-            Dtx.putLong(out, 8 + 4 * c,
-                    packed ? ringOf(header, c, n) : base[c]);
-        }
-        Dtx.putWord(out, 6, rowBytes);
-        Dtx.putWord(out, 20, width.length);
-        Dtx.putWord(out, 22, packed ? period(header, given) : 1);
-        Dtx.putLong(out, 24, records);
-        Dtx.putLong(out, 28, n);
-        int wrote = ENTRIES;
-        for (int c = 0; c < 3; c++) {
-            int w = c == 0 ? 1 : c == 1 ? 2 : 4;
-            int first = -1;
-            for (int i = 0; i < width.length; i++) {
-                if (width[i] == w && first < 0) {
-                    first = i;
-                }
-            }
-            int row = 0;
-            for (int i = 0; i < width.length; i++) {
-                if (width[i] == w) {
-                    Dtx.putWord(out, wrote,
-                            packed ? (i - first) * n : at[i] - base[c]);
-                    Dtx.putWord(out, wrote + 2, row);
-                    wrote += ENTRY;
-                }
-                row += width[i];
-            }
-        }
-        if (packed) {
-            int payload = header.length();
-            for (int i = 0; i < width.length; i++) {
-                int rec = records + STREAM * i;
-                int set = given.at()[i];
-                Dtx.putLong(out, rec, set + 28);
-                Dtx.putLong(out, rec + 4,
-                        set + Dtx.getLong(file, payload + set + 8));
-                Dtx.putLong(out, rec + 8,
-                        set + Dtx.getLong(file, payload + set + 12));
-                Dtx.putLong(out, rec + 12,
-                        set + Dtx.getLong(file, payload + set + 16));
-                Dtx.putLong(out, rec + 16, ring(header) + i * n);
-                Dtx.putLong(out, rec + 20, decoders(header) + 32 * i);
-                Dtx.putWord(out, rec + 24, shift(width[i]));
-                Dtx.putWord(out, rec + 26, shift(given.unit()));
-            }
-        }
-        return out;
-    }
-
-    /** Where a width class's ring begins in the state block. */
-    static int ringOf(Dtx.Header header, int c, int n) {
-        int w = c == 0 ? 1 : c == 1 ? 2 : 4;
-        int[] width = header.width();
-        for (int i = 0; i < width.length; i++) {
-            if (width[i] == w) {
-                return ring(header) + i * n;
-            }
-        }
-        return ring(header);
-    }
-
-    /** How many columns of each width a table has, in the order 1, 2, 4. */
-    static int[] counts(int[] width) {
-        int[] out = new int[3];
-        for (int w : width) {
-            out[w == 1 ? 0 : w == 2 ? 1 : 2]++;
-        }
-        return out;
-    }
-
-    /** Where each width class's first column begins in the payload. */
-    static int[] bases(Dtx.Header header) {
-        int[] width = header.width();
-        int[] at = Dtx1.offsets(header.rows(), width);
-        int[] out = new int[3];
-        for (int c = 0; c < 3; c++) {
-            int w = c == 0 ? 1 : c == 1 ? 2 : 4;
-            out[c] = 0;
-            for (int i = 0; i < width.length; i++) {
-                if (width[i] == w) {
-                    out[c] = at[i];
-                    break;
-                }
-            }
+        Packed given = packed(file, header);
+        int payload = header.length();
+        byte[] out = new byte[STREAM * header.columns()];
+        for (int i = 0; i < header.columns(); i++) {
+            int rec = STREAM * i;
+            int set = given.at()[i];
+            Dtx.putLong(out, rec, set + 28);
+            Dtx.putLong(out, rec + 4,
+                    set + Dtx.getLong(file, payload + set + 8));
+            Dtx.putLong(out, rec + 8,
+                    set + Dtx.getLong(file, payload + set + 12));
+            Dtx.putLong(out, rec + 12,
+                    set + Dtx.getLong(file, payload + set + 16));
         }
         return out;
     }
@@ -407,10 +280,18 @@ public final class Packager {
      * decoder built into it: the unit it decodes at, with the copy code and
      * without.
      */
-    public static String carriedName(int variant, int unit, boolean copies) {
+    public static String carriedName(int variant, int width, int unit,
+            boolean copies) {
+        if (variant == Dtx.DTX0) {
+            // DTX0 reads a row as one run of bytes, and the move that run
+            // takes comes from the row's bytes: its code does not move with
+            // the width.
+            return "DTX0.bin";
+        }
         return variant == Dtx.DTX2
-                ? "DTX2-k" + unit + (copies ? "-copies" : "") + ".bin"
-                : "DTX" + variant + ".bin";
+                ? "DTX2-w" + width + "-k" + unit
+                        + (copies ? "-copies" : "") + ".bin"
+                : "DTX1-w" + width + ".bin";
     }
 
     /**
@@ -418,8 +299,9 @@ public final class Packager {
      *
      * @throws IllegalStateException where no file of that name is carried
      */
-    public static byte[] carriedCode(int variant, int unit, boolean copies) {
-        String name = carriedName(variant, unit, copies);
+    public static byte[] carriedCode(int variant, int width, int unit,
+            boolean copies) {
+        String name = carriedName(variant, width, unit, copies);
         try (InputStream in =
                      Packager.class.getResourceAsStream(CARRIED + name)) {
             if (in == null) {
@@ -512,12 +394,13 @@ public final class Packager {
      *
      * <p>The code is the same bytes any table that follows it, so what a
      * combine writes is the five fields the table gives. It checks the
-     * two it cannot write: the variant, and under DTX2 the unit the decoder
-     * built into the code decodes at.
+     * three it cannot write: the variant, the width the code reads values
+     * at, and under DTX2 the unit the decoder built into the code decodes
+     * at.
      *
-     * @throws IllegalStateException where the code is for another variant or
-     *     another unit, or where it and its format block differ on where
-     *     the column table lands
+     * @throws IllegalStateException where the code is for another variant,
+     *     another width or another unit, or where it and its format block
+     *     differ on where the column table lands
      */
     static byte[] combine(byte[] code, byte[] file) {
         Dtx.Header header = Dtx.header(file);
@@ -547,10 +430,13 @@ public final class Packager {
             throw new IllegalStateException("the code decodes at a unit of "
                     + unit + " and the table was packed at " + given.unit());
         }
-        int rowBytes = 0;
-        for (int w : header.width()) {
-            rowBytes += w;
+        int width = code[FORMAT_AT + WIDTH_AT] & 0xFF;
+        if (variant != Dtx.DTX0 && width != header.width()) {
+            throw new IllegalStateException("the code reads values of "
+                    + width + " bytes and the table's are "
+                    + header.width());
         }
+        int rowBytes = header.rowBytes();
         byte[] entries = columnTable(file);
         byte[] image = new byte[code.length + entries.length + file.length];
         System.arraycopy(code, 0, image, 0, code.length);
@@ -573,19 +459,21 @@ public final class Packager {
     /**
      * The image, combined from the code in this repository.
      *
-     * <p>Which of the eight it takes is the file's to define: the variant,
-     * and under DTX2 the unit its data sets are packed at and whether they
-     * contain copies from the literal stream (R5.10). No word from a caller
-     * enters it, so no word can differ from the bytes.
+     * <p>Which of the twenty-two it takes is the file's to define: the
+     * variant, the width every value takes, and under DTX2 the unit its data
+     * sets are packed at and whether they contain copies from the literal
+     * stream (R5.10). No word from a caller enters it, so no word can differ
+     * from the bytes.
      */
     public static byte[] image(byte[] file) {
         Dtx.Header header = Dtx.header(file);
         if (header.variant() != Dtx.DTX2) {
-            return combine(carriedCode(header.variant(), 0, false), file);
+            return combine(carriedCode(header.variant(), header.width(), 0,
+                    false), file);
         }
         Packed given = packed(file, header);
-        return combine(
-                carriedCode(Dtx.DTX2, given.unit(), given.copies()), file);
+        return combine(carriedCode(Dtx.DTX2, header.width(), given.unit(),
+                given.copies()), file);
     }
 
     /**

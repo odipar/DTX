@@ -6,7 +6,7 @@ What to produce, the tables, and the rules.
 
 For each `NAME.dtx` under `tables/`, the bytes of `NAME.rows`: every row in
 the table, from row 0 to row `R` minus one, each row column 0 first, each
-value at its own width, most significant byte first, and nothing between
+value at the table's width, most significant byte first, and nothing between
 the values or the rows. That is the row as DTX0 lays it out (SPEC.md 2.1),
 and it is what `DTX_read` gives on the 68000 (abi.md 2).
 
@@ -27,7 +27,7 @@ which its payload's flag byte marks.
 - SPEC.md defines the format and requirements.md what it has to do. R6
   bounds what a table may contain, and a reader given a table that breaks
   R6 reports it and does not read further (R6.5). No table here breaks it.
-- A reader takes `R`, `C`, `RR` and the widths from the header, and under
+- A reader takes `R`, `C`, `RR` and the width from the header, and under
   DTX2 `N`, `k` and the flags from the payload. Nothing outside the file
   enters a read.
 - Under DTX2 a reader checks every data set's first long against

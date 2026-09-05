@@ -31,7 +31,7 @@ public final class Write {
             return;
         }
         int variant = -1;
-        String widths = "";
+        String width = "";
         int repeat = -1;
         int unit = 1;
         int ring = 960;
@@ -42,7 +42,7 @@ public final class Write {
             if (arg.startsWith("-v")) {
                 variant = Integer.parseInt(arg.substring(2));
             } else if (arg.startsWith("-w")) {
-                widths = arg.substring(2);
+                width = arg.substring(2);
             } else if (arg.startsWith("-r")) {
                 repeat = Integer.parseInt(arg.substring(2));
             } else if (arg.startsWith("-k")) {
@@ -72,8 +72,8 @@ public final class Write {
         byte[] in = Files.readAllBytes(Path.of(args[0]));
         Table table;
         if (isDtx(in)) {
-            if (!widths.isEmpty()) {
-                System.err.println("-w" + widths + " gives text its widths,"
+            if (!width.isEmpty()) {
+                System.err.println("-w" + width + " gives text its width,"
                         + " and " + args[0] + " is a DTX file with its own");
                 System.exit(2);
                 return;
@@ -87,10 +87,11 @@ public final class Write {
             }
         } else {
             String text = new String(in, StandardCharsets.UTF_8);
-            int[] width = widths.isEmpty() ? Csv.widths(text) : widths(widths);
-            int given = repeat < 0 ? Csv.repeat(text) : repeat;
-            table = given < 0 ? Csv.table(text, width)
-                    : Csv.table(text, width, given);
+            int given = width.isEmpty() ? Csv.width(text)
+                    : Integer.parseInt(width.strip());
+            int at = repeat < 0 ? Csv.repeat(text) : repeat;
+            table = at < 0 ? Csv.table(text, given)
+                    : Csv.table(text, given, at);
             if (variant < 0) {
                 variant = Dtx.DTX0;
             }
@@ -109,14 +110,10 @@ public final class Write {
             };
         }
         Files.write(Path.of(args[1]), out);
-        StringBuilder drawn = new StringBuilder();
-        for (int i = 0; i < table.columns(); i++) {
-            drawn.append(i == 0 ? "" : ",").append(table.width(i));
-        }
         System.out.printf("%s -> %s %d bytes, %d rows, %d columns,"
-                + " widths %s, RR=%d%s%n", args[0],
+                + " width %d, RR=%d%s%n", args[0],
                 toText ? "text" : "DTX" + variant, out.length,
-                table.rows(), table.columns(), drawn, table.repeat(),
+                table.rows(), table.columns(), table.width(), table.repeat(),
                 !toText && variant == Dtx.DTX2
                         ? ", k=" + unit + ", N=" + ring : "");
     }
@@ -136,13 +133,11 @@ public final class Write {
 
     /** {@code table} repeating at {@code repeat}, the rest as it is. */
     static Table repeating(Table table, int repeat) {
-        int[] width = new int[table.columns()];
         byte[][] column = new byte[table.columns()][];
         for (int i = 0; i < table.columns(); i++) {
-            width[i] = table.width(i);
             column[i] = table.column(i);
         }
-        return Table.of(table.rows(), repeat, width, column);
+        return Table.of(table.rows(), repeat, table.width(), column);
     }
 
     /**
@@ -162,13 +157,4 @@ public final class Write {
         return copies.length() > 2 ? Double.parseDouble(copies.substring(2)) : 0;
     }
 
-    /** The widths {@code -w} gives, one a column. */
-    private static int[] widths(String given) {
-        String[] cell = given.split(",");
-        int[] width = new int[cell.length];
-        for (int i = 0; i < cell.length; i++) {
-            width[i] = Integer.parseInt(cell[i].strip());
-        }
-        return width;
-    }
 }

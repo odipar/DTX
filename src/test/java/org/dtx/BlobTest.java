@@ -48,19 +48,24 @@ class BlobTest {
         Set<String> name = new HashSet<>();
         Set<String> bytes = new HashSet<>();
         for (Blobs.Build build : Blobs.all()) {
-            byte[] code = Packager.carriedCode(build.variant(), build.unit(),
-                    build.copies());
+            byte[] code = Packager.carriedCode(build.variant(), build.width(),
+                    build.unit(), build.copies());
             assertTrue(name.add(build.name()), "two builds name " + build.name());
             assertTrue(bytes.add(new String(code, java.nio.charset.StandardCharsets.ISO_8859_1)),
-                    build.name() + " holds the bytes another build holds:"
+                    build.name() + " is the same bytes as another build:"
                             + " one of them is not a build of its own");
             assertEquals(build.variant(), code[Packager.FORMAT_AT + 3],
                     build.name() + "'s variant");
             assertEquals(build.unit(),
                     code[Packager.FORMAT_AT + Packager.UNIT_AT] & 0xFF,
                     build.name() + "'s unit");
+            // DTX0 reads a row as one run of bytes, so its code does not
+            // move with the width and its format block gives a width of 0.
+            assertEquals(build.variant() == Dtx.DTX0 ? 0 : build.width(),
+                    code[Packager.FORMAT_AT + Packager.WIDTH_AT] & 0xFF,
+                    build.name() + "'s width");
         }
-        assertEquals(8, name.size(), "DTX0, DTX1 and six decoders");
+        assertEquals(22, name.size(), "DTX0, three DTX1 and eighteen DTX2");
     }
 
     @Test
@@ -74,8 +79,8 @@ class BlobTest {
                 "no build/68k: run mvn process-classes");
         for (Blobs.Build build : Blobs.all()) {
             assertArrayEquals(Files.readAllBytes(loose.resolve(build.name())),
-                    Packager.carriedCode(build.variant(), build.unit(),
-                            build.copies()),
+                    Packager.carriedCode(build.variant(), build.width(),
+                            build.unit(), build.copies()),
                     build.name() + " is different bytes in build/68k and on"
                             + " the classpath");
         }
@@ -90,27 +95,33 @@ class BlobTest {
                     build.name() + ": the combined image and the assembled one"
                             + " are different bytes");
         }
-        // And on tables the builds were not seeded from: R, C, RR and the
-        // widths move the table and not the code, so the two paths meet on
-        // any of them.
-        for (int[] width : new int[][] {{1}, {1, 1, 1}, {4, 2, 1}, {1, 2, 4, 2}}) {
-            for (int rows : new int[] {1, 100}) {
-                for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
-                    byte[] file = table(variant, rows, width);
-                    assertArrayEquals(Packager.image(file, rmac),
-                            Packager.image(file),
-                            "DTX" + variant + " at R of " + rows + " and C of "
-                                    + width.length);
+        // And on tables the builds were not seeded from: R, C and RR move
+        // the table and not the code, so the two paths meet on any of them.
+        // The width moves the code as well, so the loop runs each of the
+        // three against the code built for it.
+        for (int width : new int[] {1, 2, 4}) {
+            for (int columns : new int[] {1, 3, 4}) {
+                for (int rows : new int[] {1, 100}) {
+                    for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
+                        byte[] file = table(variant, rows, columns, width);
+                        assertArrayEquals(Packager.image(file, rmac),
+                                Packager.image(file),
+                                "DTX" + variant + " at R of " + rows + ", C of "
+                                        + columns + " and W of " + width);
+                    }
                 }
             }
         }
     }
 
-    /** A table of {@code rows} rows and these widths, with no values. */
-    private static byte[] table(int variant, int rows, int[] width) {
-        byte[][] column = new byte[width.length][];
-        for (int i = 0; i < width.length; i++) {
-            column[i] = new byte[rows * width[i]];
+    /**
+     * A table of {@code rows} rows and {@code columns} columns at this
+     * width, its values zero.
+     */
+    private static byte[] table(int variant, int rows, int columns, int width) {
+        byte[][] column = new byte[columns][];
+        for (int i = 0; i < columns; i++) {
+            column[i] = new byte[rows * width];
         }
         Table built = Table.of(rows, rows, width, column);
         return variant == Dtx.DTX0 ? Dtx0.write(built) : Dtx1.write(built);
@@ -122,8 +133,8 @@ class BlobTest {
         // read zero, so code shipped without one does not define a table, not
         // even the one it was assembled from.
         for (Blobs.Build build : Blobs.all()) {
-            byte[] code = Packager.carriedCode(build.variant(), build.unit(),
-                    build.copies());
+            byte[] code = Packager.carriedCode(build.variant(), build.width(),
+                    build.unit(), build.copies());
             int at = Packager.FORMAT_AT;
             assertEquals(0, Dtx.getLong(code, at + Packager.STATE_BYTES),
                     build.name() + " defines a state block");

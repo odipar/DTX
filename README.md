@@ -1,7 +1,7 @@
 # DTX
 
-DTX is a data format: a table of `R` rows and `C` columns, where a column
-is 1, 2 or 4 bytes wide and the rows repeat at a row `RR`.
+DTX is a data format: a table of `R` rows and `C` columns, where every
+value takes one width, 1, 2 or 4 bytes, and the rows repeat at a row `RR`.
 
 The format is data. A compile step and a calling convention belong to a
 reader and not to the format, so the specification defines what the bytes
@@ -14,7 +14,11 @@ a copy of ST4, the packer a DTX2 column is packed with, so none needs one
 beside it. `68k/` contains the reader a packaged table is read by on a
 68000 and a carried copy of the ST4 decoder it takes under DTX2; a rig runs
 that reader under emulation and compares every row it gives with the text
-the table came from.
+the table came from. One width a table, so the code is built for the width
+and no call tests it: twenty-two builds, three for DTX1 and eighteen for
+DTX2, three widths by the three units its columns are packed at, with the
+copy code and without, and one for DTX0, which reads a row as one run of
+bytes at any width.
 
 DTX does not define what a column contains. A format built on DTX defines
 that, in its own repository and against what this one defines.
@@ -32,6 +36,6 @@ written until it defines what DTX has to do.
 | [doc/abi.md](doc/abi.md) | the calls a packaged table is read by, on the 68000 |
 | [doc/performance.md](doc/performance.md) | what each call costs, in 68000 cycles, measured |
 | [doc/experiments.md](doc/experiments.md) | what was measured against real tables, and what came out |
-| [doc/BINARIES.md](doc/BINARIES.md) | the eight 68000 images, and how a tool combines one with a table |
+| [doc/BINARIES.md](doc/BINARIES.md) | the twenty-two 68000 images, and how a tool combines one with a table |
 | [doc/RELEASES.md](doc/RELEASES.md) | what a release contains, and what changed in each |
 | [doc/conformance/](doc/conformance) | the kit an independent reader is written against |

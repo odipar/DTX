@@ -20,7 +20,7 @@ public static class Help
     }
 
     public const string Write =
-              "dtx-write in out [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]\n"
+              "dtx-write in out [-vV] [-wW] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]\n"
             + "\n"
             + "Writes the table in the first file to the second. The first is a DTX file\n"
             + "of any variant, or comma separated text; the second is a DTX file of\n"
@@ -28,9 +28,9 @@ public static class Help
             + "\n"
             + "  -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for\n"
             + "               text)\n"
-            + "  -wW,W,..     text: the width of each column in bytes, 1, 2 or 4 (what the\n"
-            + "               text's first comment gives, or else the narrowest that fits\n"
-            + "               each column's values)\n"
+            + "  -wW          text: the bytes every value takes, 1, 2 or 4 (what the\n"
+            + "               text's first comment gives, or else the narrowest that\n"
+            + "               fits every value)\n"
             + "  -rRR         the repeat: the row an advance past the last steps to, R for\n"
             + "               none (what the file or the text's first comment gives, or R)\n"
             + "  -kK          DTX2: the unit, 1, 2 or 4 (1)\n"
@@ -49,8 +49,8 @@ public static class Help
             + "      literal stream\n"
             + "  dtx-write t.dtx t.csv\n"
             + "      a DTX file of any variant read out as text\n"
-            + "  dtx-write t.csv t.dtx -v1 -w1,2,4 -r32\n"
-            + "      text into a DTX1 file at the widths given, repeating at row 32\n"
+            + "  dtx-write t.csv t.dtx -v1 -w2 -r32\n"
+            + "      text into a DTX1 file of two byte values, repeating at row 32\n"
             + "\n"
             + "doc/tools.md, Write.\n";
 
@@ -82,9 +82,9 @@ public static class Help
     public const string Blobs =
               "dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]\n"
             + "\n"
-            + "Builds the eight images from the 68k/ templates with rmac and writes them\n"
-            + "into each DIR: DTX0, DTX1, and DTX2 at a unit of 1, 2 and 4, with the copy\n"
-            + "code and without.\n"
+            + "Builds the twenty-two images from the 68k/ templates with rmac and writes\n"
+            + "them into each DIR: DTX0, DTX1 at each width, and DTX2 at each width and a\n"
+            + "unit of 1, 2 and 4, with the copy code and without.\n"
             + "\n"
             + "  -aRMAC       the assembler (rmac, on the path)\n"
             + "  -tTEMPLATES  the directory the templates are read from (68k, or what\n"
@@ -94,7 +94,7 @@ public static class Help
             + "Examples\n"
             + "\n"
             + "  dtx-blobs build/68k\n"
-            + "      the eight images into build/68k, with the rmac on the path\n"
+            + "      the twenty-two images into build/68k, with the rmac on the path\n"
             + "  dtx-blobs build/68k go/internal/image/data -a/usr/local/bin/rmac\n"
             + "      into two directories, with that rmac\n"
             + "\n"

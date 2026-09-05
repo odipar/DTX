@@ -1,6 +1,6 @@
 #!/bin/sh
 # The standalone DTX executables: one set per platform, each containing the
-# eight 68000 images, so a machine with neither this repository nor a
+# twenty-two 68000 images, so a machine with neither this repository nor a
 # toolchain can write a table and package it for a 68000. The images go
 # beside them in one zip, for a caller who takes an image and no tool.
 #
@@ -47,8 +47,8 @@ mkdir -p "$OUT/release"
 rm -f "$OUT/dtx-blobs"
 
 count=$(ls "$IMAGES"/*.bin 2>/dev/null | wc -l | tr -d ' ')
-if [ "$count" != 8 ]; then
-    echo "publish: $count images built, not the 8 there are" >&2
+if [ "$count" != 22 ]; then
+    echo "publish: $count images built, not the 22 there are" >&2
     exit 1
 fi
 
@@ -108,10 +108,14 @@ esac
 if [ -n "$host" ] && [ -d "$OUT/$host" ]; then
     try=$(mktemp -d)
     printf '1,2,3\n4,5,6\n7,8,9\n8,7,6\n' > "$try/t.csv"
-    "$REPO/$OUT/$host/dtx-write" "$try/t.csv" "$try/t.dtx" -v1 -w1,2,4
-    "$REPO/$OUT/$host/dtx-package" "$try/t.dtx" "$try/t.bin"
-    echo "tried: $(wc -c < "$try/t.bin" | tr -d ' ') bytes of image from" \
-         "$OUT/$host, outside the repository"
+    # One build a width, so each width takes another image out of the
+    # executable. The three cover DTX1's three.
+    for w in 1 2 4; do
+        "$REPO/$OUT/$host/dtx-write" "$try/t.csv" "$try/t.dtx" -v1 -w"$w"
+        "$REPO/$OUT/$host/dtx-package" "$try/t.dtx" "$try/t$w.bin"
+        echo "tried: width $w, $(wc -c < "$try/t$w.bin" | tr -d ' ') bytes" \
+             "of image from $OUT/$host, outside the repository"
+    done
     rm -rf "$try"
 fi
 

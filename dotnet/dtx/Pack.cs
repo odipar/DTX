@@ -6,11 +6,12 @@ using System.Text;
 /// <summary>
 /// Combines a DTX table with the 68000 image that reads it.
 ///
-/// <para>One variant is one code, so nothing here assembles: it takes the
-/// image for the build the table needs, writes the five fields the table
-/// gives into the format block, and appends the column table and the
-/// table's bytes. doc/abi.md defines the image, the format block and the
-/// column table.</para>
+/// <para>One build is one code, so packaging combines rather than
+/// assembles: it takes the image for the build the table needs, writes the
+/// five fields the table gives into the format block, and appends the
+/// column table and the table's bytes. Code assembles a template with rmac,
+/// which is the one step an assembler is needed for. doc/abi.md defines the
+/// image, the format block and the column table.</para>
 /// </summary>
 public static class Pack
 {
@@ -30,13 +31,18 @@ public static class Pack
     public const int PeriodAt = 14;
     public const int RingAt = 16;
     public const int UnitAt = 18;
+    public const int WidthAt = 19;
     public const int ColumnsAt = 20;
 
-    /// <summary>The column table: its header, entries and stream records.</summary>
-    public const int Entry = 4;
-    public const int Entries = 32;
-    public const int Stream = 32;
-    public const int PackedHead = 80;
+    /// <summary>What one stream record runs to, one a column under DTX2.</summary>
+    public const int Stream = 16;
+
+    /// <summary>What a packed reader's state block contains before its
+    /// decoder states.</summary>
+    public const int PackedHead = 56;
+
+    /// <summary>The state block DTX0 and DTX1 take: the head, and one cursor.</summary>
+    public const int Plain = Cursor + 4;
 
     /// <summary>
     /// What a DTX2 payload defines: the ring, the unit, whether its columns
@@ -76,86 +82,19 @@ public static class Pack
                 (file[payload + 3] & Format.CopiesFlag) != 0, at);
     }
 
-    /// <summary>The widths among these, in the order 1, 2, 4.</summary>
-    public static int[] Classes(int[] width)
-    {
-        List<int> out_ = new();
-        foreach (int w in new[] { 1, 2, 4 })
-        {
-            foreach (int one in width)
-            {
-                if (one == w)
-                {
-                    out_.Add(w);
-                    break;
-                }
-            }
-        }
-        return out_.ToArray();
-    }
-
-    /// <summary>How many columns are in each width class.</summary>
-    public static int[] Counts(int[] width)
-    {
-        int[] out_ = new int[3];
-        foreach (int w in width)
-        {
-            out_[w == 1 ? 0 : w == 2 ? 1 : 2]++;
-        }
-        return out_;
-    }
-
-    /// <summary>The column of w bytes that stands first, or -1.</summary>
-    private static int First(int[] width, int w)
-    {
-        for (int i = 0; i < width.Length; i++)
-        {
-            if (width[i] == w)
-            {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /// <summary>Where each width class's first column begins in the payload.</summary>
-    public static int[] Bases(Header header)
-    {
-        int[] at = Format.Offsets(header.Rows, header.Width);
-        int[] out_ = new int[3];
-        for (int c = 0; c < 3; c++)
-        {
-            int i = First(header.Width, c == 0 ? 1 : c == 1 ? 2 : 4);
-            out_[c] = i < 0 ? 0 : at[i];
-        }
-        return out_;
-    }
-
     /// <summary>Where the decoder states stand in the state block, doc/abi.md 3.</summary>
     public static int Decoders(Header header) => PackedHead;
 
     /// <summary>Where the rings stand in the state block.</summary>
     public static int Ring(Header header) => Decoders(header) + 32 * header.Columns;
 
-    /// <summary>Where a width class's ring begins in the state block.</summary>
-    public static int RingOf(Header header, int c, int n)
-    {
-        int i = First(header.Width, c == 0 ? 1 : c == 1 ? 2 : 4);
-        return i < 0 ? Ring(header) : Ring(header) + i * n;
-    }
-
-    /// <summary>The state block a plain reader of this table takes.</summary>
-    public static int StateBytes(Header header)
-    {
-        if (header.Variant == Format.Dtx0)
-        {
-            return Cursor + 4;
-        }
-        // DTX1 has three cursors and the three places their classes begin,
-        // at any widths the table defines, so its block does not move with C.
-        return header.Variant == Format.Dtx1
-                ? 48 : Cursor + 4 * Classes(header.Width).Length;
-    }
+    /// <summary>
+    /// The state block a plain reader of this table takes, in bytes.
+    ///
+    /// <para>The same under DTX0 and DTX1, and the same at every C: every
+    /// column is one width, so one cursor walks them all.</para>
+    /// </summary>
+    public static int StateBytes(Header header) => Plain;
 
     /// <summary>The state block a packaged DTX2 reader takes.</summary>
     public static int PackedStateBytes(Header header, Packed given) =>
@@ -168,142 +107,67 @@ public static class Pack
     /// <exception cref="ArgumentException">naming the rule none meets</exception>
     public static int Period(Header header, Packed given)
     {
-        int[] width = header.Width;
         int rows = header.Rows;
+        int width = header.Width;
         int n = given.Ring;
         int k = given.Unit;
-        int columns = width.Length;
-        int widest = 0;
-        foreach (int w in width)
+        int columns = header.Columns;
+        if ((long)rows * width % k != 0)
         {
-            widest = Math.Max(widest, w);
-        }
-        if ((long)(columns - 1) * n > 32767)
-        {
-            throw new ArgumentException($"a read reaches column {columns - 1}"
-                    + $" at {(long)(columns - 1) * n}, past the 32767 a 68000"
-                    + $" displacement holds: C is at most {32767 / n + 1} at"
-                    + $" N of {n}");
-        }
-        if (k == 0 || rows % k != 0)
-        {
-            throw new ArgumentException(
-                    $"R is {rows}, which does not divide by k of {k}");
+            throw new ArgumentException($"a column is {rows} times {width}"
+                    + $" bytes, which does not divide by k of {k}");
         }
         for (int p = columns; p <= rows; p++)
         {
-            if (n < 2 * p * widest)
+            long budget = (long)p * width / k;
+            if (n < 2 * p * width)
             {
                 break;
             }
-            bool fits = true;
-            foreach (int w in width)
-            {
-                long budget = (long)p * w / k;
-                fits &= n % (p * w) == 0 && (long)p * w % k == 0
-                        && budget >= 1 && budget <= 65535;
-            }
-            if (fits)
+            if (n % (p * width) == 0 && (long)p * width % k == 0
+                    && budget >= 1 && budget <= 65535)
             {
                 return p;
             }
         }
         throw new ArgumentException($"no period from C of {columns} to R of"
-                + $" {rows} holds N of {n} and k of {k}: N divides by P times"
-                + " every width, is at least twice that, and every budget is"
-                + " a whole number of units");
-    }
-
-    /// <summary>log2 of of where it is a power of two, or -1.</summary>
-    private static int Shift(int of)
-    {
-        for (int s = 0; s < 32; s++)
-        {
-            if (1 << s == of)
-            {
-                return s;
-            }
-        }
-        return -1;
+                + $" {rows} meets N of {n} and k of {k}: N divides by P times"
+                + " the width, is at least twice that, and the budget is a"
+                + " whole number of units");
     }
 
     /// <summary>
-    /// The table behind the image's code: a header, one read entry a
-    /// column grouped by width so each of a read's three loops walks a run of
-    /// them, and under DTX2 one stream record a column.
+    /// The column table behind the image's code: under DTX2 one stream
+    /// record a column, 16 bytes at a stride of 16, and nothing else.
     ///
-    /// <para>DTX0 does not have one: a DTX0 row is one run of bytes, so no
-    /// loop walks a column.</para>
+    /// <para>A record gives where the column's four ST4 streams begin, from
+    /// the payload. Its ring and its decoder state are strides rather than
+    /// fields: every ring is N bytes and every decoder state 32, so column
+    /// i's stand i strides past column 0's.</para>
     /// </summary>
     public static byte[] ColumnTable(byte[] file, Header header)
     {
-        if (header.Variant == Format.Dtx0)
+        if (header.Variant != Format.Dtx2)
         {
+            // Every column is one width, so a cursor and a stride walk them
+            // all: what a plain read takes is arithmetic on R, C and the
+            // width, and no column table is written.
             return Array.Empty<byte>();
         }
-        int[] width = header.Width;
-        int[] at = Format.Offsets(header.Rows, width);
-        int[] count = Counts(width);
-        int[] base_ = Bases(header);
-        bool packed = header.Variant == Format.Dtx2;
-        Packed given = packed
-                ? ReadPacked(file, header)
-                : new Packed(0, 0, false, Array.Empty<int>());
-        int period = packed ? Period(header, given) : 1;
-        int n = given.Ring;
-        int records = Entries + Entry * width.Length;
-        byte[] out_ = new byte[records + (packed ? Stream * width.Length : 0)];
-        for (int c = 0; c < 3; c++)
+        Packed given = ReadPacked(file, header);
+        int payload = header.Length;
+        byte[] out_ = new byte[Stream * header.Columns];
+        for (int i = 0; i < header.Columns; i++)
         {
-            Format.PutWord(out_, 2 * c, count[c]);
-            // Under DTX2 a class begins at its first column's ring in the
-            // state block, not at its column's place in the payload.
-            Format.PutLong(out_, 8 + 4 * c,
-                    packed ? RingOf(header, c, n) : base_[c]);
-        }
-        Format.PutWord(out_, 6, header.RowBytes);
-        Format.PutWord(out_, 20, width.Length);
-        Format.PutWord(out_, 22, period);
-        Format.PutLong(out_, 24, records);
-        Format.PutLong(out_, 28, n);
-        int wrote = Entries;
-        foreach (int w in new[] { 1, 2, 4 })
-        {
-            int begins = First(width, w);
-            int row = 0;
-            for (int i = 0; i < width.Length; i++)
-            {
-                if (width[i] == w)
-                {
-                    Format.PutWord(out_, wrote, packed
-                            ? (i - begins) * n
-                            : at[i] - base_[w == 1 ? 0 : w == 2 ? 1 : 2]);
-                    Format.PutWord(out_, wrote + 2, row);
-                    wrote += Entry;
-                }
-                row += width[i];
-            }
-        }
-        if (packed)
-        {
-            int payload = header.Length;
-            int kshift = Shift(given.Unit);
-            for (int i = 0; i < width.Length; i++)
-            {
-                int rec = records + Stream * i;
-                int set = given.At[i];
-                Format.PutLong(out_, rec, set + 28);
-                Format.PutLong(out_, rec + 4,
-                        set + Format.GetLong(file, payload + set + 8));
-                Format.PutLong(out_, rec + 8,
-                        set + Format.GetLong(file, payload + set + 12));
-                Format.PutLong(out_, rec + 12,
-                        set + Format.GetLong(file, payload + set + 16));
-                Format.PutLong(out_, rec + 16, Ring(header) + i * n);
-                Format.PutLong(out_, rec + 20, Decoders(header) + 32 * i);
-                Format.PutWord(out_, rec + 24, Shift(width[i]));
-                Format.PutWord(out_, rec + 26, kshift);
-            }
+            int rec = Stream * i;
+            int set = given.At[i];
+            Format.PutLong(out_, rec, set + 28);
+            Format.PutLong(out_, rec + 4,
+                    set + Format.GetLong(file, payload + set + 8));
+            Format.PutLong(out_, rec + 8,
+                    set + Format.GetLong(file, payload + set + 12));
+            Format.PutLong(out_, rec + 12,
+                    set + Format.GetLong(file, payload + set + 16));
         }
         return out_;
     }
@@ -313,9 +177,9 @@ public static class Pack
     /// format block written to define the three.
     ///
     /// <para>The code is the same bytes any table that follows it, so what a
-    /// combine writes is the five fields the table gives. It checks the two
-    /// it cannot write: the variant, and under DTX2 the unit the decoder
-    /// built into the code decodes at.</para>
+    /// combine writes is the five fields the table gives. It checks the
+    /// three it cannot write: the variant, the width, and under DTX2 the
+    /// unit the decoder built into the code decodes at.</para>
     /// </summary>
     public static byte[] Combine(byte[] code, byte[] file, Header header)
     {
@@ -351,6 +215,13 @@ public static class Pack
                     + $" of {code[FormatAt + UnitAt]} and the table was packed"
                     + $" at {given.Unit}");
         }
+        if (header.Variant != Format.Dtx0
+                && code[FormatAt + WidthAt] != header.Width)
+        {
+            throw new InvalidOperationException($"the code reads values of"
+                    + $" {code[FormatAt + WidthAt]} bytes and the table's are"
+                    + $" {header.Width}");
+        }
         byte[] entries = ColumnTable(file, header);
         byte[] out_ = new byte[code.Length + entries.Length + file.Length];
         code.CopyTo(out_, 0);
@@ -372,21 +243,23 @@ public static class Pack
     /// <summary>
     /// The image for this table, from the code this build contains.
     ///
-    /// <para>Which of the eight it takes is the file's to define: the variant,
-    /// and under DTX2 the unit its data sets are packed at and whether they
-    /// contain copies from the literal stream (R5.10). No word from a caller
-    /// enters it, so no word can differ from the bytes.</para>
+    /// <para>Which of the twenty-two it takes is the file's to define: the
+    /// variant, the width every value takes, and under DTX2 the unit its
+    /// data sets are packed at and whether they contain copies from the
+    /// literal stream (R5.10). No word from a caller enters it, so no word
+    /// can differ from the bytes.</para>
     /// </summary>
     public static byte[] Image(byte[] file)
     {
         Header header = Format.ReadHeader(file);
         if (header.Variant != Format.Dtx2)
         {
-            return Combine(Images.Code(header.Variant, 0, false), file, header);
+            return Combine(Images.Code(header.Variant, header.Width, 0, false),
+                    file, header);
         }
         Packed given = ReadPacked(file, header);
-        return Combine(Images.Code(Format.Dtx2, given.Unit, given.Copies),
-                file, header);
+        return Combine(Images.Code(Format.Dtx2, header.Width, given.Unit,
+                given.Copies), file, header);
     }
 
     /// <summary>One NAME equ VALUE line.</summary>
@@ -396,8 +269,7 @@ public static class Pack
     /// <summary>
     /// What one table gives, as a template reads it: the equates, and no
     /// instruction. Every figure a loop counts with reaches the code
-    /// at run time instead, out of the table's own header and the column
-    /// table (doc/tools.md).
+    /// at run time instead, out of the table's own header (doc/tools.md).
     /// </summary>
     public static string Figures(byte[] file)
     {
@@ -422,7 +294,8 @@ public static class Pack
         out_.Append("; What org.dtx.Packager writes of one table, for"
                         + " 68k/DTX.S to read.\n")
                 .Append($"; DTX{variant}, R = {header.Rows}, C ="
-                        + $" {header.Columns}, RR = {header.Repeat}\n")
+                        + $" {header.Columns}, W = {header.Width}, RR ="
+                        + $" {header.Repeat}\n")
                 .Append("; Every instruction is the template's; nothing here"
                         + " is one.\n\n")
                 .Append("; The state block, doc/abi.md 3.\n")
@@ -432,6 +305,7 @@ public static class Pack
                 .Append(Equ("DTX_PARK", Park))
                 .Append(Equ("DTX_CURSOR", Cursor))
                 .Append('\n')
+                .Append(Equ("DTX_WIDTH", header.Width))
                 .Append(Equ("DTX_ROWBYTES", header.RowBytes))
                 .Append(Equ("DTX_STATE", state));
         if (variant == Format.Dtx2)

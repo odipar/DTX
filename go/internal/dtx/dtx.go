@@ -1,8 +1,8 @@
 // Package dtx reads the header every DTX variant shares.
 //
-// doc/SPEC.md section 1: DTX, the variant, R, C, RR, a width a column, and
-// zero bytes up to the next long, so the payload begins on one. Every field
-// of more than one byte is most significant byte first.
+// doc/SPEC.md section 1: DTX, the variant, R, C, RR, the width every value
+// takes, and one zero byte, so the payload begins on a long. Every field of
+// more than one byte is most significant byte first.
 package dtx
 
 import "fmt"
@@ -17,44 +17,37 @@ const (
 // Magic is the three bytes a file opens with.
 var Magic = []byte{'D', 'T', 'X'}
 
+// HeaderLength is what a header runs to, under every variant and every C.
+const HeaderLength = 16
+
 // Align gives at up to the next multiple of to.
 func Align(at, to int) int {
 	return (at + to - 1) / to * to
 }
 
-// HeaderLength gives what a header runs to: 14 plus C, up to the next long.
-func HeaderLength(columns int) int {
-	return Align(14+columns, 4)
-}
-
-// Header gives what a file's header defines. Length is the header's end, the
-// payload's first byte.
+// Header gives what a file's header defines.
 type Header struct {
 	Variant int
 	Rows    int // R
+	Columns int // C
 	Repeat  int // RR
-	Width   []int
-	Length  int
+	Width   int // W, the bytes every value takes
 }
 
-// Columns gives C.
-func (h Header) Columns() int {
-	return len(h.Width)
+// Length gives what the header runs to, the payload's first byte.
+func (h Header) Length() int {
+	return HeaderLength
 }
 
-// RowBytes gives a row's bytes, the sum of the widths.
+// RowBytes gives a row's bytes: C values of W bytes.
 func (h Header) RowBytes() int {
-	out := 0
-	for _, w := range h.Width {
-		out += w
-	}
-	return out
+	return h.Columns * h.Width
 }
 
 // ReadHeader gives the header at the start of file, or an error where the
 // file is short of one, does not open with DTX, or breaks a bound R6 sets.
 func ReadHeader(file []byte) (Header, error) {
-	if len(file) < 16 {
+	if len(file) < HeaderLength {
 		return Header{}, fmt.Errorf(
 			"a file of %d bytes does not contain a header", len(file))
 	}
@@ -66,6 +59,7 @@ func ReadHeader(file []byte) (Header, error) {
 	rows := GetLong(file, 4)
 	columns := GetWord(file, 8)
 	repeat := GetLong(file, 10)
+	width := int(file[14])
 	if rows < 1 {
 		return Header{}, fmt.Errorf("R is 1 upward, not %d", rows)
 	}
@@ -75,33 +69,11 @@ func ReadHeader(file []byte) (Header, error) {
 	if repeat < 0 || repeat > rows {
 		return Header{}, fmt.Errorf("RR is 0 to R, not %d", repeat)
 	}
-	length := HeaderLength(columns)
-	if len(file) < length {
+	if width != 1 && width != 2 && width != 4 {
 		return Header{}, fmt.Errorf(
-			"a file of %d bytes is short of a header of %d", len(file), length)
+			"the width is 1, 2 or 4 bytes, not %d", width)
 	}
-	width := make([]int, columns)
-	for i := range width {
-		width[i] = int(file[14+i])
-		if width[i] != 1 && width[i] != 2 && width[i] != 4 {
-			return Header{}, fmt.Errorf(
-				"column %d is %d bytes wide, not 1, 2 or 4", i, width[i])
-		}
-	}
-	return Header{int(file[3]), rows, repeat, width, length}, nil
-}
-
-// Offsets gives where each column begins in a DTX1 payload. A column of two
-// or four bytes begins on an even offset, so a wide value is read whole.
-func Offsets(rows int, width []int) []int {
-	at := make([]int, len(width))
-	next := 0
-	for i, w := range width {
-		next = Align(next, 2)
-		at[i] = next
-		next += rows * w
-	}
-	return at
+	return Header{int(file[3]), rows, columns, repeat, width}, nil
 }
 
 // The four byte order helpers. A DTX file and a 68000 image are both most

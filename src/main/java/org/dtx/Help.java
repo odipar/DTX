@@ -24,7 +24,7 @@ final class Help {
     }
 
     static final String WRITE = """
-            dtx-write in out [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
+            dtx-write in out [-vV] [-wW] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
 
             Writes the table in the first file to the second. The first is a DTX file
             of any variant, or comma separated text; the second is a DTX file of
@@ -32,9 +32,9 @@ final class Help {
 
               -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for
                            text)
-              -wW,W,..     text: the width of each column in bytes, 1, 2 or 4 (what the
-                           text's first comment gives, or else the narrowest that fits
-                           each column's values)
+              -wW          text: the bytes every value takes, 1, 2 or 4 (what the
+                           text's first comment gives, or else the narrowest that
+                           fits every value)
               -rRR         the repeat: the row an advance past the last steps to, R for
                            none (what the file or the text's first comment gives, or R)
               -kK          DTX2: the unit, 1, 2 or 4 (1)
@@ -53,8 +53,8 @@ final class Help {
                   literal stream
               dtx-write t.dtx t.csv
                   a DTX file of any variant read out as text
-              dtx-write t.csv t.dtx -v1 -w1,2,4 -r32
-                  text into a DTX1 file at the widths given, repeating at row 32
+              dtx-write t.csv t.dtx -v1 -w2 -r32
+                  text into a DTX1 file of two byte values, repeating at row 32
 
             doc/tools.md, Write.
             """;
@@ -88,9 +88,9 @@ final class Help {
     static final String BLOBS = """
             dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 
-            Builds the eight images from the 68k/ templates with rmac and writes them
-            into each DIR: DTX0, DTX1, and DTX2 at a unit of 1, 2 and 4, with the copy
-            code and without.
+            Builds the twenty-two images from the 68k/ templates with rmac and writes
+            them into each DIR: DTX0, DTX1 at each width, and DTX2 at each width and a
+            unit of 1, 2 and 4, with the copy code and without.
 
               -aRMAC       the assembler (rmac, on the path)
               -tTEMPLATES  the directory the templates are read from (68k, or what
@@ -100,7 +100,7 @@ final class Help {
             Examples
 
               dtx-blobs build/68k
-                  the eight images into build/68k, with the rmac on the path
+                  the twenty-two images into build/68k, with the rmac on the path
               dtx-blobs build/68k go/internal/image/data -a/usr/local/bin/rmac
                   into two directories, with that rmac
 
