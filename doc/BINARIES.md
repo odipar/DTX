@@ -29,7 +29,7 @@ the one it was built from.
 
 Each tree contains the eight: the Java jar on its classpath, the Go
 executables through `go:embed`, the C# assembly as embedded resources. A
-release puts them beside its zips as well, named by the release.
+release packs them in one zip beside the tools' zips, named by the release.
 `bin/dtx-blobs`, `dtx-blobs` and `dtx dtx-blobs` build them, and are the one
 step that needs rmac (tools.md, Build the images). No image is tracked in
 the tree.
