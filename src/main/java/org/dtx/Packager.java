@@ -19,7 +19,7 @@ import java.util.List;
  * rmac writes, so {@code _table} is the last label of the template and the
  * code ends on a long to put the table there.
  *
- * <p>{@code doc/abi.md} defines the five calls, the format block and the
+ * <p>{@code doc/abi.md} defines the four calls, the format block and the
  * state block.
  */
 public final class Packager {
@@ -29,7 +29,7 @@ public final class Packager {
     static final int TURN = 4;
     static final int DECODED = 8;
     static final int PARK = 12;
-    static final int POINTER = 24;
+    static final int POINTER = 16;
 
     /** Where it stands: behind the four slots. */
     static final int FORMAT_AT = 16;
@@ -55,7 +55,7 @@ public final class Packager {
     static final int STREAM = 16;
 
     /** What a packed reader's state block contains before its decoder states. */
-    static final int PACKED_HEAD = 56;
+    static final int PACKED_HEAD = 52;
 
     /** The state block DTX0 and DTX1 take: the head, and one pointer. */
     static final int PLAIN = POINTER + 4;

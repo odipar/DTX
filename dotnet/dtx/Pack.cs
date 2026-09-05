@@ -20,7 +20,7 @@ public static class Pack
     public const int Turn = 4;
     public const int Decoded = 8;
     public const int Park = 12;
-    public const int Pointer = 24;
+    public const int Pointer = 16;
 
     /// <summary>The format block: where it stands, behind the four slots;
     /// what it runs to, so where the bodies begin; and its fields.</summary>
@@ -41,7 +41,7 @@ public static class Pack
 
     /// <summary>What a packed reader's state block contains before its
     /// decoder states.</summary>
-    public const int PackedHead = 56;
+    public const int PackedHead = 52;
 
     /// <summary>The state block DTX0 and DTX1 take: the head, and one pointer.</summary>
     public const int Plain = Pointer + 4;

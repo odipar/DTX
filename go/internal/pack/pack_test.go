@@ -213,7 +213,7 @@ func TestTheStateBlockIsTheSameAtEveryWidth(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got := StateBytes(head); got != 28 {
+				if got := StateBytes(head); got != 20 {
 					t.Fatalf("DTX%d of %d columns at a width of %d takes %d"+
 						" bytes, not 28", variant, columns, width, got)
 				}
@@ -396,15 +396,15 @@ func TestAPackedStateBlockContainsADecoderStateAndARingAColumn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := Decoders(head); got != 56 {
-		t.Fatalf("the decoder states stand at %d, not the 56 that 68k/DTX2.S"+
+	if got := Decoders(head); got != 52 {
+		t.Fatalf("the decoder states stand at %d, not the 52 that 68k/DTX2.S"+
 			" puts them at", got)
 	}
-	if got := Ring(head); got != 56+32*2 {
+	if got := Ring(head); got != 52+32*2 {
 		t.Fatalf("the rings stand at %d, not behind two decoder states of 32"+
 			" bytes", got)
 	}
-	if got := PackedStateBytes(head, given); got != 56+32*2+2*960 {
+	if got := PackedStateBytes(head, given); got != 52+32*2+2*960 {
 		t.Fatalf("the block is %d bytes, not a ring a column", got)
 	}
 }

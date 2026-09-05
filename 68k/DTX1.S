@@ -96,12 +96,7 @@ DTX_init:
 DTX_jump:
         move.l  d0,DTX_ROW(a0)
         move.l  d0,d1
-        .if     DTX_WIDTH>1
-        add.l   d1,d1
-        .endif
-        .if     DTX_WIDTH>2
-        add.l   d1,d1
-        .endif
+        DTX_SCALE d1
         bsr     DTX_payload
         adda.l  d1,a1
         move.l  a1,DTX_POINTER(a0)
