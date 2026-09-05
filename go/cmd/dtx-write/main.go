@@ -1,5 +1,5 @@
 // Command dtx-write turns comma separated text into a DTX file of any
-// variant. doc/tools.md states the tool.
+// variant. doc/tools.md defines the tool.
 //
 //	dtx-write in.csv out.dtx [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
 package main
@@ -108,7 +108,7 @@ func run(args []string) error {
 	return nil
 }
 
-// readWidths gives the widths -w states, or the narrowest the text takes.
+// readWidths gives the widths -w defines, or the narrowest the text takes.
 func readWidths(given, text string) ([]int, error) {
 	if given == "" {
 		return csv.Narrowest(text)

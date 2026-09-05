@@ -5,7 +5,7 @@
 ; Robbert's direction. Use it freely, including commercially, as long as your
 ; documentation says you used DTX (see LICENSE).
 ;
-; doc/abi.md states the calls, the format block and the state block. One
+; doc/abi.md defines the calls, the format block and the state block. One
 ; template a variant: this file reads DTX1 and nothing else, so no call in it
 ; tests which variant it contains.
 ;
@@ -22,7 +22,7 @@
 ; the word columns, then the long ones, taking each column's displacement and
 ; its place in the row out of the column table.
 ;
-; THE COLUMN TABLE stands behind the code, and the format block states where.
+; THE COLUMN TABLE stands behind the code, and the format block defines where.
 ; The packager writes it, grouped by width so each loop walks a run:
 ;
 ;   +0   2  the width-1 columns
@@ -57,7 +57,7 @@ DTX_COL_ROWBYTES    equ     6
 DTX_COL_BASE        equ     8               ; three longs, one a width
 DTX_COL_ENTRIES     equ     32
 
-; The state block beyond what doc/abi.md 3 states: three cursors and the
+; The state block beyond what doc/abi.md 3 defines: three cursors and the
 ; three places their classes begin, so a jump reaches any row without the
 ; column table.
 DTX_CLASSBASE       equ     36

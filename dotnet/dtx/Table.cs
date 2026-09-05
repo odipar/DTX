@@ -80,7 +80,7 @@ public sealed class Table
         {
             throw new ArgumentException($"RR is 0 to R, not {repeat}");
         }
-        byte[][] held = new byte[column.Length][];
+        byte[][] kept = new byte[column.Length][];
         for (int i = 0; i < column.Length; i++)
         {
             if (width[i] != 1 && width[i] != 2 && width[i] != 4)
@@ -93,9 +93,9 @@ public sealed class Table
                 throw new ArgumentException($"column {i} holds"
                         + $" {column[i].Length} bytes, not {rows * width[i]}");
             }
-            held[i] = (byte[])column[i].Clone();
+            kept[i] = (byte[])column[i].Clone();
         }
-        return new Table(rows, repeat, (int[])width.Clone(), held);
+        return new Table(rows, repeat, (int[])width.Clone(), kept);
     }
 
     /// <summary>Whether two tables are the same rows, widths, R and RR.</summary>
@@ -137,7 +137,7 @@ public sealed class Table
 /// <summary>
 /// What packs one column of a DTX2 payload.
 ///
-/// <para>DTX2 states that a column is an ST4 data set (R5.1) and nothing
+/// <para>DTX2 defines a column as an ST4 data set (R5.1) and nothing
 /// more about how ST4 packs. St4Packer packs with the copy in this
 /// repository, St4Beside runs a packer beside it, and a caller that writes DTX2
 /// may supply one of its own.</para>
@@ -155,8 +155,8 @@ public interface IPacker
     /// stream, which ST4 packs with -c.
     ///
     /// <para>A decoder built without the copy code reads such a column
-    /// wrongly, and nothing in an ST4 data set states which it is. So the
-    /// payload states it (R5.10), and the packer states it: a flag carried
+    /// wrongly, and nothing in an ST4 data set defines which it is. So the
+    /// payload defines it (R5.10), and the packer defines it: a flag carried
     /// beside the file could differ from the bytes in it, and one the
     /// packer wrote cannot.</para>
     /// </summary>

@@ -4,13 +4,13 @@ package org.dtx;
  * DTX2, column by column and packed: {@code C} ST4 data sets, one a column,
  * behind an offset each.
  *
- * <p>The payload states {@code N} and {@code k} once, so one ring size and
+ * <p>The payload defines {@code N} and {@code k} once, so one ring size and
  * one decoder build reads every column (R5.3, R5.5), then an offset a
  * column, then the data sets, each beginning on a long (R5.9).
  */
 public final class Dtx2 {
 
-    /** The largest ring a payload can state, in bytes: `N` is two bytes. */
+    /** The largest ring a payload can define, in bytes: `N` is two bytes. */
     public static final int MAX_RING = 65535;
 
     /**
@@ -29,7 +29,7 @@ public final class Dtx2 {
      * @param unit {@code k}: 1, 2 or 4, and {@code R} divides by it (R5.6)
      * @param ring {@code N}: the bytes a column unpacks through (R5.4)
      * @throws IllegalArgumentException where {@code unit} or {@code ring} is
-     *     outside what the payload can state, or {@code R} does not divide
+     *     outside what the payload can define, or {@code R} does not divide
      *     by {@code unit}
      */
     public static byte[] write(Table table, Packer packer, int unit, int ring) {

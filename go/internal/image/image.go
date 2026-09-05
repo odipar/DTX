@@ -2,7 +2,7 @@
 //
 // One variant is one code, and under DTX2 one a build of the decoder built
 // into it, so the eight are built once and a program that packages a table
-// contains them rather than assembling one. doc/tools.md states how they are
+// contains them rather than assembling one. doc/tools.md defines how they are
 // built and doc/abi.md what each of them does.
 //
 // The files are build output. The Maven build writes them into data/, which
@@ -20,7 +20,8 @@ import (
 )
 
 // The directory rather than the files in it: a tree whose build has not run
-// has no .bin here, and a pattern that matched none would not compile.
+// does not have a .bin here, and a pattern that matched none would not
+// compile.
 //
 //go:embed data
 var data embed.FS
@@ -55,8 +56,8 @@ func Code(variant, unit int, copies bool) ([]byte, error) {
 	}
 	at := os.Getenv("DTX_68K")
 	if at == "" {
-		return nil, fmt.Errorf("this build holds no %s, and DTX_68K names"+
-			" no directory holding one", name)
+		return nil, fmt.Errorf("this build does not contain %s, and DTX_68K"+
+			" does not name a directory with one", name)
 	}
 	return os.ReadFile(filepath.Join(at, name))
 }

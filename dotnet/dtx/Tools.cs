@@ -3,7 +3,7 @@ namespace Dtx;
 using System.Globalization;
 using System.Text;
 
-/// <summary>The four tools doc/tools.md states, one method each.</summary>
+/// <summary>The four tools doc/tools.md defines, one method each.</summary>
 public static class Tools
 {
     /// <summary>What packs a column: the copy in this assembly, or a
@@ -133,12 +133,12 @@ public static class Tools
     public static int Package(string[] args)
     {
         string rmac = "";
-        bool states = false;
+        bool defines = false;
         List<string> named = new();
         foreach (string arg in args)
         {
             if (arg.StartsWith("-a", StringComparison.Ordinal)) rmac = arg[2..];
-            else if (arg == "-s") states = true;
+            else if (arg == "-s") defines = true;
             else if (arg.StartsWith('-'))
             {
                 Console.Error.WriteLine($"dtx-package does not read {arg}");
@@ -153,7 +153,7 @@ public static class Tools
         }
         byte[] file = File.ReadAllBytes(named[0]);
         Header header = Format.ReadHeader(file);
-        if (states)
+        if (defines)
         {
             File.WriteAllText(named[1], Pack.Figures(file));
         }
@@ -170,7 +170,7 @@ public static class Tools
         int state = header.Variant == Format.Dtx2
                 ? Pack.PackedStateBytes(header, Pack.ReadPacked(file, header))
                 : Pack.StateBytes(header);
-        string what = states ? "figures"
+        string what = defines ? "figures"
                 : rmac.Length == 0 ? "image" : "image assembled";
         Console.WriteLine($"{named[0]} -> DTX{header.Variant} {what} {bytes}"
                 + $" bytes, table {file.Length} bytes, {header.Rows} rows,"
@@ -244,7 +244,7 @@ public static class Tools
         {
             Format.Dtx0 => Variants.WriteDtx0(table),
             Format.Dtx1 => Variants.WriteDtx1(table),
-            // The seed states the build's own copies flag, since that fixes
+            // The seed defines the build's own copies flag, since that fixes
             // which decoder the template is assembled with.
             _ => Variants.WriteDtx2(table, new Plain(build.Copies),
                     build.Unit, 960),
@@ -252,8 +252,8 @@ public static class Tools
     }
 
     /// <summary>
-    /// A packer that packs nothing: the column comes back as it is, and states the
-    /// build's own copies flag.
+    /// A packer that packs nothing: the column comes back as it is, and
+    /// defines the build's own copies flag.
     ///
     /// <para>The assembler reads a data set's four stream offsets and
     /// nothing in the streams, so a data set whose streams are the column

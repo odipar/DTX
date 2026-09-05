@@ -27,7 +27,7 @@ final class PackedVariantTest {
     };
 
     @Test
-    void thePayloadStatesTheRingAndTheUnitOnceAndThenAnOffsetAColumn() {
+    void thePayloadDefinesTheRingAndTheUnitOnceAndThenAnOffsetAColumn() {
         byte[] file = Dtx2.write(Example.table(), STANDIN, 1, 960);
         int payload = Example.HEADER;
         assertEquals(2, file[3], "the variant");
@@ -51,7 +51,7 @@ final class PackedVariantTest {
     }
 
     @Test
-    void aDataSetHoldsTheColumnDtx1HoldsInTheSameOrder() {
+    void aDataSetContainsTheColumnDtx1WritesInTheSameOrder() {
         byte[] file = Dtx2.write(Example.table(), STANDIN, 1, 960);
         int payload = Example.HEADER;
         int[] at = offsets(file);
@@ -80,7 +80,7 @@ final class PackedVariantTest {
         byte[] zero = Dtx0.write(table);
         byte[] two = Dtx2.write(table, STANDIN, 1, 960);
         assertArrayEquals(Example.at(zero, 4, 16), Example.at(two, 4, 16),
-                "everything the header states but the variant");
+                "everything the header defines but the variant");
     }
 
     @Test

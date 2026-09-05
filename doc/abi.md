@@ -71,8 +71,8 @@ the widths at that plus 14. The variant at +3 of that header is the one
 byte this block repeats, and the packager writes it from there and fails
 the package where the two differ.
 
-The block states no cost figure. What a call costs is measured on the
-emitted code under emulation and stated in performance.md, not in the
+The block does not define a cost figure. What a call costs is measured on the
+emitted code under emulation and recorded in performance.md, not in the
 image.
 
 The two offsets are fields rather than displacements the assembler works
@@ -155,9 +155,9 @@ forms the five pointers ST4_init takes, calls it, and then makes one
 the column's decoder state, sets the turn to 0, and leaves the class
 cursors a row below row 0.
 
-After that preload a read alternates between the streams and touches no
-decoder: from row 0 onward every value a read takes is already in a
-ring.
+After that preload a read alternates between the streams and does not
+touch a decoder: from row 0 onward every value a read takes is already in
+a ring.
 
 Init writes the block and its own instructions, and nothing else. The
 image is code in RAM under every variant: the sites section 5 lists are
@@ -177,7 +177,7 @@ one call that may be made before it.
 ### 1. `DTX_metadata`, image+4
 
 Both blocks are bytes in the image, reached with one `lea` each, so this
-call needs no state and may be made before init. Its fields stand at
+call does not need state and may be made before init. Its fields stand at
 fixed offsets, so a caller that builds against a given image reads them
 out of the file at build time and never makes the call. The packager
 prints them as it writes the image, the state block's bytes among them.
@@ -202,7 +202,7 @@ row and not the distance.
 
 Under DTX2 a class cursor is that class's ring base plus the row modulo
 `N` divided by the width, times the width. Under DTX1 it is the class
-base plus the row times the width, and there is no ring to wrap in.
+base plus the row times the width, and a ring is absent.
 
 ### 3. `DTX_advance`, image+12
 
@@ -211,13 +211,13 @@ the call.
 
 It adds the row's bytes to the one cursor under DTX0, and its width to
 each class cursor under DTX1 and DTX2. A class cursor that reaches the
-ring end goes back to the ring start; under DTX0 and DTX1 there is no
-ring and no wrap.
+ring end goes back to the ring start; under DTX0 and DTX1 a ring is absent
+and nothing wraps.
 
 **Under DTX2 it then refills the column whose turn it is**, one column a
 row: column `j` on the row where the row number modulo `P` is `j`. A turn
-past `C` minus one has no column and does nothing, so a `P` above `C`
-costs those rows nothing.
+past `C` minus one does not have a column and does nothing, so a `P`
+above `C` costs those rows nothing.
 
 The refill is one `ST4_resume` into that column's ring. Its budget is `P`
 times `W[j]` divided by `k` units, except for the call that would reach
@@ -229,14 +229,14 @@ past its end marker, which ST4_wrap's assumption 5 forbids.
 After the call the write pointer is compared with the column's ring end
 and taken back to the ring start where the two are equal. `N` divides by
 `P` times `W[j]`, so a full refill lands exactly on the end or short of
-it, and the compare is exact. No call is counted and the block contains
-no counter; YMX wraps the same way.
+it, and the compare is exact. No call is counted and the block does not
+contain a counter; YMX wraps the same way.
 
 The advance from row `R` minus one where `RR` is below `R` is a jump to
 `RR`, since it is one. Where `RR` equals `R` it gives $FFFFFFFF, leaves
-the clock on row `R` minus one and moves no cursor, and a further advance
-gives $FFFFFFFF again: the end is sticky, and a read after it still gives
-row `R` minus one.
+the clock on row `R` minus one and does not move a cursor, and a further
+advance gives $FFFFFFFF again: the end is sticky, and a read after it still
+gives row `R` minus one.
 
 ### 4. `DTX_read`, image+16
 
@@ -245,7 +245,7 @@ width and nothing between them: the row as DTX0 lays it out (SPEC.md
 2.1). Where the clock stands on no row it writes nothing and gives back
 `a1` as it came.
 
-Read moves no cursor, refills nothing and decodes nothing, so a second
+Read does not move a cursor, refills nothing and decodes nothing, so a second
 read of one row writes the same bytes. It leaves `a0` where it came, so a
 caller that reads and then steps has the block in `a0` through both.
 
@@ -292,7 +292,7 @@ Taking a row costs one call rather than two, and a caller's loop is
 
 The caller supplies the block and passes it back in `a0` on every call
 but `DTX_metadata`. Its size is a build time constant the format block
-states at +4, which the packager prints and a caller reads out of the
+defines at +4, which the packager prints and a caller reads out of the
 image. The block stands on a long.
 
 | at | bytes | contains |
@@ -392,7 +392,8 @@ the row the read on that row is about to take.
 - the furthest displacement a read takes off a class cursor is at most
   32767, so `C` minus one times `N` under DTX2, and the distance between
   the outermost two columns of a class under DTX1. A 68000 displacement
-  is a signed word and `DTX_read` has no register left to re-base with
+  is a signed word and `DTX_read` does not have a register left to
+  re-base with
 
 The last rule bounds a packed table harder than the format does: at the
 `N` of 960 that Write and Rewrite default to, `C` is at most 35.
@@ -403,8 +404,8 @@ column is the same budget, `N` divides by what a refill writes, so the
 reader resets that column's write pointer after `N` divided by `P` times
 `W[i]` calls and the decoder never checks a ring end. It is 324, 328 or
 330 bytes at `k` of 1, 2 and 4, against ST4_ring's 386, 394 and 396. It
-has no done state, which costs nothing here: the caller takes rows 0 to
-`R` minus one and no decoder is driven past its data set.
+does not have a done state, which costs nothing here: the caller takes rows
+0 to `R` minus one and no decoder is driven past its data set.
 
 `P` is the lever. `P` equal to `C` gives the smallest rings and the
 flattest cost; a larger `P` uses more ring and leaves `P` minus `C`
@@ -435,8 +436,8 @@ bytes. rmac runs where the code is built, not where a table is packaged.
 
 The five: the state block's bytes at +4, the table's header at +8, the
 row's bytes at +12, `P` at +14 and `N` at +16. A kept file reads zero for
-each of them, so code shipped without a combine states no table rather
-than the one it happened to be built from. What it does state is the
+each of them, so code shipped without a combine does not define a table,
+rather than the one it happened to be built from. What it does define is the
 variant at +3, `k` at +18 and the column table's place at +20, and a
 combine checks the first two against the table rather than writing them.
 
@@ -461,10 +462,10 @@ far smaller, and it asks one thing of the package: the decoder is built
 with its copy code, which measures 32 bytes more at `k` of 1
 and 2 and 36 at `k` of 4.
 
-The payload states which kind its columns are, in the flags byte SPEC.md
+The payload defines which kind its columns are, in the flags byte SPEC.md
 2.3 gives, so the packager reads the decoder a table needs out of the
 table itself. Nothing carried beside the file enters, and nothing can
-differ from the bytes. The flag is there because no ST4 data set states
+differ from the bytes. The flag is there because no ST4 data set defines
 it and a column packed with copies read by a decoder without the copy code
 gives wrong bytes; the other way round is safe, since a decoder with the
 copy code reads a column without copies as the plain one does, at 14
@@ -494,7 +495,7 @@ than emitting an image that reads wrong.
 
 ## 6. What each call costs
 
-performance.md states it, in instructions counted under emulation, and
+performance.md records it, in instructions counted under emulation, and
 the rig that counts them checks that document against its count. The
 figures are instructions and not cycles, since the emulator counts the
 first and not the second.
@@ -513,7 +514,7 @@ since under this reader it is a jump (section 4).
 ## 7. The assumptions, unchecked
 
 1. The state block stands on a long and is at least the bytes the format
-   block states at +4.
+   block defines at +4.
 2. The block passed to a call was seeded by init on this image, and one
    reader uses it. A call is not re-entrant on one block, and an
    interrupt that calls into the image uses a block of its own.
@@ -534,8 +535,8 @@ since under this reader it is a jump (section 4).
 9. DTX2: the caller takes rows 0 to `R` minus one. The rows decoded
    in the block shorten the last refill of a column and stop the one
    after it, so a column takes the `ceil(R/P)` calls ST4_wrap's
-   assumption 5 allows and no more. ST4_wrap has no done state and none
-   is read.
+   assumption 5 allows and no more. ST4_wrap does not have a done state and
+   none is read.
 10. DTX2: ST4_wrap's own assumptions are met, its 1 to 7, which the packer
     options and the packager's checks see to.
 
@@ -544,7 +545,7 @@ since under this reader it is a jump (section 4).
 ## 8. The trade-offs
 
 **Init fills every ring.** A read then alternates between the streams and
-touches no decoder, and the first row is ready when init returns. Given
+does not touch a decoder, and the first row is ready when init returns. Given
 up: init is the one burst, `C` calls of `P` rows each, and that cost
 comes before the first row rather than during it.
 

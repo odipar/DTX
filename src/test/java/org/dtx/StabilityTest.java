@@ -62,7 +62,7 @@ class StabilityTest {
      * code taken off.
      *
      * <p>The packager's other path combines code the build already made, and
-     * states nothing of what a template assembles to, so this one
+     * defines nothing of what a template assembles to, so this one
      * assembles.
      */
     private static byte[] code(int variant, Shape shape, int unit, int ring,
@@ -73,7 +73,7 @@ class StabilityTest {
                 shape.repeat(), unit, ring, copies);
         byte[] image = Packager.combine(
                 Packager.code(blob, Path.of(Rig.rmac())), blob);
-        // The format block states where the column table begins, at +20 of
+        // The format block defines where the column table begins, at +20 of
         // it, and the code ends there.
         int columns = Dtx.getLong(image, Packager.FORMAT_AT + Packager.COLUMNS_AT);
         byte[] out = new byte[columns - 48];
@@ -100,17 +100,17 @@ class StabilityTest {
             List<Shape> corpus = variant == Dtx.DTX2
                     ? packedCorpus(1) : TABLES;
             byte[] first = code(variant, corpus.get(0), 1, 960, false);
-            String held = corpus.get(0).name();
+            String name = corpus.get(0).name();
             for (Shape shape : corpus.subList(1, corpus.size())) {
                 assertArrayEquals(first, code(variant, shape, 1, 960, false),
                         "DTX" + variant + ": " + shape.name()
-                        + " assembles to code \"" + held + "\" does not");
+                        + " assembles to code \"" + name + "\" does not");
             }
         }
     }
 
     @Test
-    void aPackedImageHoldsOneCodeADecoderAndNoTwoDecodersAreOneCode() {
+    void aPackedImageHasOneCodeADecoderAndNoTwoDecodersAreOneCode() {
         needsRmac();
         // k and copies build the decoder, not the table, so a DTX2 image may
         // have different code for each of them and must not for R, C or RR.
@@ -137,16 +137,16 @@ class StabilityTest {
     }
 
     @Test
-    void theDecoderMeasuresWhatExperimentsStates() throws Exception {
+    void theDecoderMeasuresWhatExperimentsDefines() throws Exception {
         needsRmac();
-        // doc/experiments.md states ST4_wrap.S's bytes at each unit, with the
+        // doc/experiments.md defines ST4_wrap.S's bytes at each unit, with the
         // copy code and without: assembled alone, here, and compared with it.
         String doc = java.nio.file.Files.readString(
                 Rig.root().resolve("doc/experiments.md"));
         java.util.regex.Matcher row = java.util.regex.Pattern.compile(
                 "^\\| ([124]) \\| (\\d+) \\| (\\d+) \\| (\\d+) \\|$",
                 java.util.regex.Pattern.MULTILINE).matcher(doc);
-        int held = 0;
+        int units = 0;
         while (row.find()) {
             int unit = Integer.parseInt(row.group(1));
             int without = decoder(unit, false);
@@ -157,9 +157,9 @@ class StabilityTest {
                     "ST4_wrap.S with the copy code at k of " + unit);
             assertEquals(Integer.parseInt(row.group(4)), with - without,
                     "the copy code at k of " + unit);
-            held++;
+            units++;
         }
-        assertEquals(3, held, "three units in the decoder table");
+        assertEquals(3, units, "three units in the decoder table");
     }
 
     /** ST4_wrap.S assembled alone at this unit, in bytes. */
@@ -178,9 +178,9 @@ class StabilityTest {
     }
 
     @Test
-    void theCopyCodeMeasuresWhatTheDocumentStates() throws Exception {
+    void theCopyCodeMeasuresWhatTheDocumentDefines() throws Exception {
         needsRmac();
-        // doc/abi.md 5 states the figure the copy code costs a build, and
+        // doc/abi.md 5 defines the figure the copy code costs a build, and
         // it is not one figure: 32 bytes at k of 1 and 2, 36 at k of 4.
         int[] cost = new int[5];
         for (int unit : new int[] {1, 2, 4}) {
@@ -190,14 +190,14 @@ class StabilityTest {
         }
         String said = java.nio.file.Files.readString(
                 Rig.root().resolve("doc/abi.md"));
-        java.util.regex.Matcher states = java.util.regex.Pattern.compile(
+        java.util.regex.Matcher defines = java.util.regex.Pattern.compile(
                 "copy code, which measures (\\d+) bytes more at `k` of 1\\s+"
                 + "and 2 and (\\d+) at `k` of 4").matcher(said);
-        org.junit.jupiter.api.Assertions.assertTrue(states.find(),
-                "doc/abi.md 5 no longer states the copy code's size");
-        assertEquals(cost[1], Integer.parseInt(states.group(1)),
+        org.junit.jupiter.api.Assertions.assertTrue(defines.find(),
+                "doc/abi.md 5 no longer defines the copy code's size");
+        assertEquals(cost[1], Integer.parseInt(defines.group(1)),
                 "the copy code at k of 1");
-        assertEquals(cost[4], Integer.parseInt(states.group(2)),
+        assertEquals(cost[4], Integer.parseInt(defines.group(2)),
                 "the copy code at k of 4");
         assertEquals(cost[1], cost[2], "k of 1 and k of 2 pay the same");
     }

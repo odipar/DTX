@@ -19,13 +19,13 @@ import java.util.List;
  * <p>Every column is packed with {@code -l65535}, which meets ST4_wrap's
  * assumption 4: no operation is longer than the 65535 units the 68000
  * decoders count in a word. ST4's own default already fits them, and this
- * states it rather than taking it.
+ * defines it rather than taking it.
  *
  * <p>{@code copies} reaches the packer as {@code -c}, or {@code -cS} for a
  * search of {@code S} seconds. A column packed that way so that a match beyond
  * the ring copies from its own literal stream, which packs a small ring far
  * smaller; the reader of it takes a decoder built with
- * {@code ST4_WINDOW equ 1}, which the payload states (R5.10).
+ * {@code ST4_WINDOW equ 1}, which the payload defines (R5.10).
  */
 public final class St4Beside implements Packer {
 

@@ -22,8 +22,8 @@ script's one argument, and stands at `0.1-SNAPSHOT` until the first release
 is cut.
 
 The images are built from `68k/` by rmac on the machine that cuts the
-release, and nowhere else: a caller who takes a release runs no assembler,
-and no image is tracked in the tree.
+release, and nowhere else: a caller who takes a release does not run an
+assembler, and no image is tracked in the tree.
 
 ## Published
 

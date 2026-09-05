@@ -11,7 +11,7 @@ compound it replaces.
 A noun pressed into service as a verb is the same fault. A repository does
 not *vendor* a library: it carries a copy of one, and the copy is what the
 sentence is about. Write what happened - copied here, carried here, kept
-here - and the reader needs no glossary.
+here - and the reader does not need a glossary.
 
 ## One vocabulary
 
@@ -35,7 +35,7 @@ caller *claims* it, a register *survives* a call.
 
 ## Say it once
 
-Four habits that state an idea twice:
+Four habits that repeat an idea:
 
 - **three of a kind.** `no stale value, no zero, no bus cycle` - say what
   happens and stop.
@@ -52,7 +52,7 @@ Keep a list only where each item carries something the others do not.
 
 ## No flourish
 
-Technical prose states the operation and ends. Three habits that decorate
+Technical prose gives the operation and ends. Three habits that decorate
 instead:
 
 - **the sweep.** `whatever value is written`, `wherever it sits` - a
@@ -66,15 +66,20 @@ instead:
 ## The verb that says the action
 
 Something *uses* a resource, a bit *marks* a case, a header *flags* a state, a
-code *selects* an option, a field *gives* a value. Reserve *names* for what a
-thing is called.
+code *selects* an option, a field *gives* a value, a payload *defines* a
+count. Reserve *names* for what a thing is called, and *state* for the noun:
+a state block, a decoder state.
 
-## A specification states operations
+Negate the verb, not the object: `an image itself does not define a table`,
+not `an image alone defines no table`.
+
+## A specification defines operations
 
 Describe what happens, in terms an implementer can check: what is written, in
-what order, and what is left alone. Name no product, routine or source file -
-an implementation follows the specification, not the other way round. A rule
-that needs a cross-reference to be understood is not yet stated operationally.
+what order, and what is left alone. Do not name a product, a routine or a
+source file - an implementation follows the specification, not the other way
+round. A rule that needs a cross-reference to be understood is not yet
+defined operationally.
 
 ## True beats accurate
 

@@ -22,18 +22,18 @@ by 2, and on a long where it divides by 4.
 | 14 | `C` | one byte a column, its width: 1, 2 or 4 |
 
 `RR` names a row, so 0 to `R` minus one. `RR` equal to `R` marks a table
-that does not repeat, and a reader that reaches the last row has no next
-one.
+that does not repeat, and a reader that reaches the last row does not have
+a next one.
 
 The header is padded with zero bytes so the payload begins on a long. Its
 length is 14 plus `C`, rounded up to a multiple of 4.
 
 A long and not a word, because DTX2's data sets begin on longs (2.3).
-DTX0 and DTX1 need no more than a word, and take the same rule so that a
+DTX0 and DTX1 do not need more than a word, and take the same rule so that a
 header is one shape under every variant.
 
-A reader takes the variant from byte 3 and reads no further where it does
-not read that variant (R2.3).
+A reader takes the variant from byte 3 and does not read further where it
+does not read that variant (R2.3).
 
 A table of `R` = 3 rows and `C` = 3 columns, of widths 1, 4 and 2, has
 this header, and the pictures below lay out that same table:
@@ -55,11 +55,11 @@ this header, and the pictures below lay out that same table:
 
 The payload begins on a long. Inside it DTX0 pads nothing, DTX1 pads
 before each column to a word, and DTX2 pads before each data set to a
-long: each variant's section states where. A pad byte is zero.
+long: each variant's section defines where. A pad byte is zero.
 
 In DTX0 and DTX1 an offset is arithmetic on `R`, `C` and the widths (R3.3,
 R4.2), and DTX1's pad enters that arithmetic as a fixed term. DTX2
-differs: the payload states at what offset each column begins, and a value
+differs: the payload defines at what offset each column begins, and a value
 within a packed column is found by unpacking (2.3).
 
 ### 2.1 DTX0, row by row
@@ -122,7 +122,7 @@ DTX1's column `i` and is complete: its own ST4 header, and the
 length of what it unpacks to.
 
 Every data set in a payload is packed at one unit and unpacks through a
-ring of one size, so the payload states both once and then where the data
+ring of one size, so the payload defines both once and then where the data
 sets are:
 
 | offset | bytes | gives |
@@ -145,8 +145,8 @@ cursor arithmetic runs every column (R5.4, R5.5).
 **The flags byte.** Bit 0 marks a payload whose every column was packed so
 that a match beyond the ring copies from that column's own literal stream,
 which ST4 packs with `-c`. A decoder built without the copy code reads such
-a column wrongly, and nothing in an ST4 data set states which kind it is, so
-the payload states it (R5.10). In a payload that states it every column
+a column wrongly, and nothing in an ST4 data set defines which kind it is, so
+the payload defines it (R5.10). In a payload that defines it every column
 contains copies, and in one that does not, none does.
 
 A file written before this byte was used reads zero here, no copies,
@@ -166,12 +166,12 @@ Four bytes and `4C` divide by 4, so the first data set begins on a long
 where the payload does. The data sets follow, each beginning on a long:
 where one ends short of the next boundary, the bytes between are zero.
 
-A reader takes a column from its offset alone: a data set states the
+A reader takes a column from its offset alone: a data set defines the
 length of what it unpacks to, and the bits that pack it end on a marker,
 so no offset is read against the next.
 
 **What an ST4 data set is.** Enough of it to find the way; the format is
-stated in full in [ST4](https://github.com/odipar/ST4).
+defined in full in [ST4](https://github.com/odipar/ST4).
 
 - Its first long is `$53 $34 $07 k`: `'S'`, `'4'`, the ST4 format version
   7, and the unit `k`.
@@ -184,7 +184,7 @@ stated in full in [ST4](https://github.com/odipar/ST4).
   against `$53 $34 $07 k` checks the signature, the format version and
   the unit at once.
 - A run of bytes shorter than twenty-eight is smaller stored than packed.
-  ST4 states that, and no requirement here follows from it.
+  ST4 defines that, and no requirement here follows from it.
 
 ```
    N, k and the flags once, an offset a column, then a data set a column
@@ -204,7 +204,7 @@ A reader unpacks a column through its ring rather than into `R` times
 
 ## 3. Not yet written
 
-Where a table states its length, or whether it states one.
+Where a table defines its length, or whether it defines one.
 
 What a reader reports of a table it will not read: a variant not among
 those it reads, an `R` below 1, a `C` outside 1 to 256, a width other than

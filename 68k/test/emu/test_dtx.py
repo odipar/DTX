@@ -11,14 +11,14 @@ advance, the registers that stand across a call, and a guard band past the
 row.
 
 THE ROUND TRIP. The same text through the writer, the packager and the
-68000 at DTX0, DTX1 and DTX2, compared with the rows the text states and
+68000 at DTX0, DTX1 and DTX2, compared with the rows the text defines and
 with one another (R1.3). What a row should be is worked out in this file,
 from the
-text, by a reader that shares no code with the one under test - so neither
-the writer nor the 68000 is checked against itself. Under DTX2 it also
-counts the decoder's calls, the one thing a wrong stopping rule shows up
-in: the output does not change when a column is
-driven one call past its end marker, but the count does.
+text, by a reader that does not share code with the one under test - so
+neither the writer nor the 68000 is checked against itself. Under DTX2 it
+also counts the decoder's calls, the one thing a wrong stopping rule shows
+up in: the output does not change when a column is driven one call past
+its end marker, but the count does.
 
     python3 68k/test/emu/test_dtx.py
 
@@ -68,7 +68,7 @@ D = [UC_M68K_REG_D0, UC_M68K_REG_D1, UC_M68K_REG_D2, UC_M68K_REG_D3,
 # An independent reader: doc/SPEC.md 1, 2.1 and 2.2, in Python.
 
 def read_dtx(blob):
-    """The header a DTX file states, and one row of bytes a row."""
+    """The header of a DTX file, and one row of bytes a row."""
     assert blob[:3] == b"DTX", "the file does not open with DTX"
     variant = blob[3]
     rows, columns, repeat = struct.unpack(">IHI", blob[4:14])
@@ -122,7 +122,7 @@ def csv_values(csv):
             else:
                 row.append(int(c))
         out.append(row)
-    assert out, "the text holds no row"
+    assert out, "the text does not contain a row"
     return out
 
 
@@ -138,7 +138,7 @@ def csv_widths(values):
         taken = 1
         for row in values:
             while not fits(row[i], taken):
-                assert taken != 4, "column %d takes no width" % i
+                assert taken != 4, "column %d does not take a width" % i
                 taken = 2 if taken == 1 else 4
         out.append(taken)
     return out
@@ -212,7 +212,7 @@ def package(blob, assemble=False):
     lst = os.path.join(work, "t.lst")
     with open(src, "wb") as f:
         f.write(blob)
-    # No -copies: the payload states it (R5.10), so the packager reads
+    # No -copies: the payload defines it (R5.10), so the packager reads
     # which decoder the table needs out of the file.
     run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img]
         + (["-a" + RMAC] if assemble else []))
@@ -338,11 +338,11 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
     fmt = image[24:24 + 20]
     assert fmt[:3] == b"DTX" and fmt[3] == kind, "the format block's variant"
     state_bytes, header_at = struct.unpack(">II", fmt[4:12])
-    stated_row, p, n = struct.unpack(">HHH", fmt[12:18])
-    assert stated_row == row_bytes, "the format block's row bytes"
+    defined_row, p, n = struct.unpack(">HHH", fmt[12:18])
+    assert defined_row == row_bytes, "the format block's row bytes"
     if kind == 2:
         assert p >= columns, "P is at least C"
-        assert n == ring and fmt[18] == unit, "N and k the payload states"
+        assert n == ring and fmt[18] == unit, "N and k the payload defines"
         for w in set(width):
             assert n % (p * w) == 0, "N divides by P times %d" % w
             assert n >= 2 * p * w, "N is at least twice P times %d" % w
@@ -465,7 +465,7 @@ def numbers(rows, columns, span=251):
 
 # --------------------------------------------------------------------------
 # The round trip: text, through the writer, through the packager, through a
-# 68000, and back to the rows the text states.
+# 68000, and back to the rows the text defines.
 
 def rows_through_68k(csv, variant, widths, repeat, unit, ring, copies=False):
     """Every row a packaged reader of this variant gives, and its image."""
@@ -574,7 +574,7 @@ PACKED = [
 
 
 # --------------------------------------------------------------------------
-# doc/performance.md, read back: every figure it states is one this rig
+# doc/performance.md, read back: every figure it records is one this rig
 # counts, or the rig fails naming the cell.
 
 def instructions(m):
@@ -616,22 +616,22 @@ def measured(variant, unit, widths):
 def performance():
     """doc/performance.md against the machine, cell by cell."""
     doc = open(os.path.join(ROOT, "doc", "performance.md")).read()
-    stated = {}
+    listed = {}
     for line in doc.splitlines():
         cell = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cell) == 6 and cell[0] in ("init", "advance", "read", "take",
                                           "jump to row 0", "jump to row 63",
                                           "code, bytes"):
-            stated[cell[0]] = cell[1:]
+            listed[cell[0]] = cell[1:]
     columns = [(0, 1, [1, 2, 4]), (1, 1, [1, 2, 4]), (2, 1, [1, 2, 4]),
                (2, 2, [2, 2, 2]), (2, 4, [4, 4, 4])]
     got = [measured(variant, unit, widths) for variant, unit, widths in columns]
-    for call, said in stated.items():
+    for call, said in listed.items():
         for at, one in enumerate(got):
             assert said[at] == one[call], \
                 "doc/performance.md gives %s for %s in column %d, the rig" \
                 " counts %s" % (said[at], call, at + 1, one[call])
-    assert len(stated) == 7, "doc/performance.md states %d rows, not 7" % len(stated)
+    assert len(listed) == 7, "doc/performance.md lists %d rows, not 7" % len(listed)
     print("  %d cells of doc/performance.md, each the figure the rig counts"
           % (7 * 5))
 

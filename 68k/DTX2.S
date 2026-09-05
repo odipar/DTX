@@ -5,7 +5,7 @@
 ; Robbert's direction. Use it freely, including commercially, as long as your
 ; documentation says you used DTX (see LICENSE).
 ;
-; doc/abi.md states the calls, the format block and the state block. One
+; doc/abi.md defines the calls, the format block and the state block. One
 ; template a variant: this file reads DTX2 and nothing else, so no call in it
 ; tests which variant it contains. org.dtx.Packager takes the template the
 ; table's variant needs.
@@ -15,7 +15,7 @@
 ; that one column is refilled a row, the one whose turn it is. So a read takes
 ; one value from each ring and never enters a decoder. ST4_wrap.S, the copy
 ; carried into this repository, is the decoder, built at the unit the payload
-; states.
+; defines.
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR, P, N and the widths reach
 ; it at run time. R, RR, P, N and C stand in the state block, which init reads
@@ -31,7 +31,7 @@
 ; alone, so the loop's state is in neither: the record now being
 ; filled stands in the block, and a6 reaches it.
 ;
-; THE COLUMN TABLE stands behind the code, and the format block states where.
+; THE COLUMN TABLE stands behind the code, and the format block defines where.
 ; Its header and read entries are DTX1's, and the records follow them:
 ;
 ;   +0   4  stream A, from the payload    +16  4  the ring, in the block
@@ -74,7 +74,7 @@ DTX_S_WSHIFT        equ     24
 DTX_S_KSHIFT        equ     26
 DTX_S_SIZE          equ     32
 
-; The state block beyond what doc/abi.md 3 states: three cursors, the three
+; The state block beyond what doc/abi.md 3 defines: three cursors, the three
 ; rings their classes begin at, the record a fill is at, and the five figures
 ; the table gives. The decoder states stand at DTX_DECODERS, one a column,
 ; and the rings behind them.
@@ -167,10 +167,10 @@ DTX_wrap:
         move.l  DTX_S_RING(a3),d4
         add.l   DTX_NFIG(a6),d4
         cmp.l   d4,d3
-        bne.s   .held
+        bne.s   .kept
         movea.l a6,a1
         adda.l  DTX_S_RING(a3),a1
-.held:
+.kept:
         rts
 
 ; The decoder state of the record in a3, written from the decoder's registers.
@@ -369,9 +369,9 @@ DTX_move:
         move.l  DTX_CLASSBASE-DTX_CURSOR(a3),d1
         add.l   DTX_NFIG(a6),d1
         cmp.l   d1,d0
-        bne.s   .held
+        bne.s   .kept
         move.l  DTX_CLASSBASE-DTX_CURSOR(a3),d0
-.held:
+.kept:
         move.l  d0,(a3)
         rts
 
@@ -434,7 +434,7 @@ DTX_advance:
 ; stands at a displacement off its class cursor, and the ring the class walks
 ; puts every column of it a whole ring apart.
 ;
-; A read moves no cursor, refills nothing and decodes nothing.
+; A read does not move a cursor, refills nothing and decodes nothing.
 
 DTX_read:
         tst.l   DTX_ROW(a0)

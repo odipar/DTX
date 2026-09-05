@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -165,7 +167,22 @@ final class HouseStyleTest {
             "the ones that matter",
             "the whole point",
             // filler: cut unless the word carries the meaning
-            "actually");
+            "actually",
+            // "state" is the noun - a state block, a decoder state - and a
+            // document, header or payload defines
+            "stated",
+            "stating",
+            " states",
+            "to state",
+            "can state",
+            "not state",
+            "does state",
+            "must state",
+            "should state",
+            "state what",
+            "state which",
+            "state whether",
+            "state how");
 
     /**
      * What this repository carries rather than writes. A copy states its
@@ -364,6 +381,10 @@ final class HouseStyleTest {
                                 + " has \"" + struck + '"');
                     }
                 }
+                for (String shape : shapes(prose)) {
+                    hits.add(source + ":" + one.line() + " has \"" + shape
+                            + '"');
+                }
             }
         }
         assertTrue(hits.isEmpty(), () -> String.join("\n", hits)
@@ -392,9 +413,31 @@ final class HouseStyleTest {
      * and the entry struck is {@code window}, the reach a data set decodes
      * through: a name spelled like a word is not that word. They are
      * matched before the line is lowered, so the noun still reads as
-     * struck.
+     * struck. `decoder states` is the plural noun, and {@code  states} the
+     * verb.
      */
-    private static final List<String> NAMES = List.of("Windows", "ST4_WINDOW");
+    private static final List<String> NAMES = List.of("Windows", "ST4_WINDOW",
+            "decoder states", "Decoder states");
+
+    /**
+     * A shape struck as a pattern rather than a phrase: a verb negating its
+     * object, `defines no table`, where the verb is what to negate - `does
+     * not define a table`. A word in s before ` no ` is read as the verb;
+     * `this`, `thus`, `as`, `unless`, `its` and `yes` are not verbs and pass.
+     */
+    private static final Pattern SHAPE = Pattern.compile(
+            "\\b(?!this\\b|thus\\b|as\\b|unless\\b|its\\b|yes\\b)"
+            + "[a-z]+s no [a-z]+");
+
+    /** The struck shapes in {@code prose}, as the text each matched. */
+    private static List<String> shapes(String prose) {
+        List<String> found = new ArrayList<>();
+        Matcher shape = SHAPE.matcher(prose);
+        while (shape.find()) {
+            found.add(shape.group());
+        }
+        return found;
+    }
 
     /** {@code line} with the names out and the rest lowered. */
     private static String read(String line) {
@@ -421,6 +464,10 @@ final class HouseStyleTest {
                         hits.add(document + ":" + (at + 1)
                                 + " has \"" + struck + '"');
                     }
+                }
+                for (String shape : shapes(line)) {
+                    hits.add(document + ":" + (at + 1) + " has \"" + shape
+                            + '"');
                 }
             }
             hits.addAll(wrappedHits(document, lines));
@@ -468,6 +515,15 @@ final class HouseStyleTest {
                         hits.add(document + ":" + (from + 1) + " has \""
                                 + struck + "\", broken by a line wrap");
                     }
+                }
+                int whole = shapes(joined).size();
+                int apart = 0;
+                for (String line : paragraph) {
+                    apart += shapes(read(line)).size();
+                }
+                for (int n = apart; n < whole; n++) {
+                    hits.add(document + ":" + (from + 1) + " has a verb"
+                            + " negating its object, broken by a line wrap");
                 }
             }
             from = at + 1;

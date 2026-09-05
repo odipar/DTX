@@ -20,13 +20,13 @@ SOURCES.md lists them. Each is complete: the header, and the payload of its
 variant. A DTX2 table's data sets are ST4 version 7 (SPEC.md 2.3), packed
 with the copy of ST4 in this repository, at the unit and ring the row
 gives, and `dtx2-copies` was packed with copies from the literal stream,
-which its payload's flag byte states.
+which its payload's flag byte marks.
 
 ## The rules
 
-- SPEC.md states the format and requirements.md what it has to do. R6
+- SPEC.md defines the format and requirements.md what it has to do. R6
   bounds what a table may contain, and a reader given a table that breaks
-  R6 reports it and reads no further (R6.5). No table here breaks it.
+  R6 reports it and does not read further (R6.5). No table here breaks it.
 - A reader takes `R`, `C`, `RR` and the widths from the header, and under
   DTX2 `N`, `k` and the flags from the payload. Nothing outside the file
   enters a read.

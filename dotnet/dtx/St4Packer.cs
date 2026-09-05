@@ -13,7 +13,7 @@ using System.Globalization;
 ///
 /// <para>The packer takes what <c>st4 -f -kK -mN -l65535</c> gives it, and <c>-c</c> beside them where the columns contain copies.
 /// The ring is bytes and the packer counts units, so <c>-m</c> is the ring
-/// divided by the unit, at most what a word offset can state.</para>
+/// divided by the unit, at most what a word offset can give.</para>
 ///
 /// <para><c>-l65535</c> meets ST4_wrap's assumption 4: no operation is
 /// longer than the 65535 units the 68000 decoders count in a word.</para>
@@ -26,7 +26,7 @@ public sealed class St4Packer : IPacker
     private readonly bool copies;
     private readonly double seconds;
 
-    /// <summary>A packer that packs no copies from the literal stream.</summary>
+    /// <summary>A packer that does not pack copies from the literal stream.</summary>
     public St4Packer() : this(false, 0)
     {
     }
@@ -127,13 +127,13 @@ public sealed class St4Beside : IPacker
             using Process run = Process.Start(start)
                     ?? throw new InvalidOperationException(
                             $"{packer} did not start");
-            string said = run.StandardOutput.ReadToEnd()
+            string given = run.StandardOutput.ReadToEnd()
                     + run.StandardError.ReadToEnd();
             run.WaitForExit();
             if (run.ExitCode != 0 || !File.Exists(out_))
             {
                 throw new InvalidOperationException(
-                        $"{packer} gave {said.Trim()}");
+                        $"{packer} gave {given.Trim()}");
             }
             return File.ReadAllBytes(out_);
         }

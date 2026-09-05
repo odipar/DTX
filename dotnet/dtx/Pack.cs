@@ -9,7 +9,7 @@ using System.Text;
 /// <para>One variant is one code, so nothing here assembles: it takes the
 /// image for the build the table needs, writes the five fields the table
 /// gives into the format block, and appends the column table and the
-/// table's bytes. doc/abi.md states the image, the format block and the
+/// table's bytes. doc/abi.md defines the image, the format block and the
 /// column table.</para>
 /// </summary>
 public static class Pack
@@ -39,7 +39,7 @@ public static class Pack
     public const int PackedHead = 80;
 
     /// <summary>
-    /// What a DTX2 payload states: the ring, the unit, whether its columns
+    /// What a DTX2 payload defines: the ring, the unit, whether its columns
     /// contain copies from the literal stream, and where each data set begins.
     /// </summary>
     public readonly record struct Packed(int Ring, int Unit, bool Copies, int[] At);
@@ -51,7 +51,7 @@ public static class Pack
     /// <c>$53 $34 $07 k</c>, so one compare against the payload's own k
     /// checks ST4's signature, its format version and R5.2 at once.</para>
     /// </summary>
-    /// <exception cref="ArgumentException">where a data set states another
+    /// <exception cref="ArgumentException">where a data set defines another
     /// version or another unit than the payload does</exception>
     public static Packed ReadPacked(byte[] file, Header header)
     {
@@ -62,12 +62,12 @@ public static class Pack
         for (int i = 0; i < at.Length; i++)
         {
             at[i] = Format.GetLong(file, payload + 4 + 4 * i);
-            int said = Format.GetLong(file, payload + at[i]);
-            if (said != signature)
+            int read = Format.GetLong(file, payload + at[i]);
+            if (read != signature)
             {
                 throw new ArgumentException(
-                        $"column {i}'s data set opens {said:X8} and the"
-                        + $" payload states {signature:X8}: an ST4 data set"
+                        $"column {i}'s data set opens {read:X8} and the"
+                        + $" payload defines {signature:X8}: an ST4 data set"
                         + " opens with S4, the format version 7 and the"
                         + " payload's own k");
             }
@@ -82,9 +82,9 @@ public static class Pack
         List<int> out_ = new();
         foreach (int w in new[] { 1, 2, 4 })
         {
-            foreach (int held in width)
+            foreach (int one in width)
             {
-                if (held == w)
+                if (one == w)
                 {
                     out_.Add(w);
                     break;
@@ -152,7 +152,7 @@ public static class Pack
             return Cursor + 4;
         }
         // DTX1 has three cursors and the three places their classes begin,
-        // at any widths the table states, so its block does not move with C.
+        // at any widths the table defines, so its block does not move with C.
         return header.Variant == Format.Dtx1
                 ? 48 : Cursor + 4 * Classes(header.Width).Length;
     }
@@ -196,14 +196,14 @@ public static class Pack
             {
                 break;
             }
-            bool holds = true;
+            bool fits = true;
             foreach (int w in width)
             {
                 long budget = (long)p * w / k;
-                holds &= n % (p * w) == 0 && (long)p * w % k == 0
+                fits &= n % (p * w) == 0 && (long)p * w % k == 0
                         && budget >= 1 && budget <= 65535;
             }
-            if (holds)
+            if (fits)
             {
                 return p;
             }
@@ -310,7 +310,7 @@ public static class Pack
 
     /// <summary>
     /// One image: this code, the column table, the table's bytes, and the
-    /// format block written to state the three.
+    /// format block written to define the three.
     ///
     /// <para>The code is the same bytes any table that follows it, so what a
     /// combine writes is the five fields the table gives. It checks the two
@@ -332,7 +332,7 @@ public static class Pack
                     $"the code reads DTX{code[FormatAt + 3]} and the table is"
                     + $" DTX{header.Variant}");
         }
-        // The code ends where the format block states the column table begins:
+        // The code ends where the format block puts the column table:
         // the two match, or the image reads its own last instruction as a
         // column.
         int columns = Format.GetLong(code, FormatAt + ColumnsAt);
@@ -372,7 +372,7 @@ public static class Pack
     /// <summary>
     /// The image for this table, from the code this build contains.
     ///
-    /// <para>Which of the eight it takes is the file's to state: the variant,
+    /// <para>Which of the eight it takes is the file's to define: the variant,
     /// and under DTX2 the unit its data sets are packed at and whether they
     /// contain copies from the literal stream (R5.10). No word from a caller
     /// enters it, so no word can differ from the bytes.</para>
@@ -419,7 +419,7 @@ public static class Pack
             state = PackedStateBytes(header, given);
         }
         StringBuilder out_ = new();
-        out_.Append("; What org.dtx.Packager states of one table, for"
+        out_.Append("; What org.dtx.Packager writes of one table, for"
                         + " 68k/DTX.S to read.\n")
                 .Append($"; DTX{variant}, R = {header.Rows}, C ="
                         + $" {header.Columns}, RR = {header.Repeat}\n")
@@ -439,7 +439,7 @@ public static class Pack
             out_.Append(Equ("DTX_PERIOD", period))
                     .Append(Equ("DTX_N", given.Ring))
                     .Append(Equ("ST4_UNIT", given.Unit));
-            // The payload states whether its columns contain copies (R5.10), so
+            // The payload defines whether its columns contain copies (R5.10), so
             // the decoder built for them is fixed by the file. That build
             // writes the reach into two of its own instructions, and a 68030
             // caller flushes the instruction cache after every call that
@@ -488,12 +488,12 @@ public static class Pack
             }
             using Process run = Process.Start(start)
                     ?? throw new InvalidOperationException($"{rmac} did not start");
-            string said = run.StandardOutput.ReadToEnd()
+            string given = run.StandardOutput.ReadToEnd()
                     + run.StandardError.ReadToEnd();
             run.WaitForExit();
             if (run.ExitCode != 0 || !File.Exists(out_))
             {
-                throw new InvalidOperationException($"{rmac} gave {said.Trim()}");
+                throw new InvalidOperationException($"{rmac} gave {given.Trim()}");
             }
             return File.ReadAllBytes(out_);
         }
@@ -506,11 +506,11 @@ public static class Pack
     /// <summary>
     /// The five fields a combine writes, zeroed.
     ///
-    /// <para>Built code states no table. The assembler read one to build it,
-    /// and what it read stands in the format block: zeroing those five is
-    /// what makes the file a function of the template alone, and what makes
-    /// code shipped without a combine read a state block of zero bytes rather
-    /// than some other table's.</para>
+    /// <para>Built code does not define a table. The assembler read one to
+    /// build it, and what it read stands in the format block: zeroing those
+    /// five is what makes the file a function of the template alone, and what
+    /// makes code shipped without a combine read a state block of zero bytes
+    /// rather than some other table's.</para>
     /// </summary>
     public static void Blank(byte[] code)
     {

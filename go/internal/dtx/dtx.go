@@ -27,7 +27,7 @@ func HeaderLength(columns int) int {
 	return Align(14+columns, 4)
 }
 
-// Header gives what a file's header states. Length is the header's end, the
+// Header gives what a file's header defines. Length is the header's end, the
 // payload's first byte.
 type Header struct {
 	Variant int
@@ -55,8 +55,8 @@ func (h Header) RowBytes() int {
 // file is short of one, does not open with DTX, or breaks a bound R6 sets.
 func ReadHeader(file []byte) (Header, error) {
 	if len(file) < 16 {
-		return Header{}, fmt.Errorf("a file of %d bytes holds no header",
-			len(file))
+		return Header{}, fmt.Errorf(
+			"a file of %d bytes does not contain a header", len(file))
 	}
 	for i, b := range Magic {
 		if file[i] != b {

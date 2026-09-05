@@ -42,7 +42,7 @@ final class St4Test {
     }
 
     @Test
-    void everyDataSetOpensWithTheSignatureAndTheUnitThePayloadStates()
+    void everyDataSetOpensWithTheSignatureAndTheUnitThePayloadDefines()
             throws Exception {
         Packer st4 = new St4();
         for (int unit : new int[] {1, 2, 4}) {
@@ -89,7 +89,8 @@ final class St4Test {
     }
 
     @Test
-    void aPackedTableRunsToFewerBytesThanTheColumnsItHolds() throws Exception {
+    void aPackedTableRunsToFewerBytesThanTheColumnsItContains()
+            throws Exception {
         Table table = table();
         byte[] plain = Dtx1.write(table);
         byte[] packed = Dtx2.from(plain, new St4(), 1, 960);

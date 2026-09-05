@@ -4,7 +4,7 @@ DTX is a data format: a table of `R` rows and `C` columns, where a column
 is 1, 2 or 4 bytes wide and the rows repeat at a row `RR`.
 
 The format is data. A compile step and a calling convention belong to a
-reader and not to the format, so the specification states what the bytes
+reader and not to the format, so the specification defines what the bytes
 are and what a reader takes out of them, and no more than that.
 
 Three trees write it: Java under `src/main/java/`, Go under `go/` and C#
@@ -16,11 +16,11 @@ beside it. `68k/` contains the reader a packaged table is read by on a
 that reader under emulation and compares every row it gives with the text
 the table came from.
 
-DTX states nothing of what a column contains. A format built on DTX states
-that, in its own repository and against what this one states.
+DTX does not define what a column contains. A format built on DTX defines
+that, in its own repository and against what this one defines.
 
 [doc/requirements.md](doc/requirements.md) comes first. Nothing else is
-written until it states what DTX has to do.
+written until it defines what DTX has to do.
 
 | | |
 |---|---|

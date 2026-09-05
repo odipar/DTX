@@ -50,7 +50,7 @@ public final class Dtx {
     }
 
     /**
-     * What a file's header states.
+     * What a file's header defines.
      *
      * @param variant the byte at offset 3
      * @param rows {@code R}
@@ -76,7 +76,8 @@ public final class Dtx {
     public static Header header(byte[] file) {
         if (file.length < 16) {
             throw new IllegalArgumentException(
-                    "a file of " + file.length + " bytes holds no header");
+                    "a file of " + file.length
+                            + " bytes does not contain a header");
         }
         for (int i = 0; i < MAGIC.length; i++) {
             if (file[i] != MAGIC[i]) {

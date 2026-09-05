@@ -19,7 +19,7 @@ type Packer struct {
 	Seconds    float64
 }
 
-// Copies states whether this packer packs copies from the literal stream.
+// Copies gives whether this packer packs copies from the literal stream.
 func (p Packer) Copies() bool {
 	return p.CopiesFlag
 }

@@ -55,7 +55,7 @@ public final class Dtx1 {
      * The table in a DTX1 file.
      *
      * @throws IllegalArgumentException where the file is not DTX1, or is
-     *     short of the columns its header states
+     *     short of the columns its header defines
      */
     public static Table read(byte[] file) {
         Dtx.Header header = Dtx.header(file);

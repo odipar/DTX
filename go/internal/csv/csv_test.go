@@ -18,7 +18,7 @@ func TestTheNarrowestWidthTakesEveryValue(t *testing.T) {
 
 // A value is decimal, or hexadecimal where it opens with $, and negative
 // where it opens with -. A blank line and a # line are not rows.
-func TestWhatALineMayHold(t *testing.T) {
+func TestWhatALineMayContain(t *testing.T) {
 	table, err := TableAt("# a comment\n\n1,$FF\n-2,-$10\n", []int{1, 2})
 	if err != nil {
 		t.Fatal(err)
@@ -40,7 +40,7 @@ func TestWhatIsRefused(t *testing.T) {
 	for _, bad := range []struct{ name, text string }{
 		{"no row at all", "\n# nothing\n"},
 		{"a short line", "1,2\n3\n"},
-		{"a value that is no number", "1,two\n"},
+		{"a value that is not a number", "1,two\n"},
 	} {
 		if _, err := Narrowest(bad.text); err == nil {
 			t.Fatalf("%s was taken", bad.name)

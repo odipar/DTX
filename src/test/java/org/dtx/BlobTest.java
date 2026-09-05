@@ -64,7 +64,7 @@ class BlobTest {
     }
 
     @Test
-    void theReleaseFilesAndTheClasspathHoldTheSameBytes() throws Exception {
+    void theReleaseFilesAndTheClasspathContainTheSameBytes() throws Exception {
         // The build writes each file twice: into the classes a jar is made
         // of, and into build/68k, which a release attaches and a port in
         // another language builds from. A release that shipped other bytes
@@ -112,29 +112,29 @@ class BlobTest {
         for (int i = 0; i < width.length; i++) {
             column[i] = new byte[rows * width[i]];
         }
-        Table held = Table.of(rows, rows, width, column);
-        return variant == Dtx.DTX0 ? Dtx0.write(held) : Dtx1.write(held);
+        Table built = Table.of(rows, rows, width, column);
+        return variant == Dtx.DTX0 ? Dtx0.write(built) : Dtx1.write(built);
     }
 
     @Test
-    void carriedCodeStatesNoTable() {
-        // A build states no table: the five fields a combine writes read
-        // zero, so code shipped without one states no table rather than
-        // the table it was assembled from.
+    void carriedCodeDoesNotDefineATable() {
+        // A build does not define a table: the five fields a combine writes
+        // read zero, so code shipped without one does not define a table, not
+        // even the one it was assembled from.
         for (Blobs.Build build : Blobs.all()) {
             byte[] code = Packager.carriedCode(build.variant(), build.unit(),
                     build.copies());
             int at = Packager.FORMAT_AT;
             assertEquals(0, Dtx.getLong(code, at + Packager.STATE_BYTES),
-                    build.name() + " states a state block");
+                    build.name() + " defines a state block");
             assertEquals(0, Dtx.getLong(code, at + Packager.TABLE_AT),
-                    build.name() + " states a table");
+                    build.name() + " defines a table");
             assertEquals(0, Dtx.getWord(code, at + Packager.ROWBYTES_AT),
-                    build.name() + " states a row's bytes");
+                    build.name() + " defines a row's bytes");
             assertEquals(0, Dtx.getWord(code, at + Packager.PERIOD_AT),
-                    build.name() + " states a period");
+                    build.name() + " defines a period");
             assertEquals(0, Dtx.getWord(code, at + Packager.RING_AT),
-                    build.name() + " states a ring");
+                    build.name() + " defines a ring");
             assertEquals(code.length,
                     Dtx.getLong(code, at + Packager.COLUMNS_AT),
                     build.name() + " puts the column table off its own end");

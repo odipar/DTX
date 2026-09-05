@@ -5,7 +5,7 @@
 ; Robbert's direction. Use it freely, including commercially, as long as your
 ; documentation says you used DTX (see LICENSE).
 ;
-; doc/abi.md states the calls, the format block and the state block. One
+; doc/abi.md defines the calls, the format block and the state block. One
 ; template a variant: this file reads DTX0 and nothing else, so no call in it
 ; tests which variant it contains.
 ;
@@ -26,8 +26,9 @@
 ;
 ; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here contains them: _columns is the
 ; last label and the code ends on a long, so the packager appends the .dtx
-; file to what rmac writes and _columns is where it lands. DTX0 has no column
-; table, so under this variant the table's own header is the first byte there.
+; file to what rmac writes and _columns is where it lands. DTX0 does not have
+; a column table, so under this variant the table's own header is the first
+; byte there.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call takes
@@ -209,7 +210,7 @@ read_none:
 ; -----------------------------------------------------------------------------
 ; DTX_take. A read and an advance in one call. The read leaves a2 one past the
 ; row it took, which is the cursor the step would work out, so the step stores
-; a2 and does no arithmetic.
+; a2 and does not do arithmetic.
 
 DTX_take:
         tst.l   DTX_ROW(a0)

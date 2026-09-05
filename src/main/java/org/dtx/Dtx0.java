@@ -33,7 +33,7 @@ public final class Dtx0 {
      * The table in a DTX0 file.
      *
      * @throws IllegalArgumentException where the file is not DTX0, or is
-     *     short of the rows its header states
+     *     short of the rows its header defines
      */
     public static Table read(byte[] file) {
         Dtx.Header header = Dtx.header(file);

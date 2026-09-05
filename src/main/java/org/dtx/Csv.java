@@ -15,8 +15,8 @@ import java.util.List;
  * every field of the header is, and a negative one in two's complement. A
  * value fits {@code W} bytes where it lies from -2^(8W-1) to 2^(8W)-1, so
  * one width takes a signed column's values and an unsigned one's
- * alike. DTX states no more of a column than its width, so which of the two
- * a column is, the caller states elsewhere.
+ * alike. DTX does not define more of a column than its width, so which of
+ * the two a column is, the caller defines elsewhere.
  */
 public final class Csv {
 
@@ -114,7 +114,8 @@ public final class Csv {
             out.add(row);
         }
         if (out.isEmpty()) {
-            throw new IllegalArgumentException("the text holds no row");
+            throw new IllegalArgumentException(
+                    "the text does not contain a row");
         }
         return out;
     }

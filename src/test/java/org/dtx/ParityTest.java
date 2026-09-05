@@ -88,10 +88,10 @@ class ParityTest {
     /** What the three trees wrote, compared with one another. */
     private static void same(String name, Map<String, byte[]> written) {
         byte[] one = written.getOrDefault("java", new byte[0]);
-        for (Map.Entry<String, byte[]> held : written.entrySet()) {
-            assertArrayEquals(one, held.getValue(), name + ": the java tree"
-                    + " wrote " + one.length + " bytes and the " + held.getKey()
-                    + " tree " + held.getValue().length);
+        for (Map.Entry<String, byte[]> tree : written.entrySet()) {
+            assertArrayEquals(one, tree.getValue(), name + ": the java tree"
+                    + " wrote " + one.length + " bytes and the " + tree.getKey()
+                    + " tree " + tree.getValue().length);
         }
     }
 

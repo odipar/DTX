@@ -7,7 +7,7 @@ import (
 	"dtx/internal/image"
 )
 
-// A header of R rows and these widths, padded to a long as SPEC.md 1 states.
+// A header of R rows and these widths, padded to a long as SPEC.md 1 defines.
 func header(variant, rows, repeat int, width []int) []byte {
 	out := make([]byte, dtx.HeaderLength(len(width)))
 	copy(out, dtx.Magic)
@@ -21,8 +21,8 @@ func header(variant, rows, repeat int, width []int) []byte {
 	return out
 }
 
-// A plain file whose payload has no values: the packager reads the header
-// and the widths and never a value.
+// A plain file whose payload does not have values: the packager reads the
+// header and the widths and never a value.
 func plain(variant, rows int, width []int) []byte {
 	head := header(variant, rows, rows, width)
 	size := 0
@@ -39,7 +39,7 @@ func packed(rows int, width []int, unit, ring int) []byte {
 	return packedCopies(rows, width, unit, ring, false)
 }
 
-// The same, whose payload states that its columns contain copies, R5.10.
+// The same, whose payload defines that its columns contain copies, R5.10.
 func packedCopies(rows int, width []int, unit, ring int, copies bool) []byte {
 	head := header(dtx.DTX2, rows, rows, width)
 	payload := make([]byte, 4+4*len(width))
@@ -68,12 +68,12 @@ func packedCopies(rows int, width []int, unit, ring int, copies bool) []byte {
 func needsImages(t *testing.T) {
 	t.Helper()
 	if image.Embedded() == 0 {
-		t.Skip("this build holds no images: run mvn process-classes")
+		t.Skip("this build does not contain images: run mvn process-classes")
 	}
 }
 
-// The format block states back what the table gives, doc/abi.md 1.
-func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
+// The format block defines what the table gives, doc/abi.md 1.
+func TestTheFormatBlockDefinesWhatTheTableFixes(t *testing.T) {
 	needsImages(t)
 	for _, one := range []struct {
 		name    string
@@ -99,7 +99,7 @@ func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
 		if got := dtx.GetWord(out, FormatAt+RowBytesAt); got != one.row {
 			t.Fatalf("%s: the row's bytes are %d, not %d", one.name, got, one.row)
 		}
-		// The table stands where the block states, and states the same variant.
+		// The table stands where the block puts it, and defines the same variant.
 		at := dtx.GetLong(out, FormatAt+TableAt)
 		if string(out[at:at+3]) != "DTX" || int(out[at+3]) != one.variant {
 			t.Fatalf("%s: no header at %d", one.name, at)
@@ -116,7 +116,8 @@ func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
 				at-columns)
 		}
 		if one.variant != dtx.DTX0 && columns >= at {
-			t.Fatalf("%s: DTX%d holds no column table", one.name, one.variant)
+			t.Fatalf("%s: DTX%d does not contain a column table", one.name,
+				one.variant)
 		}
 		if got := len(out) - at; got != len(one.file) {
 			t.Fatalf("%s: %d bytes of table, not %d", one.name, got,
@@ -126,7 +127,7 @@ func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
 }
 
 // The five rules of doc/abi.md 4, on the image the packager writes.
-func TestAPackedImageHoldsEveryRuleOfThePeriod(t *testing.T) {
+func TestAPackedImageMeetsEveryRuleOfThePeriod(t *testing.T) {
 	needsImages(t)
 	file := packed(64, []int{1, 2, 4}, 1, 960)
 	out, err := Image(file)
@@ -161,7 +162,7 @@ func TestATableTooWideIsRefused(t *testing.T) {
 }
 
 // A table packed at one unit does not package against another decoder:
-// the image would read bytes no decoder wrote.
+// the image would read bytes that no decoder wrote.
 func TestAUnitTheDecoderDoesNotDecodeIsRefused(t *testing.T) {
 	needsImages(t)
 	file := packed(64, []int{1, 2}, 1, 960)
@@ -178,9 +179,9 @@ func TestAUnitTheDecoderDoesNotDecodeIsRefused(t *testing.T) {
 	}
 }
 
-// The payload states whether its columns contain copies, so the image a table
-// takes is the file's to fix and no word from a caller enters it.
-func TestThePayloadStatesWhetherItsColumnsHoldCopies(t *testing.T) {
+// The payload defines whether its columns contain copies, so the image a
+// table takes is the file's to fix and no word from a caller enters it.
+func TestThePayloadDefinesWhetherItsColumnsContainCopies(t *testing.T) {
 	needsImages(t)
 	plain, err := Image(packed(64, []int{1, 2}, 1, 960))
 	if err != nil {
@@ -196,18 +197,18 @@ func TestThePayloadStatesWhetherItsColumnsHoldCopies(t *testing.T) {
 	}
 }
 
-// R5.2: the k a payload states and the k in every data set's own signature
+// R5.2: the k a payload defines and the k in every data set's own signature
 // are the same, and the packager checks one against the other.
-func TestADataSetThatDoesNotStateThePayloadsUnitIsRefused(t *testing.T) {
+func TestADataSetThatDoesNotDefineThePayloadsUnitIsRefused(t *testing.T) {
 	file := packed(64, []int{1, 2}, 1, 960)
 	head, err := dtx.ReadHeader(file)
 	if err != nil {
 		t.Fatal(err)
 	}
 	at := head.Length + dtx.GetLong(file, head.Length+4+4)
-	file[at+3] = 2 // column 1 now states a unit of 2
+	file[at+3] = 2 // column 1 now defines a unit of 2
 	if _, err := ReadPacked(file, head); err == nil {
-		t.Fatal("a payload took a data set stating another unit")
+		t.Fatal("a payload took a data set defining another unit")
 	}
 	file[at+3] = 1
 	file[at+2] = 6 // and the format version before this one
