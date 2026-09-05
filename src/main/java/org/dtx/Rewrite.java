@@ -18,10 +18,12 @@ public final class Rewrite {
 
     /** Reads the file named first and writes the DTX2 file named second. */
     public static void main(String[] args) throws IOException {
+        if (Help.among(args)) {
+            System.out.print(Help.REWRITE);
+            return;
+        }
         if (args.length < 2) {
-            System.err.println("Rewrite in.dtx out.dtx"
-                    + " [-kK] [-mN] [-pPACKER]"
-                    + " [-copies[S]]");
+            System.err.print(Help.REWRITE);
             System.exit(2);
             return;
         }
@@ -43,7 +45,7 @@ public final class Rewrite {
             } else if (arg.startsWith("-p")) {
                 packer = arg.substring(2);
             } else {
-                System.err.println("Rewrite does not read " + arg);
+                System.err.println("dtx-rewrite does not read " + arg);
                 System.exit(2);
                 return;
             }

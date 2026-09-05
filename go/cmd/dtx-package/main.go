@@ -9,6 +9,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -16,14 +17,41 @@ import (
 	"dtx/internal/pack"
 )
 
+// What -help prints: the synopsis, a line a flag with the default in
+// parentheses, and the section of doc/tools.md that describes the tool. The
+// Java and C# trees print the same text.
+const help = `dtx-package in.dtx out.bin
+
+Packages a DTX file as a 68000 image: the code for its variant, the column
+table and the file. doc/abi.md gives the six calls into the image.
+
+  -help        this text
+
+doc/tools.md, Package.
+`
+
+// errUsage is the run given no file to work on, which prints help to
+// standard error and exits with 2.
+var errUsage = errors.New("usage")
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		if errors.Is(err, errUsage) {
+			fmt.Fprint(os.Stderr, help)
+			os.Exit(2)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
 func run(args []string) error {
+	for _, arg := range args {
+		if arg == "-help" || arg == "-h" {
+			fmt.Print(help)
+			return nil
+		}
+	}
 	var named []string
 	for _, arg := range args {
 		if len(arg) > 0 && arg[0] == '-' {
@@ -32,7 +60,7 @@ func run(args []string) error {
 		named = append(named, arg)
 	}
 	if len(named) != 2 {
-		return fmt.Errorf("dtx-package in.dtx out.bin")
+		return errUsage
 	}
 	file, err := os.ReadFile(named[0])
 	if err != nil {

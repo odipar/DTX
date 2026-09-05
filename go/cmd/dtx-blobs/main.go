@@ -13,6 +13,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,8 +24,33 @@ import (
 	"dtx/internal/pack"
 )
 
+// What -help prints: the synopsis, a line a flag with the default in
+// parentheses, and the section of doc/tools.md that describes the tool. The
+// Java and C# trees print the same text.
+const help = `dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
+
+Builds the eight images from the 68k/ templates with rmac and writes them
+into each DIR: DTX0, DTX1, and DTX2 at a unit of 1, 2 and 4, with the copy
+code and without.
+
+  -aRMAC       the assembler (rmac, on the path)
+  -tTEMPLATES  the directory the templates are read from (68k, or what
+               DTX_68K names)
+  -help        this text
+
+doc/tools.md, Build the images.
+`
+
+// errUsage is the run given no file to work on, which prints help to
+// standard error and exits with 2.
+var errUsage = errors.New("usage")
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		if errors.Is(err, errUsage) {
+			fmt.Fprint(os.Stderr, help)
+			os.Exit(2)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -81,6 +107,12 @@ func seed(build image.Build) ([]byte, error) {
 }
 
 func run(args []string) error {
+	for _, arg := range args {
+		if arg == "-help" || arg == "-h" {
+			fmt.Print(help)
+			return nil
+		}
+	}
 	rmac := "rmac"
 	templates := pack.Templates()
 	var into []string
@@ -97,7 +129,7 @@ func run(args []string) error {
 		}
 	}
 	if len(into) == 0 {
-		return fmt.Errorf("dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]")
+		return errUsage
 	}
 	for _, at := range into {
 		if err := os.MkdirAll(at, 0o755); err != nil {

@@ -23,10 +23,12 @@ public final class Write {
 
     /** Reads the text named first and writes the DTX file named second. */
     public static void main(String[] args) throws IOException {
+        if (Help.among(args)) {
+            System.out.print(Help.WRITE);
+            return;
+        }
         if (args.length < 2) {
-            System.err.println("Write in.csv out.dtx"
-                    + " [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER]"
-                    + " [-copies[S]]");
+            System.err.print(Help.WRITE);
             System.exit(2);
             return;
         }
@@ -57,7 +59,7 @@ public final class Write {
             } else if (arg.startsWith("-p")) {
                 packer = arg.substring(2);
             } else {
-                System.err.println("Write does not read " + arg);
+                System.err.println("dtx-write does not read " + arg);
                 System.exit(2);
                 return;
             }
