@@ -25,8 +25,8 @@ import (
 )
 
 // What -help prints: the synopsis, a line a flag with the default in
-// parentheses, and the section of doc/tools.md that describes the tool. The
-// Java and C# trees print the same text.
+// parentheses, examples, and the section of doc/tools.md that describes the
+// tool. The Java and C# trees print the same text.
 const help = `dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 
 Builds the eight images from the 68k/ templates with rmac and writes them
@@ -37,6 +37,13 @@ code and without.
   -tTEMPLATES  the directory the templates are read from (68k, or what
                DTX_68K names)
   -help        this text
+
+Examples
+
+  dtx-blobs build/68k
+      the eight images into build/68k, with the rmac on the path
+  dtx-blobs build/68k go/internal/image/data -a/usr/local/bin/rmac
+      into two directories, with that rmac
 
 doc/tools.md, Build the images.
 `

@@ -21,8 +21,8 @@ import (
 )
 
 // What -help prints: the synopsis, a line a flag with the default in
-// parentheses, and the section of doc/tools.md that describes the tool. The
-// Java and C# trees print the same text.
+// parentheses, examples, and the section of doc/tools.md that describes the
+// tool. The Java and C# trees print the same text.
 const help = `dtx-write in out [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
 
 Writes the table in the first file to the second. The first is a DTX file
@@ -42,6 +42,18 @@ variant V, or text where its name ends in .csv.
   -copies[S]   DTX2: copies from the literal stream, with S seconds of
                search for a better parse
   -help        this text
+
+Examples
+
+  dtx-write t.csv t.dtx -v2 -k1 -m960
+      text into a DTX2 file, at a unit of 1 and a ring of 960 bytes
+  dtx-write t.dtx again.dtx -k2 -copies
+      a DTX2 file repacked at a unit of 2, with copies from the
+      literal stream
+  dtx-write t.dtx t.csv
+      a DTX file of any variant read out as text
+  dtx-write t.csv t.dtx -v1 -w1,2,4 -r32
+      text into a DTX1 file at the widths given, repeating at row 32
 
 doc/tools.md, Write.
 `

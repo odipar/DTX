@@ -18,14 +18,21 @@ import (
 )
 
 // What -help prints: the synopsis, a line a flag with the default in
-// parentheses, and the section of doc/tools.md that describes the tool. The
-// Java and C# trees print the same text.
+// parentheses, examples, and the section of doc/tools.md that describes the
+// tool. The Java and C# trees print the same text.
 const help = `dtx-package in.dtx out.bin
 
 Packages a DTX file as a 68000 image: the code for its variant, the column
 table and the file. doc/abi.md gives the six calls into the image.
 
   -help        this text
+
+Examples
+
+  dtx-package t.dtx t.bin
+      the image of a table, from the code the build made
+  dtx-package t.dtx t.i -s
+      the table's figures as assembler equates, for a build of your own
 
 doc/tools.md, Package.
 `
