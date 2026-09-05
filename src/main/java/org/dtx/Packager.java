@@ -31,8 +31,11 @@ public final class Packager {
     static final int PARK = 12;
     static final int POINTER = 24;
 
-    /** Where it stands: behind the six slots. */
-    static final int FORMAT_AT = 24;
+    /** Where it stands: behind the four slots. */
+    static final int FORMAT_AT = 16;
+
+    /** What the format block runs to, so where the bodies begin. */
+    static final int FORMAT = 28;
 
     /** The format block's fields, doc/abi.md 1. */
     static final int STATE_BYTES = 4;
@@ -43,6 +46,7 @@ public final class Packager {
     static final int UNIT_AT = 18;
     static final int WIDTH_AT = 19;
     static final int COLUMNS_AT = 20;
+    static final int STRIDE_AT = 24;
 
     /** Where the carried code stands on the classpath. */
     private static final String CARRIED = "/org/dtx/68k/";
@@ -142,6 +146,21 @@ public final class Packager {
     /** The state block a packaged DTX2 reader takes, in bytes. */
     static int stateBytes(Dtx.Header header, Packed packed) {
         return ring(header) + packed.ring() * header.columns();
+    }
+
+    /**
+     * The stride from one column's value to the next, in the row an advance
+     * points at: the width under DTX0, where a row's values stand one after
+     * another; the length of a column under DTX1, where the columns lie at
+     * one stride; and {@code N} under DTX2, where every column has a ring of
+     * that size. {@code DTX_metadata} gives it, out of the format block.
+     */
+    static int stride(Dtx.Header header, Packed packed) {
+        return switch (header.variant()) {
+            case Dtx.DTX0 -> header.width();
+            case Dtx.DTX1 -> Dtx1.stride(header.rows(), header.width());
+            default -> packed.ring();
+        };
     }
 
     /** Where the decoder states stand in the state block, doc/abi.md 3. */
@@ -315,10 +334,10 @@ public final class Packager {
     }
 
     /**
-     * The five fields a combine writes, zeroed.
+     * The six fields a combine writes, zeroed.
      *
      * <p>Carried code does not define a table. The assembler read one to build
-     * it, and what it read stands in the format block: zeroing those five is
+     * it, and what it read stands in the format block: zeroing those six is
      * what makes the file a function of the template alone, and what makes
      * code shipped without a combine read a state block of zero bytes rather
      * than some other table's.
@@ -329,6 +348,7 @@ public final class Packager {
         Dtx.putWord(code, FORMAT_AT + ROWBYTES_AT, 0);
         Dtx.putWord(code, FORMAT_AT + PERIOD_AT, 0);
         Dtx.putWord(code, FORMAT_AT + RING_AT, 0);
+        Dtx.putLong(code, FORMAT_AT + STRIDE_AT, 0);
     }
 
     /**
@@ -393,7 +413,7 @@ public final class Packager {
      * format block written to define the three.
      *
      * <p>The code is the same bytes any table that follows it, so what a
-     * combine writes is the five fields the table gives. It checks the
+     * combine writes is the six fields the table gives. It checks the
      * three it cannot write: the variant, the width the code reads values
      * at, and under DTX2 the unit the decoder built into the code decodes
      * at.
@@ -453,6 +473,7 @@ public final class Packager {
         Dtx.putWord(image, FORMAT_AT + PERIOD_AT,
                 variant == Dtx.DTX2 ? period(header, given) : 1);
         Dtx.putWord(image, FORMAT_AT + RING_AT, given.ring());
+        Dtx.putLong(image, FORMAT_AT + STRIDE_AT, stride(header, given));
         return image;
     }
 

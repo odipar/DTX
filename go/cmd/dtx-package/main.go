@@ -3,7 +3,7 @@
 // It combines rather than assembles: the code does not move with the table's
 // shape, so this executable contains the twenty-two images built once and
 // takes the one the table needs. No assembler runs. doc/tools.md defines the
-// tool and doc/abi.md the six calls into the image.
+// tool and doc/abi.md the four calls into the image.
 //
 //	dtx-package in.dtx out.bin
 package main
@@ -23,7 +23,7 @@ import (
 const help = `dtx-package in.dtx out.bin
 
 Packages a DTX file as a 68000 image: the code for its variant, the column
-table and the file. doc/abi.md gives the six calls into the image.
+table and the file. doc/abi.md gives the four calls into the image.
 
   -help        this text
 
@@ -32,7 +32,8 @@ Examples
   dtx-package t.dtx t.bin
       the image of a table, from the code the build made
   dtx-package t.dtx t.i -s
-      the table's figures as assembler equates, for a build of your own
+      the table's figures as assembler equates, for a build of your
+      own
 
 doc/tools.md, Package.
 `

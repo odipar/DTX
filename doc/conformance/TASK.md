@@ -8,7 +8,8 @@ For each `NAME.dtx` under `tables/`, the bytes of `NAME.rows`: every row in
 the table, from row 0 to row `R` minus one, each row column 0 first, each
 value at the table's width, most significant byte first, and nothing between
 the values or the rows. That is the row as DTX0 lays it out (SPEC.md 2.1),
-and it is what `DTX_read` gives on the 68000 (abi.md 2).
+and it is what a caller reads off the pointer `DTX_advance` gives on the
+68000, one value a column at the stride (abi.md 2).
 
 A reader that repeats the table gives row `RR` after row `R` minus one;
 the file is one pass, rows 0 to `R` minus one, and nothing of the repeat.

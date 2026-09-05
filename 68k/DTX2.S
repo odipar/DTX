@@ -1,5 +1,5 @@
 ; -----------------------------------------------------------------------------
-; DTX2.S - a DTX2 table read on the 68000: six calls, one table, PC relative
+; DTX2.S - a DTX2 table read on the 68000: four calls, one table, PC relative
 ;
 ; By Robbert van Dalen. Written by Claude (Anthropic's Claude Code) under
 ; Robbert's direction. Use it freely, including commercially, as long as your
@@ -18,8 +18,12 @@
 ; defines.
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR, P and N reach it at run
-; time and stand in the state block, and the count a read walks and the
-; stride between two rings are written into the instructions that take them.
+; time and stand in the state block.
+;
+; A READ IS THE CALLER'S. An advance gives the pointer at column 0's value
+; for the row, and every ring is N bytes, so column i's value stands i rings
+; further on. DTX_metadata gives that stride, and nothing here copies a row
+; anywhere.
 ;
 ; WHAT MOVES THE CODE is the width and the decoder: the width every value
 ; takes (R6.3) and k and the copy code are assembly-time constants, so a
@@ -77,21 +81,6 @@ DTX_DECODERS        equ     56
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
         DTX_IMAGE 2,DTX_PERIOD,DTX_N,ST4_UNIT,DTX_WIDTH
-
-; -----------------------------------------------------------------------------
-; What a value is installed with. A 68000 reaches PC relative for a source
-; and never for a destination, so a site is lea'd into a4 and written through
-; it, and the assembler works out where each site stands.
-
-        .macro  DTX_INSTALL_W   value,site
-        lea     \site+2(pc),a4
-        move.w  \value,(a4)
-        .endm
-
-        .macro  DTX_INSTALL_L   value,site
-        lea     \site+2(pc),a4
-        move.l  \value,(a4)
-        .endm
 
 ; -----------------------------------------------------------------------------
 ; Where things stand, worked out rather than assembled in: the payload and the
@@ -243,9 +232,8 @@ seed_column:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_init. The five figures into the block, where the rings begin with them,
-; the count a read walks and the stride between two rings into the
-; instructions that take them, and then a seed.
+; DTX_init. The five figures into the block, where the rings begin with
+; them, and then a seed.
 
 DTX_init:
         movem.l d6-d7/a6,DTX_PARK(a0)
@@ -275,14 +263,6 @@ DTX_init:
         lsl.l   #5,d2
         addi.l  #DTX_DECODERS,d2
         move.l  d2,DTX_RINGS(a6)
-
-; The columns a read walks, one less: a dbf counts that way. The stride from
-; one ring to the next is N, since every ring is that size (R5.5).
-        subq.w  #1,d1
-        DTX_INSTALL_W d1,read_count
-        DTX_INSTALL_W d1,take_count
-        DTX_INSTALL_L d0,read_stride
-        DTX_INSTALL_L d0,take_stride
 
         bsr     DTX_seed
         movem.l DTX_PARK(a6),d6-d7/a6
@@ -369,11 +349,13 @@ DTX_jump:
         bra.s   .run
 .there:
         move.l  (a7)+,d0
+        movea.l DTX_POINTER(a6),a1
         movem.l DTX_PARK(a6),d6-d7/a6
         rts
 
 ; -----------------------------------------------------------------------------
 ; DTX_advance. The move that leaves d0 sets N and Z, so bmi after the call.
+; a1 comes back the pointer at column 0's value for the row.
 
 DTX_advance:
         movem.l d6-d7/a6,DTX_PARK(a0)
@@ -389,77 +371,15 @@ DTX_advance:
         bra.w   DTX_jump                ; the repeat is a jump
 .over:
         moveq   #-1,d0
+        movea.l DTX_POINTER(a6),a1      ; the last row stands where it stood
         movem.l DTX_PARK(a6),d6-d7/a6
         rts
 .step:
         move.l  d0,DTX_ROW(a6)
         bsr     DTX_step
         move.l  DTX_ROW(a6),d0          ; a step clobbers d0 to d5
+        movea.l DTX_POINTER(a6),a1
         movem.l DTX_PARK(a6),d6-d7/a6
-        rts
-
-; -----------------------------------------------------------------------------
-; DTX_read. The row as DTX0 lays it out, and nothing between the values. One
-; loop over the columns: every ring is N bytes, so column i's value for this
-; row stands i rings past column 0's.
-;
-; A read does not move a pointer, refill or decode.
-
-DTX_read:
-        tst.l   DTX_ROW(a0)
-        bmi.s   read_none
-        movea.l DTX_POINTER(a0),a2
-read_count:
-        move.w  #0,d0                   ; installed: C, less one
-read_loop:
-        DTX_VALUE (a2),(a1)+
-read_stride:
-        adda.l  #0,a2                   ; installed: N
-        dbf     d0,read_loop
-read_none:
-        rts
-
-; -----------------------------------------------------------------------------
-; DTX_take. A read and an advance in one call. a1 goes on the stack for the
-; length of the step: a1 is the decoder's write pointer, and ST4_resume takes
-; it.
-
-DTX_take:
-        tst.l   DTX_ROW(a0)
-        bmi.w   DTX_advance             ; no row: step to row 0 without a write
-        movea.l DTX_POINTER(a0),a2
-take_count:
-        move.w  #0,d0                   ; installed: C, less one
-take_loop:
-        DTX_VALUE (a2),(a1)+
-take_stride:
-        adda.l  #0,a2                   ; installed: N
-        dbf     d0,take_loop
-        move.l  a1,-(a7)                ; the decoder takes a1
-        movem.l d6-d7/a6,DTX_PARK(a0)
-        movea.l a0,a6
-        move.l  DTX_ROW(a6),d0
-        addq.l  #1,d0
-        cmp.l   DTX_ROWSFIG(a6),d0
-        bne.s   take_step
-        move.l  DTX_REPEATFIG(a6),d0
-        cmp.l   DTX_ROWSFIG(a6),d0
-        bcc.s   take_over_end           ; RR at R: the end, and it is sticky
-        movem.l DTX_PARK(a6),d6-d7/a6
-        bsr     DTX_jump                ; a0 is the block still
-        movea.l (a7)+,a1
-        rts
-take_over_end:
-        moveq   #-1,d0
-        movem.l DTX_PARK(a6),d6-d7/a6
-        movea.l (a7)+,a1
-        rts
-take_step:
-        move.l  d0,DTX_ROW(a6)
-        bsr     DTX_step
-        move.l  DTX_ROW(a6),d0
-        movem.l DTX_PARK(a6),d6-d7/a6
-        movea.l (a7)+,a1
         rts
 
 ; -----------------------------------------------------------------------------

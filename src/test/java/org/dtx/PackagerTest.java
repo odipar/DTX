@@ -300,23 +300,29 @@ final class PackagerTest {
                 "no rmac at " + rmac);
         byte[] image = Packager.image(table(Dtx.DTX0, 2), rmac);
         assertEquals(0x60, image[0] & 0xFF, "the first slot is a bra.w");
-        assertEquals("DTX", new String(image, 24, 3), "the format block at 24");
-        assertEquals(0, image[27], "the variant the format block defines");
-        assertEquals(28, Dtx.getLong(image, 28), "the state block's bytes");
-        int header = Dtx.getLong(image, 32);
+        assertEquals("DTX", new String(image, 16, 3),
+                "the format block behind the four slots");
+        assertEquals(0, image[19], "the variant the format block defines");
+        assertEquals(28, Dtx.getLong(image, 20), "the state block's bytes");
+        int header = Dtx.getLong(image, 24);
         assertEquals("DTX", new String(image, header, 3),
                 "the header the format block points at");
         // The width byte stands beside the unit at +19 of the block, so at
-        // 43 of the image: the format defines the place, and reading it
+        // 35 of the image: the format defines the place, and reading it
         // there checks the packager against the format.
-        assertEquals(0, image[43],
+        assertEquals(0, image[35],
                 "DTX0 reads a row as one run of bytes, so its code does not"
                         + " move with the width and the byte is zero");
         // DTX1 moves a value in one instruction, one build a width, and the
         // width byte is where a combine checks the code against the table.
         byte[] one = Packager.image(table(Dtx.DTX1, 4), rmac);
-        assertEquals(4, one[43],
-                "the width DTX1's code reads values at");
+        assertEquals(4, one[35], "the width DTX1's code reads values at");
+        // The stride a caller steps from one column's value to the next,
+        // which DTX_metadata gives out of the block at +24.
+        assertEquals(2, Dtx.getLong(image, 16 + Packager.STRIDE_AT),
+                "DTX0 strides by the width");
+        assertEquals(Dtx1.stride(4, 4), Dtx.getLong(one, 16 + Packager.STRIDE_AT),
+                "DTX1 strides by a column's length");
     }
 
     private static boolean onThePath(Path rmac) {

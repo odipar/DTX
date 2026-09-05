@@ -68,7 +68,7 @@ final class Help {
             dtx-package in.dtx out.bin [-aRMAC] [-s]
 
             Packages a DTX file as a 68000 image: the code for its variant, the column
-            table and the file. doc/abi.md gives the six calls into the image.
+            table and the file. doc/abi.md gives the four calls into the image.
 
               -aRMAC       assembles the code from the 68k/ templates with the rmac at
                            RMAC, in place of the image the build made

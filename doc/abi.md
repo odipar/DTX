@@ -1,13 +1,18 @@
 # The DTX68 calling convention
 
 A DTX table packaged as a standalone 68000 binary: the code first, the
-table's bytes after it, and six calls that reach those bytes PC relative.
+table's bytes after it, and four calls that reach those bytes PC relative.
 No relocation, no operating system, nothing allocated while it runs.
 
+**No call copies a value.** An advance gives the caller the address of the
+row's first value, and `DTX_metadata` gives the stride from one column's
+value to the next, so a caller reads the columns it needs where they
+stand. A packaged reader finds a row; the caller reads it.
+
 One image contains one table, so it contains the code for that table's
-variant. The variant is resolved at package time behind six slots: a caller
-has one contract and one state block, and the code the packager emits behind
-the slots changes with the variant.
+variant. The variant is resolved at package time behind four slots: a
+caller has one contract and one state block, and the code the packager
+emits behind the slots changes with the variant.
 
 The code behind those slots does not move with the table's shape. `R`,
 `C` and `RR` reach it at run time, out of the table's own header, and init
@@ -44,19 +49,19 @@ In this order, from the image's first byte:
 
 | at | bytes | contains |
 |---|---|---|
-| +0 | 24 | six `bra.w` slots, one a call |
-| +24 | 24 | the format block, on a long |
-| +48 | .. | the bodies for the variant |
+| +0 | 16 | four `bra.w` slots, one a call |
+| +16 | 28 | the format block, on a long |
+| +44 | .. | the bodies for the variant |
 | .. | 324, 328 or 330 | under DTX2, ST4's wrap decoder at `k` |
 | .. | .. | under DTX2 the column table, on a long. The plain variants do not have one |
 | .. | .. | the table's bytes, header and payload, on a long |
 
-The six slots stand at +0, +4, +8, +12, +16 and +20, in the order the
-calls are numbered below, following ST4's own precedent. The dispatch is
-the whole of it: no call tests the variant, because the packager emitted
-the bodies for it.
+The four slots stand at +0, +4, +8 and +12, in the order the calls are
+numbered below, following ST4's own precedent. The dispatch is the whole
+of it: no call tests the variant, because the packager emitted the bodies
+for it.
 
-**The format block**, 24 bytes on a long:
+**The format block**, 28 bytes on a long:
 
 | at | bytes | gives |
 |---|---|---|
@@ -69,6 +74,7 @@ the bodies for it.
 | +18 | 1 | `k`. Zero under DTX0 and DTX1 |
 | +19 | 1 | the width this image reads. Zero under DTX0, whose code does not move with it |
 | +20 | 4 | the column table, from the image's first byte |
+| +24 | 4 | the stride from one column's value to the next |
 
 `R`, `C` and `RR` are not here. They stand in the table's own header, at
 the offsets SPEC.md 1 gives, and the field at +8 reaches it. The variant
@@ -104,7 +110,7 @@ turn, so the decoder ST4 contributes stands in the image once.
 
 ---
 
-## 2. The six calls
+## 2. The four calls
 
 Under every variant `d6`, `d7`, `a6` and the stack beyond the return
 address stand, as they stand across an ST4 call. No call builds a stack
@@ -113,11 +119,9 @@ frame.
 | call | in | out | clobbered |
 |---|---|---|---|
 | `DTX_init` | `a0` the state block | nothing | d0-d5, a0-a5 |
-| `DTX_metadata` | nothing | `a0` format block, `a1` the table's header, `d0.l` `R`, `d1.w` `C`, `d2.l` `RR` | d0-d2, a0-a1 |
-| `DTX_jump` | `a0`, `d0.l` the row | `d0.l` that row | d0-d5, a0-a5 |
-| `DTX_advance` | `a0` | `d0.l` the row, or $FFFFFFFF | d0-d5, a0-a5 |
-| `DTX_read` | `a0`, `a1` where the row goes | `a1` one past the last byte | d0-d1, a1-a4 |
-| `DTX_take` | `a0`, `a1` where the row goes | `a1` one past the last byte, `d0.l` the row the cursor now stands on, or $FFFFFFFF | d0-d5, a1-a5 |
+| `DTX_metadata` | nothing | `a0` format block, `a1` the table's header, `d0.l` `R`, `d1.w` `C`, `d2.l` `RR`, `d3.l` the stride | d0-d3, a0-a1 |
+| `DTX_jump` | `a0`, `d0.l` the row | `d0.l` that row, `a1` its first value | d0-d5, a0-a5 |
+| `DTX_advance` | `a0` | `d0.l` the row, or $FFFFFFFF, `a1` the row's first value | d0-d5, a0-a5 |
 
 ### 0. `DTX_init`, image+0
 Seeds the block. The cursor does not stand on a row, so the first advance
@@ -208,50 +212,47 @@ contain a counter; YMX wraps the same way.
 
 The advance from row `R` minus one where `RR` is below `R` is a jump to
 `RR`, since it is one. Where `RR` equals `R` it gives $FFFFFFFF, leaves
-the cursor on row `R` minus one and does not move a pointer, and a further
-advance gives $FFFFFFFF again: the end is sticky, and a read after it still
-gives row `R` minus one.
+the cursor on row `R` minus one and does not move the pointer, and a
+further advance gives $FFFFFFFF again: the end is sticky, and `a1` still
+gives row `R` minus one's values.
 
-### 4. `DTX_read`, image+16
-Writes the row the cursor stands on, column 0 first, each value at the
-table's width and nothing between them: the row as DTX0 lays it out
-(SPEC.md 2.1).
-Where the cursor does not stand on a row it does not write and gives back `a1`
-as it came.  Read does not move a pointer, refill or decode, so a second read
-of one row writes the same bytes. It leaves `a0` where it came, so a caller
-that reads and then steps has the block in `a0` through both.
+### The row a caller reads
 
-Under DTX0 it is one run of bytes from the pointer, at the widest move the
-row's bytes take. Under DTX1 and DTX2 it is one loop of `C` turns: a value
-from the pointer, then a stride to the next column's. The stride is `N`
-under DTX2, where every ring is that size, and `R` times the width rounded
-up to a word under DTX1, where every column is that long. Neither moves
-with the column, so the loop is three instructions and the image does not
-have an entry a column.
-
-Nothing tests an address. A value is the table's width, the row it goes to
-stands on a long, and the payload and every ring stand on a long, so at a
-width of 2 or 4 both sides of the move are on that width's boundary and a
-68000 takes it whole. At a width of 1 no boundary applies.
-
-### 5. `DTX_take`, image+20
-A read and an advance in one call: it writes the row the cursor stands on,
-then steps the cursor, and gives back what each of them gives. Where the
-cursor does not stand on a row it does not write and steps to row 0, as an
-advance alone does.
-
-The two calls share their registers. `a0` is the block through the read,
-so the step reaches it without loading it again, and under DTX0 the
-read's own pointer ends on the next row, so the step stores that and does
-not add.
-
-Taking a row costs one call rather than two, and a caller's loop is
+`a1` comes back from an advance or a jump at the row's first value, which
+is column 0's, and the stride `DTX_metadata` gives reaches the next
+column's. So column `i` of that row is one move at `i` strides:
 
         bsr     DTX_advance     ; onto row 0
     .row:
-        bsr     DTX_take        ; the row, and the cursor steps
+        move.w  (a1),d0                 ; column 0
+        move.w  DTX_STRIDE(a1),d1       ; column 1
+        move.w  DTX_STRIDE*2(a1),d2     ; column 2
+        bsr     DTX_advance
         bpl.s   .row
 
+The stride is the width under DTX0, where a row's values stand one after
+another; a column's length under DTX1, `R` times the width rounded up to a
+word, where the columns lie at one stride; and `N` under DTX2, where every
+column has a ring of that size. None of the three moves with the column,
+so one displacement a column reaches the whole row and a caller reading
+one column of it makes one move.
+
+A caller that needs the row laid out as DTX0 lays it (SPEC.md 2.1) makes
+those `C` moves into its own memory. The image does not, so the two calls
+that did are gone from it, and with them every rule about where a row may
+go.
+
+**Nothing tests an address.** A value is the table's width, the payload
+and every ring stand on a long, and the stride is a whole number of
+widths, so at a width of 2 or 4 the pointer and every column off it stand
+on that width's boundary and a 68000 takes the move whole. At a width of 1
+no boundary applies.
+
+**The pointer stands until the next advance.** Under DTX0 and DTX1 it
+points into the table's own bytes, which nothing writes. Under DTX2 it
+points into a ring, and the refill that would write over it is `P`
+advances away (section 4), so the row it was given stands until its next
+advance.
 
 ---
 
@@ -377,10 +378,7 @@ jump backward, so it seeds every ring again and runs forward from row 0: a
 table that repeats costs `RR` rows of decoding once a pass. ST4 can pack a
 data set to loop where the table does, with `st4 -r`, and YMX packs its
 streams that way so that a repeat costs one pointer reload; the packager does
-not yet, and under it a repeat is a jump.  **What advance does that read does
-not.** Advance steps the cursor, moves the pointers, refills the column whose
-turn it is, and takes the repeat at `R` to `RR`. Read writes the caller's row
-bytes, and only those.
+not yet, and under it a repeat is a jump.
 
 ---
 
@@ -404,10 +402,10 @@ It folds only the state block's offsets into the bodies. Every figure the
 table gives it writes into the format block and the column table instead,
 and the code reads them at run time. The few a loop counts with, which no
 68000 addressing mode takes from memory, init writes into the instructions
-that take them: the run a DTX0 read moves and the move it moves with, and
-the count and the stride a DTX1 or DTX2 read loops on. A site is `lea`d PC
-relative into an address register and written through it, since a 68000
-reaches PC relative for a source and never for a destination.
+that take them: `R` and `RR` for the compares an advance takes, and the
+row's bytes a DTX0 advance steps by. A site is `lea`d PC relative into an
+address register and written through it, since a 68000 reaches PC relative
+for a source and never for a destination.
 
 Under DTX2 the carried decoder is ST4's wrap decoder built at `ST4_UNIT`
 equal to `k`. The packer's options are `-f -k<k> -m<N/k> -l65535`, and the
@@ -463,9 +461,10 @@ the manual's tables, and the rig that counts them checks that document
 against its count.
 
 The shape, which the figures bear out: under DTX0 and DTX1 every call is
-flat in `R` and a read is linear in `C`. Under DTX2 a read is flat and
-linear in `C`, an advance is flat and takes one column's refill of at most
-`P` rows, and a jump costs the rows it runs the turn through.
+flat in `R` and in `C`, since no call walks the columns. Under DTX2 an
+advance is flat and takes one column's refill of at most `P` rows, and a
+jump costs the rows it runs the turn through. What reading the columns
+costs is the caller's, one move a column.
 
 Two calls are not flat. A backward jump costs the target row of decoding,
 and so does the advance from row `R` minus one of a table that repeats,
@@ -481,7 +480,8 @@ since under this reader it is a jump (section 4).
    reader uses it. A call is not re-entrant on one block, and an
    interrupt that calls into the image uses a block of its own.
 3. A jump's row in `d0.l` is 0 to `R` minus one.
-4. A read's row bytes stand on a long and are at least the row's bytes.
+4. A caller reads the row `a1` points at before its next advance, and
+   reads `C` values at the stride and no more.
 5. The table's bytes are the ones the packager checked. No call checks any of
    it, as ST4 does not check its own: a wrong value reads or writes arbitrary
    memory.
@@ -531,10 +531,10 @@ ring start itself, which is one compare against the ring end after each
 refill and no counter anywhere. The budget is fixed except on the last
 refill of a column, and the rows decoded shortens that one.
 
-**One pointer a width class.** Column `i` of a class stands at the class
-pointer plus `i` times `N`, so a read is `C` moves off at most three
-address registers. Given up: three pointers rather than one, the price of
-widths of 1, 2 and 4 over YMX's single byte a stream.
+**One pointer, and a stride.** Every column is one width, so column `i`
+stands at the pointer plus `i` strides and a caller reaches the row off one
+address register. Given up: a table of columns of different widths, which
+took three pointers before.
 
 **`movem` of the whole decoder state.** Reaching it through a
 pointer would turn every register read into a memory read and fork ST4's
@@ -544,11 +544,10 @@ code. Given up: two `movem`s a refill, and one refill a row.
 the distance, and the repeat at `R` to `RR` is one. Given up: a bounded
 backward jump.
 
-**The row goes down as DTX0 lays it out.** DTX0's read is then one run of
-bytes, R3.5's reason for the variant. Given up: under DTX1 and DTX2 a
-wide value whose place in the row is odd costs a test of its offset and
-two or four byte moves, since a 68000 takes an address error on a word at
-an odd address.
+**The image finds a row and the caller reads it.** An advance gives an
+address and a stride reaches the rest, so no call copies a value and
+reading one column of a wide table is one move. Given up: a caller that
+needs the row packed as DTX0 lays it out makes those `C` moves itself.
 
 **One variant an image.** A caller that reads two variants has two
-images, and the six calls read the same in both.
+images, and the four calls read the same in both.
