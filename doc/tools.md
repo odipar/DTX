@@ -1,7 +1,8 @@
 # tools
 
-Each tool is written twice, once in each tree, and the two write the same
-bytes. `test/test_parity.py` runs both over a corpus and holds them to it.
+Each tool is written three times, once in each tree, and the three write
+the same bytes. `test/test_parity.py` runs all of them over a corpus and
+holds them to it.
 
 In Java each is a script under `bin/`. A script builds first where a source
 is newer than the last build, and then runs the tool out of
@@ -14,13 +15,17 @@ under `go/`. None of them takes a wrapper: Go builds an executable, so
 nothing has to find a runtime or a classpath before one runs, and there is
 no `dtx-run` to write.
 
-| what it does | Java | Go |
-|---|---|---|
-| text into a DTX file | `bin/dtx-write` | `dtx-write` |
-| a plain file into a DTX2 one | `bin/dtx-rewrite` | `dtx-rewrite` |
-| a DTX file into a 68000 image | `bin/dtx-package` | `dtx-package` |
-| the eight images the packager combines from | `bin/dtx-blobs` | `dtx-blobs` |
-| find the classpath and run one of the above | `bin/dtx-run` | none needed |
+In C# the four are one assembly. `dotnet dtx.dll <tool>` names the tool in
+the first argument, and an executable published under a tool's own name is
+that tool, with every argument its own.
+
+| what it does | Java | Go | C# |
+|---|---|---|---|
+| text into a DTX file | `bin/dtx-write` | `dtx-write` | `dtx dtx-write` |
+| a plain file into a DTX2 one | `bin/dtx-rewrite` | `dtx-rewrite` | `dtx dtx-rewrite` |
+| a DTX file into a 68000 image | `bin/dtx-package` | `dtx-package` | `dtx dtx-package` |
+| the eight images the packager combines from | `bin/dtx-blobs` | `dtx-blobs` | `dtx dtx-blobs` |
+| find the classpath and run one of the above | `bin/dtx-run` | none needed | none needed |
 
 ## Write
 
@@ -117,7 +122,7 @@ each of them three times:
 | into | read by |
 |---|---|
 | the classes the jar is made of | the Java packager, off the classpath |
-| `build/68k` | a release, which attaches the eight |
+| `build/68k` | a release, which attaches the eight, and the C# assembly, which embeds them from there |
 | `go/internal/image/data` | `go:embed`, which reads only inside its own module |
 
 They are plain files and nothing about them is Java's, so a port in another
@@ -219,8 +224,11 @@ TARGETS="linux-x64" release/publish.sh
 `go build` cross-compiles to any target from any host, which is why one
 machine covers Windows, macOS and Linux on both architectures.
 
-It writes `dist/release`: one zip a platform and the eight images, both
-named by the release. It builds `dtx-blobs` first, from a tree holding no
+It writes `dist/release`: one zip a platform, the eight images, both named
+by the release, and `MANIFEST.txt`, which gives every file's size and
+sha256 beside what picks it - a variant, a unit and copies for an image, a
+platform for a zip - so one release's file is told from another's without
+opening it. It builds `dtx-blobs` first, from a tree holding no
 image, since that is the one command that makes them rather than holding
 them; it fails where fewer than eight come out; and it ends by writing and
 packaging a table with the host's own executables, from a directory that is
@@ -228,12 +236,12 @@ not this repository, so an executable holding no image fails there rather
 than in a release.
 
 Writing DTX2 asks for an ST4 packer, and each tree holds one:
-`src/main/java/org/st4`, taken from odipar/ST4@498aa25, and
-`go/internal/st4`, taken from odipar/YMX@498aa25, which is that same packer
-in Go. Neither is edited here beyond one comment naming where it came from,
-and the two pack the same bytes, which `test/test_parity.py` holds them to.
-So a release needs no packer beside it either. `-pPACKER` runs another where
-a caller has a newer build.
+`src/main/java/org/st4` and `dotnet/nt4`, both taken from
+odipar/ST4@498aa25, and `go/internal/st4`, taken from odipar/YMX@498aa25,
+which is that same packer in Go. None is edited here beyond one comment
+naming where it came from, and the three pack the same bytes, which
+`test/test_parity.py` holds them to. So a release needs no packer beside it
+either. `-pPACKER` runs another where a caller has a newer build.
 
 ## The rigs
 
@@ -267,14 +275,14 @@ tables.
 python3 test/test_parity.py
 ```
 
-**The two trees.** Every tool run both ways over a corpus, and the files
-held to the same bytes: text written at each variant and each unit, a plain
-file rewritten, the eight images built, and fourteen tables packaged, which
-reach every image the packager picks from. One input has one output,
+**The three trees.** Every tool run in each of them over a corpus, and the
+files held to the same bytes: text written at each variant and each unit, a
+plain file rewritten, the eight images built, and fourteen tables packaged,
+which reach every image the packager picks from. One input has one output,
 whichever tree a caller took.
 
-It needs `mvn package`, Go on the path, rmac on it or at `$RMAC`, and an
-ST4 packer at `$ST4`.
+It needs `mvn package`, Go on the path, the .NET SDK, and rmac on it or at
+`$RMAC`.
 
 ## Through Maven
 

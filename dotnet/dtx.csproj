@@ -1,14 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- The C# tree. One assembly, and no source in it yet. -->
+  <!-- The C# tree: DTX's own code under dtx/, and under nt4/ a carried copy
+       of ST4's C# packer, so a DTX2 file is written with no packer beside
+       this one. doc/tools.md states the tools; LICENSE states the copy. -->
   <PropertyGroup>
-    <OutputType>Library</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- ST4's own C# tree builds with these on, and the copy under nt4/ is
+         not edited here, so this builds it the way its own tree does. -->
+    <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>dtx</AssemblyName>
     <RootNamespace></RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The eight 68000 images, as go:embed takes them in the Go tree. A
+         tree whose build has not run holds none, and Images.Read then gives
+         nothing back. -->
+    <EmbeddedResource Include="../build/68k/*.bin" Condition="Exists('../build/68k')" />
+  </ItemGroup>
 
 </Project>

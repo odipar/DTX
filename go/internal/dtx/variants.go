@@ -114,7 +114,7 @@ func Read(file []byte) (*Table, error) {
 // MaxRing is the largest ring a payload can state, in bytes: N is two bytes.
 const MaxRing = 65535
 
-// CopiesFlag is the flags bit at payload byte 3 that says every column was
+// CopiesFlag is the flags bit at payload byte 3 that marks every column was
 // packed with copies from its own literal stream, R5.10.
 const CopiesFlag = 1
 
@@ -128,10 +128,10 @@ type Packer interface {
 	// the length of what it unpacks to.
 	Pack(column []byte, unit, ring int) ([]byte, error)
 
-	// Copies says whether a match beyond the ring copies from the column's
-	// own literal stream, which ST4 packs with -c. It is the packer that
-	// says so, because a flag carried beside a file could disagree with the
-	// bytes in it (R5.10).
+	// Copies states whether a match beyond the ring copies from the
+	// column's own literal stream, which ST4 packs with -c. The packer
+	// states it: a flag carried beside a file could disagree with the bytes
+	// in it, and one the packer wrote cannot (R5.10).
 	Copies() bool
 }
 

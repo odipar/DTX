@@ -45,7 +45,7 @@ const (
 	PackedHead = 80
 )
 
-// Copies is the flags bit at payload byte 3 that says every column was
+// Copies is the flags bit at payload byte 3 that marks every column was
 // packed with copies from its own literal stream, R5.10.
 const Copies = 1
 

@@ -14,7 +14,7 @@ public final class Dtx2 {
     public static final int MAX_RING = 65535;
 
     /**
-     * The flags bit that says every column was packed with copies from its
+     * The flags bit that marks every column was packed with copies from its
      * own literal stream (R5.10), at payload byte 3.
      */
     public static final int COPIES = 1;

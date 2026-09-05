@@ -38,6 +38,10 @@ Attribution
   the Java it is a port of. One line of that comment is edited here to
   name where the copy came from, and beside.go is DTX's own. The BSD
   3-Clause License below covers it as it covers the Java.
+* dotnet/nt4 is that same packer in C#, a carried copy of
+  odipar/ST4@498aa25's csharp/src/Nt4, not edited here. The project builds
+  it with the implicit usings its own tree builds it with. The BSD
+  3-Clause License below covers it too.
 * 68k/ST4_wrap.S is a carried copy of that repository's file, at
   odipar/ST4@02f3cc0, so a packaged DTX2 reader holds a decoder. ST4's
   license lets a decompressor be used freely, on the one condition that
@@ -48,7 +52,8 @@ BSD 3-Clause License (the carried ST4 compressor)
 
 Copyright (c) 2026 Robbert van Dalen, and (c) 2021 Einar Saukas, from whose
 ZX1 compressor ST4's is derived through ST1. This covers
-src/main/java/org/st4 and go/internal/st4, and nothing else here.
+src/main/java/org/st4, go/internal/st4 and dotnet/nt4, and nothing else
+here.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
