@@ -30,7 +30,7 @@ written until it defines what DTX has to do.
 | [doc/terminology.md](doc/terminology.md) | the same terms explained |
 | [doc/tools.md](doc/tools.md) | every tool's usage, flags and environment, in three trees |
 | [doc/abi.md](doc/abi.md) | the calls a packaged table is read by, on the 68000 |
-| [doc/performance.md](doc/performance.md) | what each call costs, in instructions, measured |
+| [doc/performance.md](doc/performance.md) | what each call costs, in 68000 cycles, measured |
 | [doc/experiments.md](doc/experiments.md) | what was measured against real tables, and what came out |
 | [doc/BINARIES.md](doc/BINARIES.md) | the eight 68000 images, and how a tool combines one with a table |
 | [doc/RELEASES.md](doc/RELEASES.md) | what a release contains, and what changed in each |

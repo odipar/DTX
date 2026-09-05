@@ -131,8 +131,8 @@ a column wrongly and no ST4 data set defines which kind it is. Measured on the
 same table, a column packed with copies and read by a decoder without the
 copy code gives row 37 wrong, where the pattern first repeats past the
 ring. The other way round is safe: a decoder with the copy code reads a
-column without copies as the plain one does, at 14 instructions more over
-64 rows and 30 to 36 bytes more code (experiments.md).
+column without copies as the plain one does, at a few cycles more over 64
+rows (performance.md) and 30 to 36 bytes more code (experiments.md).
 
 ## Package
 
@@ -284,9 +284,9 @@ calls ST4_wrap's assumption 5 allows: a stopping rule under which a column
 runs one call past its end marker does not change a byte a reader gives, and
 shows up only in the count.
 
-**The figures.** performance.md records what each call costs in
-instructions, and the rig counts them again and checks every cell of that
-table against its count.
+**The figures.** performance.md records what each call costs in 68000
+cycles, and the rig counts them again and checks every cell of its tables
+against its count.
 
 It needs `mvn compile`, [rmac](http://rmac.is-slick.com) on the path or at
 `$RMAC`, and `pip install unicorn`, which brings the emulator it runs the
