@@ -7,16 +7,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The code this repository carries, one file a build.
+ * The code this repository holds, one file a build.
  *
- * <p>A variant assembles to one code whatever table follows it, so the
+ * <p>A variant assembles to one code any table that follows it, so the
  * packager combines rather than assembles: it takes the file for the build
  * the table asks for, writes the five fields the table settles into the
  * format block, and appends the column table and the table's bytes. This
  * writes those files, and it is the one step rmac is needed for.
  *
- * <p>Eight of them: DTX0, DTX1, and one a build of the decoder DTX2 carries,
- * which is a unit of 1, 2 or 4 with the copy code and without.
+ * <p>Eight of them: DTX0, DTX1, and one a build of the decoder built into
+ * DTX2, which is a unit of 1, 2 or 4 with the copy code and without.
  *
  * <p>The table each is assembled from settles nothing but the figures the
  * assembler reads, so it is made here rather than read: the columns hold no
@@ -79,7 +79,7 @@ public final class Blobs {
      * build's own copies flag.
      *
      * <p>The assembler reads a data set's four stream offsets and nothing in
-     * the streams, so a container whose streams are the column itself
+     * the streams, so a data set whose streams are the column itself
      * settles every figure the build takes. Nothing decodes it, and nothing
      * here runs it: the packer that writes a table a caller reads is ST4's
      * own.

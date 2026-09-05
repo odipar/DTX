@@ -152,7 +152,7 @@ public static class Pack
             return Cursor + 4;
         }
         // DTX1 holds three cursors and the three places their classes begin,
-        // whatever widths the table states, so its block does not move with C.
+        // at any widths the table states, so its block does not move with C.
         return header.Variant == Format.Dtx1
                 ? 48 : Cursor + 4 * Classes(header.Width).Length;
     }
@@ -312,7 +312,7 @@ public static class Pack
     /// One image: this code, the column table, the table's bytes, and the
     /// format block written to state the three.
     ///
-    /// <para>The code is the same bytes whatever table follows it, so what a
+    /// <para>The code is the same bytes any table that follows it, so what a
     /// combine writes is the five fields the table settles. It checks the two
     /// it cannot write: the variant, and under DTX2 the unit the decoder
     /// built into the code decodes at.</para>

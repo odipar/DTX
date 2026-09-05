@@ -29,7 +29,7 @@ func (p Packer) Pack(column []byte, unit, ring int) ([]byte, error) {
 	if problem := CheckUnit(unit); problem != "" {
 		return nil, fmt.Errorf("%s", problem)
 	}
-	// A word offset is stored scaled to bytes, so the window is a byte
+	// A word offset is stored scaled to bytes, so the limit is a byte
 	// figure: 32512 units at k=4 would not fit the word.
 	offsetLimit := min(ring/unit, MaxOffsetUnits(unit))
 	units := Split(column, unit)

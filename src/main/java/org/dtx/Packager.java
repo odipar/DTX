@@ -172,7 +172,7 @@ public final class Packager {
             return CURSOR + 4;
         }
         // DTX1 holds three cursors and the three places their classes
-        // begin, whatever widths the table states, so its block does not
+        // begin, at any widths the table states, so its block does not
         // move with C either.
         return header.variant() == Dtx.DTX1
                 ? 48 : CURSOR + 4 * classes(header.width()).length;
@@ -403,7 +403,7 @@ public final class Packager {
 
     /**
      * The file the code for one build stands in. A variant assembles to one
-     * code whatever table follows it, and under DTX2 to one a build of the
+     * code any table that follows it, and under DTX2 to one a build of the
      * decoder built into it: the unit it decodes at, with the copy code and
      * without.
      */
@@ -510,7 +510,7 @@ public final class Packager {
      * One image: this code, the column table, the table's bytes, and the
      * format block written to state the three.
      *
-     * <p>The code is the same bytes whatever table follows it, so what a
+     * <p>The code is the same bytes any table that follows it, so what a
      * combine writes is the five fields the table settles. It checks the
      * two it cannot write: the variant, and under DTX2 the unit the decoder
      * built into the code decodes at.

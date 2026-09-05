@@ -313,7 +313,7 @@ DTX_step:
 
 ; DTX_take steps the cursors from the block itself, and comes in here for the
 ; turn and the refill. At the turn's wrap a period's rows join the rows
-; decoded, which is what shortens a column's last refill and stops the one
+; decoded, and that shortens a column's last refill and stops the one
 ; after it.
 DTX_refill:
         move.l  DTX_ROWSFIG(a6),d3

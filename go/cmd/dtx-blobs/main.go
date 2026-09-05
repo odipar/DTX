@@ -30,11 +30,11 @@ func main() {
 	}
 }
 
-// held packs nothing: it hands the column back inside an ST4 container and
+// held packs nothing: it hands the column back inside an ST4 data set and
 // states the build's own copies flag.
 //
 // The assembler reads a data set's four stream offsets and nothing in the
-// streams, so a container whose streams are the column itself settles every
+// streams, so a data set whose streams are the column itself settles every
 // figure the build takes. Nothing decodes it, and nothing here runs it: the
 // packer that writes a table a caller reads is ST4's own.
 type held struct{ copies bool }

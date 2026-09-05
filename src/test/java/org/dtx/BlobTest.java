@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 /**
- * The code this repository carries, against the templates it was assembled
+ * The code this repository holds, against the templates it was assembled
  * from.
  *
  * <p>The packager combines rather than assembles, so a template edited
@@ -119,8 +119,8 @@ class BlobTest {
     @Test
     void carriedCodeStatesNoTable() {
         // A build states no table: the five fields a combine writes read
-        // zero, so code shipped without one is refused rather than read as
-        // whatever table it was assembled from.
+        // zero, so code shipped without one states no table rather than
+        // the table it was assembled from.
         for (Blobs.Build build : Blobs.all()) {
             byte[] code = Packager.carriedCode(build.variant(), build.unit(),
                     build.copies());

@@ -52,7 +52,7 @@
 ; counts an offset, and every reach into the image is PC relative.
 ;
 ; The operand of an instruction whose opcode is one word stands at +2 of it,
-; which is what the L and W forms add; OP writes the opcode itself.
+; and the L and W forms add that; OP writes the opcode itself.
 
         .macro  DTX_INSTALL_L   value,site
         lea     \site+2(pc),a4

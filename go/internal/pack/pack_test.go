@@ -32,9 +32,9 @@ func plain(variant, rows int, width []int) []byte {
 	return append(head, make([]byte, size)...)
 }
 
-// A DTX2 file at this ring and unit. The data sets are containers rather
-// than packed streams: the packager reads a set's four stream offsets and
-// never a byte of a stream.
+// A DTX2 file at this ring and unit. The data sets are held rather than
+// packed: the packager reads a set's four stream offsets and never a byte
+// of a stream.
 func packed(rows int, width []int, unit, ring int) []byte {
 	return packedCopies(rows, width, unit, ring, false)
 }
@@ -148,7 +148,7 @@ func TestAPackedImageHoldsEveryRuleOfThePeriod(t *testing.T) {
 	}
 }
 
-// A table too wide for a 68000 displacement is refused rather than packaged.
+// A table too wide for a 68000 displacement does not package.
 func TestATableTooWideIsRefused(t *testing.T) {
 	width := make([]int, 40)
 	for i := range width {
@@ -160,7 +160,7 @@ func TestATableTooWideIsRefused(t *testing.T) {
 	}
 }
 
-// A table packed at one unit and packaged against another decoder is refused:
+// A table packed at one unit does not package against another decoder:
 // the image would read bytes no decoder wrote.
 func TestAUnitTheDecoderDoesNotDecodeIsRefused(t *testing.T) {
 	held(t)
