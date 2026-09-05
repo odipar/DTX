@@ -221,15 +221,16 @@ TARGETS="linux-x64" release/publish.sh
 `go build` cross-compiles to any target from any host, so one machine
 covers Windows, macOS and Linux on both architectures.
 
-It writes `dist/release`: one zip a platform, the eight images, both named by
-the release, and `MANIFEST.txt`, which gives every file's size and sha256
-beside what identifies it - a variant, a unit and copies for an image, a
-platform for a zip - so one release's file is told from another's without
-opening it. It builds `dtx-blobs` first, from a tree with no image, since that
-is the one command that makes them rather than containing them; it fails where
-fewer than eight come out; and it ends by writing and packaging a table with
-the host's own executables, from a directory that is not this repository, so
-an executable with no image fails there rather than in a release.
+It writes `dist/release`: one zip a platform, one zip of the eight images, all
+named by the release, and `MANIFEST.txt`, written by `release/manifest.sh`,
+which gives every file's size and sha256 beside what identifies it - a
+variant, a unit and copies for an image, what it contains for a zip - so one
+release's file is told from another's without opening it. It builds
+`dtx-blobs` first, from a tree with no image, since that is the one command
+that makes them rather than containing them; it fails where fewer than eight
+come out; and it ends by writing and packaging a table with the host's own
+executables, from a directory that is not this repository, so an executable
+with no image fails there rather than in a release.
 
 Writing DTX2 needs an ST4 packer, and each tree contains one:
 `src/main/java/org/st4` and `dotnet/nt4`, both taken from
