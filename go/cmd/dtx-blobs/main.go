@@ -30,13 +30,13 @@ func main() {
 	}
 }
 
-// plain packs nothing: it hands the column back inside an ST4 data set and
+// plain does not pack: it hands the column back inside an ST4 data set and
 // defines the build's own copies flag.
 //
-// The assembler reads a data set's four stream offsets and nothing in the
-// streams, so a data set whose streams are the column itself fixes every
-// figure the build takes. Nothing decodes it, and nothing here runs it: the
-// packer that writes a table a caller reads is ST4's own.
+// The assembler reads only a data set's four stream offsets, not the streams,
+// so a data set whose streams are the column itself fixes every figure the
+// build takes. Nothing decodes it, and nothing here runs it: the packer that
+// writes a table a caller reads is ST4's own.
 type plain struct{ copies bool }
 
 func (h plain) Copies() bool { return h.copies }

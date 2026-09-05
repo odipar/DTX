@@ -6,9 +6,9 @@
 // built and doc/abi.md what each of them does.
 //
 // The files are build output. The Maven build writes them into data/, which
-// go:embed reads only inside its own module. A tree built without them
-// contains none: Read gives nothing back and the caller resolves an image as
-// it otherwise would.
+// go:embed reads only inside its own module. A tree built without them does
+// not contain one: Read gives nil back and the caller resolves an image as it
+// otherwise would.
 package image
 
 import (
@@ -20,8 +20,8 @@ import (
 )
 
 // The directory rather than the files in it: a tree whose build has not run
-// does not have a .bin here, and a pattern that matched none would not
-// compile.
+// does not have a .bin here, and a pattern that did not match a file would
+// not compile.
 //
 //go:embed data
 var data embed.FS
@@ -38,7 +38,7 @@ func Name(variant, unit int, copies bool) string {
 	return fmt.Sprintf("DTX2-k%d.bin", unit)
 }
 
-// Read gives one image's bytes, or nil where this build contains none.
+// Read gives one image's bytes, or nil where the build does not contain one.
 func Read(variant, unit int, copies bool) []byte {
 	bytes, err := fs.ReadFile(data, "data/"+Name(variant, unit, copies))
 	if err != nil {
@@ -48,7 +48,7 @@ func Read(variant, unit int, copies bool) []byte {
 }
 
 // Code gives one image's bytes, from what this build contains or, where it
-// contains none, from the directory DTX_68K names.
+// does not contain one, from the directory DTX_68K names.
 func Code(variant, unit int, copies bool) ([]byte, error) {
 	name := Name(variant, unit, copies)
 	if bytes := Read(variant, unit, copies); bytes != nil {

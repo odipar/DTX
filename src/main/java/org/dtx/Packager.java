@@ -279,8 +279,8 @@ public final class Packager {
     static byte[] columnTable(byte[] file) {
         Dtx.Header header = Dtx.header(file);
         if (header.variant() == Dtx.DTX0) {
-            // A DTX0 row is one run of bytes: no loop walks a column, so
-            // there is nothing a column table would define.
+            // A DTX0 row is one run of bytes: no loop walks a column, so no
+            // column table is written.
             return new byte[0];
         }
         int[] width = header.width();

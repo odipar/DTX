@@ -137,8 +137,8 @@ public sealed class Table
 /// <summary>
 /// What packs one column of a DTX2 payload.
 ///
-/// <para>DTX2 defines a column as an ST4 data set (R5.1) and nothing
-/// more about how ST4 packs. St4Packer packs with the copy in this
+/// <para>DTX2 defines a column as an ST4 data set (R5.1) and does not
+/// define how ST4 packs. St4Packer packs with the copy in this
 /// repository, St4Beside runs a packer beside it, and a caller that writes DTX2
 /// may supply one of its own.</para>
 /// </summary>

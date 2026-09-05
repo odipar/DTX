@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-// A build with the images has all eight, and each is the bytes
-// the Maven build wrote. A tree built without them contains none, which is
-// the other whole state: half of them would be a build gone wrong.
+// A build with the images has all eight, and each is the bytes the Maven
+// build wrote. A tree built without them does not contain one, which is the
+// other whole state: half of them would be a build gone wrong.
 func TestContainsEveryImageOrNone(t *testing.T) {
 	embedded := Embedded()
 	if embedded == 0 {

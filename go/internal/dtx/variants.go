@@ -120,9 +120,9 @@ const CopiesFlag = 1
 
 // A Packer makes one ST4 data set of one column.
 //
-// DTX2 defines that a column is an ST4 data set (R5.1) and nothing more about
-// how ST4 packs: no packer is kept in this repository, and a caller that
-// writes DTX2 supplies one.
+// DTX2 defines a column as an ST4 data set (R5.1) and does not define how
+// ST4 packs: the copy of ST4 carried in internal/st4 packs, or a packer
+// beside it that -p names.
 type Packer interface {
 	// Pack gives column as one complete ST4 data set: its own header, and
 	// the length of what it unpacks to.

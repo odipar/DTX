@@ -6,8 +6,8 @@
 ; documentation says you used DTX (see LICENSE).
 ;
 ; doc/abi.md defines the calls, the format block and the state block. One
-; template a variant: this file reads DTX1 and nothing else, so no call in it
-; tests which variant it contains.
+; template a variant: this file reads only DTX1, so no call in it tests which
+; variant it contains.
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR and the widths reach it at
 ; run time rather than at assembly time, so every DTX1 image contains the same
@@ -18,7 +18,7 @@
 ;
 ; DTX1 lays a column's values together, so one cursor a width class walks
 ; them and every column of that width stands at a displacement from it. There
-; is one loop a width and none a column: a read runs the byte columns, then
+; is one loop a width, not one a column: a read runs the byte columns, then
 ; the word columns, then the long ones, taking each column's displacement and
 ; its place in the row out of the column table.
 ;
@@ -132,8 +132,8 @@ DTX_init:
         DTX_INSTALL_W d2,take_over
 
 ; The counts, one a width, into the six loops that walk them. A count of
-; zero leaves its loop with -1 in the counter, which the branch below it
-; takes as none.
+; zero leaves its loop with -1 in the counter, and the branch below it
+; skips the loop.
         move.w  DTX_COL_COUNT+0(a3),d0
         subq.w  #1,d0
         DTX_INSTALL_W d0,read_bytes
@@ -273,7 +273,7 @@ read_none:
 
 DTX_take:
         tst.l   DTX_ROW(a0)
-        bmi.w   DTX_advance             ; no row: step to row 0 and write none
+        bmi.w   DTX_advance             ; no row: step to row 0 without a write
         bsr     DTX_columns
         lea     DTX_COL_ENTRIES(a3),a3
         movea.l DTX_CURSOR+0(a0),a2

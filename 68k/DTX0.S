@@ -6,8 +6,8 @@
 ; documentation says you used DTX (see LICENSE).
 ;
 ; doc/abi.md defines the calls, the format block and the state block. One
-; template a variant: this file reads DTX0 and nothing else, so no call in it
-; tests which variant it contains.
+; template a variant: this file reads only DTX0, so no call in it tests which
+; variant it contains.
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR and the row's bytes reach it
 ; at run time rather than at assembly time: DTX_init reads them out of the
@@ -214,7 +214,7 @@ read_none:
 
 DTX_take:
         tst.l   DTX_ROW(a0)
-        bmi.w   DTX_advance             ; no row: step to row 0 and write none
+        bmi.w   DTX_advance             ; no row: step to row 0 without a write
         movea.l DTX_CURSOR(a0),a2
 take_count:
         move.w  #0,d0                   ; installed: the moves a row takes

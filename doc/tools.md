@@ -76,15 +76,14 @@ column 2 a negative value.
 
 ## Package
 
-A DTX file of any variant into a standalone 68000 image: the code, then
-the table's bytes, reached PC relative. [abi.md](abi.md) defines the six
-calls into the image, and the state block a caller supplies.
-
-It combines rather than assembles. The code does not move with the table,
-so it is built once and the tool takes the image for the build the table
-needs, writes the five fields the table gives into the format block,
-and appends the column table and the table's bytes. No assembler runs,
-and a caller who takes a release installs none.
+A DTX file of any variant into a standalone 68000 image: the code, then the
+table's bytes, reached PC relative. [abi.md](abi.md) defines the six calls
+into the image, and the state block a caller supplies.  It combines rather
+than assembles. The code does not move with the table, so it is built once and
+the tool takes the image for the build the table needs, writes the five fields
+the table gives into the format block, and appends the column table and the
+table's bytes. No assembler runs, and a caller who takes a release does not
+install one.
 
 ```
 bin/dtx-package in.dtx out.bin
@@ -123,15 +122,13 @@ each of them three times:
 | the classes the jar is made of | the Java packager, off the classpath |
 | `build/68k` | a release, which attaches the eight, and the C# assembly, which embeds them from there |
 | `go/internal/image/data` | `go:embed`, which reads only inside its own module |
-
 They are plain files and nothing about them is Java's, so a port in another
 language builds from the same eight. A Go executable built after the Maven
-build contains all eight and needs neither this repository nor an
-assembler beside it; one built from a tree whose build had not run
-contains none, and resolves an image through `DTX_68K` instead. The
-directory under `go/` contains
-a README and a `.gitignore` of its own and is committed empty of images, so
-the package compiles either way.
+build contains all eight and needs neither this repository nor an assembler
+beside it; one built from a tree whose build had not run does not contain one,
+and resolves an image through `DTX_68K` instead. The directory under `go/`
+contains a README and a `.gitignore` of its own and is committed empty of
+images, so the package compiles either way.
 
 This is the one step rmac is needed for. `-Drmac=PATH` names one that is
 not on the path, and a build without either fails at it and names which.
@@ -295,6 +292,20 @@ move the
 table and not the reader. Under DTX2 the six decoder builds are grouped, no
 two of them one code, and the copy code's size is read back out and
 compared with what doc/abi.md 5 gives. It needs rmac.
+
+## The style check
+
+`org.dtx.style.HouseStyle` reads every document and every code comment
+this repository writes against `STRUCK.md`, the list of constructs struck
+under the rules of `AGENTS.md`. A hit names the file, the line, the text
+matched and the rule. `mvn test` runs it; so does
+
+    java -cp target/classes org.dtx.style.HouseStyle
+
+from the root of the tree, which exits with 1 where there was a hit. A
+construct is added to `STRUCK.md`, not to the code: an entry is a pattern
+over lowered prose with samples it is in and samples it is not in, and
+`HouseStyleTest` reads every sample back.
 
 ## Through Maven
 

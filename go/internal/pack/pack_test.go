@@ -105,7 +105,7 @@ func TestTheFormatBlockDefinesWhatTheTableFixes(t *testing.T) {
 			t.Fatalf("%s: no header at %d", one.name, at)
 		}
 		// The column table stands between the code and the table, and DTX0
-		// has none: its two offsets then meet.
+		// does not have one: its two offsets then meet.
 		columns := dtx.GetLong(out, FormatAt+ColumnsAt)
 		if columns > at {
 			t.Fatalf("%s: the column table at %d stands past the table at %d",

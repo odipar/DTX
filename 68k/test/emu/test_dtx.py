@@ -364,7 +364,7 @@ def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
 
     m.call("init")
 
-    # a read before the first advance writes nothing and gives a1 back
+    # a read before the first advance does not write and gives a1 back
     got = m.call("read")
     assert got["a1"] == ROWBUF, "a read on no row moved a1"
     assert bytes(m.mu.mem_read(ROWBUF, row_bytes)) == bytes([GUARD]) * row_bytes, \

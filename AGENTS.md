@@ -1,6 +1,7 @@
 # House style
 
 Rules for prose: documents, code comments, commit messages. Each appears once.
+STRUCK.md lists what is struck under each, and the style check reads it.
 
 ## Plain words
 

@@ -51,11 +51,10 @@ this header, and the pictures below lay out that same table:
 
 ## 2. The payload
 
-`W[i]` is column `i`'s width, from the header.
-
-The payload begins on a long. Inside it DTX0 pads nothing, DTX1 pads
-before each column to a word, and DTX2 pads before each data set to a
-long: each variant's section defines where. A pad byte is zero.
+`W[i]` is column `i`'s width, from the header.  The payload begins on a long.
+Inside it DTX0 does not pad, DTX1 pads before each column to a word, and DTX2
+pads before each data set to a long: each variant's section defines where. A
+pad byte is zero.
 
 In DTX0 and DTX1 an offset is arithmetic on `R`, `C` and the widths (R3.3,
 R4.2), and DTX1's pad enters that arithmetic as a fixed term. DTX2
