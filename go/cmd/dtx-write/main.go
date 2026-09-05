@@ -45,15 +45,20 @@ variant V, or text where its name ends in .csv.
 
 Examples
 
-  dtx-write t.csv t.dtx -v2 -k1 -m960
-      text into a DTX2 file, at a unit of 1 and a ring of 960 bytes
+  dtx-write t.csv t.dtx -v1 -w2
+      text into a DTX1 file of two byte values
+  dtx-write t.csv t.dtx -v1
+      the same, at the narrowest width every value of the text fits
+  dtx-write t.csv t.dtx -v2 -w1 -k1 -m960
+      text into a DTX2 file of one byte values, at a unit of 1 and
+      a ring of 960 bytes
+  dtx-write t.csv t.dtx -v0 -w4 -r32
+      text into a DTX0 file of four byte values, repeating at row 32
   dtx-write t.dtx again.dtx -k2 -copies
       a DTX2 file repacked at a unit of 2, with copies from the
-      literal stream
+      literal stream. The width is the file's own
   dtx-write t.dtx t.csv
       a DTX file of any variant read out as text
-  dtx-write t.csv t.dtx -v1 -w2 -r32
-      text into a DTX1 file of two byte values, repeating at row 32
 
 doc/tools.md, Write.
 `
