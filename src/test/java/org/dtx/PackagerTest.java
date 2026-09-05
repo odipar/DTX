@@ -104,8 +104,8 @@ final class PackagerTest {
             int at = entries + Packager.STREAM * i;
             assertEquals(Packager.ring(header) + i * 960,
                     Dtx.getLong(table, at + 16), "column " + i + "'s ring");
-            assertEquals(Packager.slot(header) + 32 * i,
-                    Dtx.getLong(table, at + 20), "column " + i + "'s slot");
+            assertEquals(Packager.decoders(header) + 32 * i,
+                    Dtx.getLong(table, at + 20), "column " + i + "'s decoder state");
             assertEquals(i, Dtx.getWord(table, at + 24),
                     "column " + i + "'s width shift");
             assertEquals(0, Dtx.getWord(table, at + 26), "the unit's shift");
@@ -187,13 +187,14 @@ final class PackagerTest {
     }
 
     @Test
-    void aPackedStateBlockHoldsASlotAndARingAColumn() {
+    void aPackedStateBlockHoldsADecoderStateAndARingAColumn() {
         byte[] file = packed(64, new int[] {1, 2}, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
-        assertEquals(80, Packager.slot(header),
-                "the slots follow the cursors and the five figures");
-        assertEquals(144, Packager.ring(header), "the rings follow two slots");
+        assertEquals(80, Packager.decoders(header),
+                "the decoder states follow the cursors and the five figures");
+        assertEquals(144, Packager.ring(header),
+                "the rings follow two decoder states");
         assertEquals(144 + 2 * 960, Packager.stateBytes(header, given),
                 "a ring a column");
     }

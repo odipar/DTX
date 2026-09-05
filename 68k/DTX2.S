@@ -35,7 +35,7 @@
 ; Its header and read entries are DTX1's, and the records follow them:
 ;
 ;   +0   4  stream A, from the payload    +16  4  the ring, in the block
-;   +4   4  stream B                      +20  4  the slot, in the block
+;   +4   4  stream B                      +20  4  the decoder state, in the block
 ;   +8   4  stream C                      +24  2  the width's shift
 ;   +12  4  stream D                      +26  2  the unit's shift
 ;
@@ -69,14 +69,15 @@ DTX_S_B             equ     4
 DTX_S_C             equ     8
 DTX_S_D             equ     12
 DTX_S_RING          equ     16
-DTX_S_SLOT          equ     20
+DTX_S_DECODER       equ     20
 DTX_S_WSHIFT        equ     24
 DTX_S_KSHIFT        equ     26
 DTX_S_SIZE          equ     32
 
 ; The state block beyond what doc/abi.md 3 states: three cursors, the three
 ; rings their classes begin at, the record a fill is at, and the five figures
-; the table settles. The slots stand at DTX_SLOTS and the rings behind them.
+; the table settles. The decoder states stand at DTX_DECODERS, one a column,
+; and the rings behind them.
 DTX_PAYLOAD         equ     36
 DTX_RECORD          equ     40
 DTX_LEFT            equ     44              ; the columns a fill has left
@@ -86,7 +87,7 @@ DTX_REPEATFIG       equ     64              ; RR
 DTX_PERIODFIG       equ     68              ; P
 DTX_NFIG            equ     72              ; N
 DTX_CFIG            equ     76              ; C, a word
-DTX_SLOTS           equ     80
+DTX_DECODERS        equ     80
 
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
@@ -172,11 +173,11 @@ DTX_wrap:
 .held:
         rts
 
-; The slot of the record in a3, written from the decoder's registers. d4 holds
-; the offset while a3 becomes the slot: nothing else is free.
+; The decoder state of the record in a3, written from the decoder's registers.
+; d4 holds the offset while a3 becomes the state: nothing else is free.
 
 DTX_store:
-        move.l  DTX_S_SLOT(a3),d4
+        move.l  DTX_S_DECODER(a3),d4
         movea.l a6,a3
         adda.l  d4,a3
         movem.l d0-d2/a0-a2/a4-a5,(a3)
@@ -332,7 +333,7 @@ DTX_refill:
         move.l  a3,DTX_RECORD(a6)
         bsr     DTX_budget
         movea.l DTX_RECORD(a6),a3
-        move.l  DTX_S_SLOT(a3),d4
+        move.l  DTX_S_DECODER(a3),d4
         movea.l a6,a3
         adda.l  d4,a3
         movem.l (a3)+,d0-d2/a0-a2/a4-a5

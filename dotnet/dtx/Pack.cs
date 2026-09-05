@@ -131,11 +131,11 @@ public static class Pack
         return out_;
     }
 
-    /// <summary>Where the slots stand in the state block, doc/abi.md 3.</summary>
-    public static int Slot(Header header) => PackedHead;
+    /// <summary>Where the decoder states stand in the state block, doc/abi.md 3.</summary>
+    public static int Decoders(Header header) => PackedHead;
 
     /// <summary>Where the rings stand in the state block.</summary>
-    public static int Ring(Header header) => Slot(header) + 32 * header.Columns;
+    public static int Ring(Header header) => Decoders(header) + 32 * header.Columns;
 
     /// <summary>Where a width class's ring begins in the state block.</summary>
     public static int RingOf(Header header, int c, int n)
@@ -300,7 +300,7 @@ public static class Pack
                 Format.PutLong(out_, rec + 12,
                         set + Format.GetLong(file, payload + set + 16));
                 Format.PutLong(out_, rec + 16, Ring(header) + i * n);
-                Format.PutLong(out_, rec + 20, Slot(header) + 32 * i);
+                Format.PutLong(out_, rec + 20, Decoders(header) + 32 * i);
                 Format.PutWord(out_, rec + 24, Shift(width[i]));
                 Format.PutWord(out_, rec + 26, kshift);
             }

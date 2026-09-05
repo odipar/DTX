@@ -139,14 +139,14 @@ func Bases(header dtx.Header) [3]int {
 	return out
 }
 
-// Slot gives where the slots stand in the state block, doc/abi.md 3.
-func Slot(header dtx.Header) int {
+// Decoders gives where the decoder states stand in the state block, doc/abi.md 3.
+func Decoders(header dtx.Header) int {
 	return PackedHead
 }
 
 // Ring gives where the rings stand in the state block.
 func Ring(header dtx.Header) int {
-	return Slot(header) + 32*header.Columns()
+	return Decoders(header) + 32*header.Columns()
 }
 
 // RingOf gives where a width class's ring begins in the state block.
@@ -303,7 +303,7 @@ func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
 			dtx.PutLong(out, rec+8, set+dtx.GetLong(file, payload+set+12))
 			dtx.PutLong(out, rec+12, set+dtx.GetLong(file, payload+set+16))
 			dtx.PutLong(out, rec+16, Ring(header)+i*n)
-			dtx.PutLong(out, rec+20, Slot(header)+32*i)
+			dtx.PutLong(out, rec+20, Decoders(header)+32*i)
 			dtx.PutWord(out, rec+24, shift(w))
 			dtx.PutWord(out, rec+26, kshift)
 		}

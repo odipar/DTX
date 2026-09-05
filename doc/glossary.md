@@ -12,6 +12,7 @@ same change (requirements.md, R0.6 to R0.9).
 | column table | What stands behind a packaged reader's code and before its table: the counts, bases and entries a read walks, and under DTX2 a stream record a column. | abi.md 1 |
 | cursor | The address, in a ring or in a payload, of the row a packaged reader's clock stands on. | abi.md 3 |
 | data set | One column of a DTX2 payload, packed with ST4: its own ST4 header, and the length of what it unpacks to. | SPEC.md 2.3 |
+| decoder state | The eight longs a column's decoder is saved in between refills, 32 bytes of a packaged DTX2 reader's state block. | abi.md 3 |
 | DTX | This format: a table of `R` rows and `C` columns. The table is data, and a reader of it is code. | README.md |
 | format block | The 24 bytes at +24 of an image: the variant, the state block's bytes, where the table and the column table stand, the row's bytes, `P`, `N` and `k`. | abi.md 1 |
 | header | What stands before a payload: `DTX`, the variant, and the metadata. | SPEC.md 1 |

@@ -113,7 +113,7 @@ DTX2, 32 bytes at a stride of 32:
 | +8 | 4 | stream C |
 | +12 | 4 | stream D |
 | +16 | 4 | the column's ring, from the state block |
-| +20 | 4 | the column's slot, from the state block |
+| +20 | 4 | the column's decoder state, from the state block |
 | +24 | 2 | the width's shift |
 | +26 | 2 | `k`'s shift |
 
@@ -151,9 +151,9 @@ advance from no row to row 0 steps like any other advance.
 **Under DTX2 it fills every ring before it returns.** For each column it
 forms the five pointers ST4_init takes, calls it, and then makes one
 `ST4_resume` of `P` rows into that column's ring, so every ring holds `P`
-rows before any row is read. It stores the eight longs of decoder state
-in the column's slot, sets the turn to 0, and leaves the class cursors a
-row below row 0.
+rows before any row is read. It stores the eight longs the decoder holds
+in the column's decoder state, sets the turn to 0, and leaves the class
+cursors a row below row 0.
 
 That preload lets a read alternate between the streams and touch no
 decoder: from row 0 onward every value a read takes is already in a
@@ -331,11 +331,12 @@ shortens the last refill of a column and stops the one after it, and it is
 the only counter the block holds: the write pointer's wrap is a compare,
 not a count.
 
-Then, under DTX2 only, at +80, one slot a column, 32 bytes at a stride
-of 32, the eight longs in `movem`'s own order, so that
-`movem.l (a3)+,d0-d2/a0-a2/a4-a5` loads a slot whole:
+Then, under DTX2 only, at +80, one **decoder state** a column: the eight
+longs a column's decoder is saved in between refills, 32 bytes at a stride
+of 32, in `movem`'s own order, so that `movem.l (a3)+,d0-d2/a0-a2/a4-a5`
+loads one whole:
 
-| at in the slot | holds |
+| at in the decoder state | holds |
 |---|---|
 | +0 | `d0`, the bit queue in the low word |
 | +4 | `d1`, the remaining count with the negated ring start above it |
@@ -347,8 +348,8 @@ of 32, the eight longs in `movem`'s own order, so that
 | +28 | `a5`, the position in stream D |
 
 `d1` and `d2` are held and put back as longs: ST4's ring decoders keep
-the ring's bounds in their high words, so a slot holding only the low
-words would decode into another column's ring.
+the ring's bounds in their high words, so a decoder state holding only
+the low words would decode into another column's ring.
 
 The rings follow, `N` bytes a column at a stride of `N`, which is R5.5's
 one size and one stride. Column `i`'s ring is the ring area plus `i`
@@ -356,7 +357,7 @@ times `N`, and its read cursor is its class cursor plus the same
 displacement, so one cursor a class reaches every column of that class.
 
 Sizes: DTX0 28 bytes. DTX1 48 bytes, at any widths. DTX2 80 plus 32`C`
-plus `NC`.
+plus `NC`: a decoder state and a ring a column.
 
 ---
 
@@ -572,7 +573,7 @@ cursor plus `i` times `N`, so a read is `C` moves off at most three
 address registers. Given up: three cursors rather than one, the price of
 widths of 1, 2 and 4 over YMX's single byte a stream.
 
-**`movem` of the whole slot.** Reaching the decoder's state through a
+**`movem` of the whole decoder state.** Reaching it through a
 pointer would turn every register read into a memory read and fork ST4's
 code. Given up: two `movem`s a refill, and one refill a row.
 

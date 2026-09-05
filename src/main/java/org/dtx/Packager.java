@@ -59,7 +59,7 @@ public final class Packager {
     /** What one stream record runs to, one a column under DTX2. */
     static final int STREAM = 32;
 
-    /** What a packed reader's state block holds before its slots. */
+    /** What a packed reader's state block holds before its decoder states. */
     static final int PACKED_HEAD = 80;
 
     private Packager() {
@@ -183,14 +183,14 @@ public final class Packager {
         return ring(header) + packed.ring() * header.columns();
     }
 
-    /** Where the slots stand in the state block, doc/abi.md 3. */
-    static int slot(Dtx.Header header) {
+    /** Where the decoder states stand in the state block, doc/abi.md 3. */
+    static int decoders(Dtx.Header header) {
         return PACKED_HEAD;
     }
 
     /** Where the rings stand in the state block. */
     static int ring(Dtx.Header header) {
-        return slot(header) + 32 * header.columns();
+        return decoders(header) + 32 * header.columns();
     }
 
     /** log2 of {@code of}, where it is a power of two, or -1. */
@@ -342,7 +342,7 @@ public final class Packager {
                 Dtx.putLong(out, rec + 12,
                         set + Dtx.getLong(file, payload + set + 16));
                 Dtx.putLong(out, rec + 16, ring(header) + i * n);
-                Dtx.putLong(out, rec + 20, slot(header) + 32 * i);
+                Dtx.putLong(out, rec + 20, decoders(header) + 32 * i);
                 Dtx.putWord(out, rec + 24, shift(width[i]));
                 Dtx.putWord(out, rec + 26, shift(given.unit()));
             }

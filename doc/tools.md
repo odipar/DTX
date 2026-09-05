@@ -162,7 +162,8 @@ no period holds every rule abi.md 4 states: what it gives names the rule
 and the figures that break it.
 
 A DTX2 image asks for more of the caller than a plain one. Its state block
-holds a slot and a ring a column, so it runs to `NC` bytes and more; the
+holds a decoder state and a ring a column, so it runs to `NC` bytes and
+more; the
 tool prints the figure and the format block states it.
 
 ## Rewrite
