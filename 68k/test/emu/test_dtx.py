@@ -40,7 +40,7 @@ from unicorn.m68k_const import (
     UC_M68K_REG_A4, UC_M68K_REG_A5, UC_M68K_REG_A6, UC_M68K_REG_A7,
     UC_M68K_REG_D0, UC_M68K_REG_D1, UC_M68K_REG_D2, UC_M68K_REG_D3,
     UC_M68K_REG_D4, UC_M68K_REG_D5, UC_M68K_REG_D6, UC_M68K_REG_D7,
-    UC_M68K_REG_PC,
+    UC_M68K_REG_PC, UC_M68K_REG_SR,
 )
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -50,7 +50,7 @@ ST4 = os.environ.get("ST4", "st4")
 
 IMAGE = 0x10000          # the packaged image
 STATE = 0x30000          # the state block the caller supplies
-ROWBUF = 0x31000         # where a row goes
+ROWBUF = 0x3C000         # where a row goes, past the widest state block
 STACK = 0x40000          # the caller's stack
 DONE = 0x50000           # the return address a call comes back to
 GUARD = 0xCC             # what stands around the row, to catch an overrun
@@ -266,7 +266,7 @@ class Machine:
             self.misaligned.append((mu.reg_read(UC_M68K_REG_PC), address, size))
 
     def seed(self):
-        self.mu.mem_write(STATE, b"\x00" * 0x1000)
+        self.mu.mem_write(STATE, b"\x00" * max(0x1000, self.state_bytes))
         self.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
 
     def call(self, name, d0=0, a0=STATE, a1=ROWBUF):
@@ -574,36 +574,424 @@ PACKED = [
 
 
 # --------------------------------------------------------------------------
+# 68000 cycles. Every instruction the machine runs is given the cycles the
+# M68000 user's manual's tables give it, out of its opcode words and, for a
+# branch or a loop, out of where the machine went next. The cycles are the
+# processor's own, with no wait state: a machine whose bus rounds an access
+# up, as an Atari ST's does, takes longer.
+
+class Unknown(Exception):
+    """An instruction the tables here do not cover."""
+
+
+# The effective address fetch, by mode and, under mode 7, register: the
+# cycles for a byte or word and for a long, and the extension words.
+EA_TIME = {(0, 0): (0, 0), (1, 0): (0, 0), (2, 0): (4, 8), (3, 0): (4, 8),
+           (4, 0): (6, 10), (5, 0): (8, 12), (6, 0): (10, 14),
+           (7, 0): (8, 12), (7, 1): (12, 16), (7, 2): (8, 12),
+           (7, 3): (10, 14), (7, 4): (4, 8)}
+EA_WORDS = {(0, 0): 0, (1, 0): 0, (2, 0): 0, (3, 0): 0, (4, 0): 0, (5, 0): 1,
+            (6, 0): 1, (7, 0): 1, (7, 1): 2, (7, 2): 1, (7, 3): 1}
+SIZE = {0: "b", 1: "w", 2: "l"}
+# The control modes lea, pea, jsr, jmp and movem take.
+LEA = {(2, 0): 4, (5, 0): 8, (6, 0): 12, (7, 0): 8, (7, 1): 12, (7, 2): 8,
+       (7, 3): 12}
+PEA = {key: cycles + 8 for key, cycles in LEA.items()}
+JSR = {(2, 0): 16, (5, 0): 18, (6, 0): 22, (7, 0): 18, (7, 1): 20,
+       (7, 2): 18, (7, 3): 22}
+JMP = {(2, 0): 8, (5, 0): 10, (6, 0): 14, (7, 0): 10, (7, 1): 12, (7, 2): 10,
+       (7, 3): 14}
+MOVEM_TO = {(2, 0): 8, (4, 0): 8, (5, 0): 12, (6, 0): 14, (7, 0): 12,
+            (7, 1): 16}
+MOVEM_FROM = {(2, 0): 12, (3, 0): 12, (5, 0): 16, (6, 0): 18, (7, 0): 16,
+              (7, 1): 20, (7, 2): 16, (7, 3): 18}
+
+
+def condition(cc, sr):
+    """Whether condition `cc` is true under status register `sr`."""
+    c, v, z, n = sr & 1, sr >> 1 & 1, sr >> 2 & 1, sr >> 3 & 1
+    return (True, False, not c and not z, c or z, not c, c, not z, z,
+            not v, v, not n, n, n == v, n != v, n == v and not z,
+            n != v or z)[cc]
+
+
+def cycles_of(words, sr, dn, pc, next_pc):
+    """The cycles of the instruction at `pc` that `words` begin, and how many
+    words it is.
+
+    `sr` is the status register before it and `dn` the data registers before
+    it, or None where the instruction reads neither. `next_pc` is where the
+    machine went after it, which tells a branch taken from one not, or None
+    where the rig does not have it.
+    """
+    op = words[0]
+    top = op >> 12
+    mode, reg = op >> 3 & 7, op & 7
+    key = (mode, reg if mode == 7 else 0)
+
+    def fetch(size):
+        return EA_TIME[key][1 if size == "l" else 0]
+
+    def extra(size):
+        if key == (7, 4):
+            return 2 if size == "l" else 1
+        return EA_WORDS[key]
+
+    def no_fetch():
+        # a register or an immediate source: two cycles more on a long
+        return mode in (0, 1) or key == (7, 4)
+
+    if top == 0:
+        if op >> 8 & 1:                          # a bit operation by register
+            if mode == 1:
+                raise Unknown("movep")
+            kind = op >> 6 & 3                   # btst bchg bclr bset
+            if mode == 0:
+                return (6, 8, 10, 8)[kind], 1
+            return (4 if kind == 0 else 8) + fetch("b"), 1 + extra("b")
+        group = op >> 9 & 7                      # ori andi subi addi - eori cmpi
+        if group == 4:                           # a bit operation by number
+            kind = op >> 6 & 3
+            if mode == 0:
+                return (10, 12, 14, 12)[kind], 2
+            return (8 if kind == 0 else 12) + fetch("b"), 2 + extra("b")
+        size = SIZE[op >> 6 & 3]
+        immediate = 2 if size == "l" else 1
+        if mode == 0:
+            long = 14 if group in (1, 6) else 16
+            return (long if size == "l" else 8), 1 + immediate
+        if key == (7, 4):                        # to the condition codes or sr
+            return 20, 1 + immediate
+        if group == 6:
+            return ((12 if size == "l" else 8) + fetch(size),
+                    1 + immediate + extra(size))
+        return ((20 if size == "l" else 12) + fetch(size),
+                1 + immediate + extra(size))
+    if top in (1, 2, 3):                         # move, movea
+        size = {1: "b", 3: "w", 2: "l"}[top]
+        dmode, dreg = op >> 6 & 7, op >> 9 & 7
+        dkey = (dmode, dreg if dmode == 7 else 0)
+        # a predecrement destination costs what a plain indirect one does
+        to = ((8 if size == "l" else 4) if dmode == 4
+              else EA_TIME[dkey][1 if size == "l" else 0])
+        return 4 + fetch(size) + to, 1 + extra(size) + EA_WORDS[dkey]
+    if top == 4:
+        if op == 0x4E75:
+            return 16, 1                         # rts
+        if op == 0x4E71:
+            return 4, 1                          # nop
+        if op in (0x4E73, 0x4E77):
+            return 20, 1                         # rte rtr
+        if op & 0xFFF8 == 0x4E50:
+            return 16, 2                         # link
+        if op & 0xFFF8 == 0x4E58:
+            return 12, 1                         # unlk
+        if op & 0xFFF0 == 0x4E40:
+            return 34, 1                         # trap
+        if op & 0xFFF0 == 0x4E60:
+            return 4, 1                          # move usp
+        if op & 0xFFC0 == 0x4E80:
+            return JSR[key], 1 + extra("w")
+        if op & 0xFFC0 == 0x4EC0:
+            return JMP[key], 1 + extra("w")
+        if op & 0xF1C0 == 0x41C0:
+            return LEA[key], 1 + extra("w")
+        if op & 0xF1C0 == 0x4180:
+            return 10 + fetch("w"), 1 + extra("w")   # chk
+        if op & 0xFFF8 == 0x4840:
+            return 4, 1                          # swap
+        if op & 0xFFC0 == 0x4840:
+            return PEA[key], 1 + extra("w")
+        if op & 0xFFB8 == 0x4880:
+            return 4, 1                          # ext
+        if op & 0xFB80 == 0x4880:                # movem
+            each = 8 if op & 0x40 else 4
+            count = bin(words[1]).count("1")
+            base = MOVEM_FROM[key] if op & 0x400 else MOVEM_TO[key]
+            return base + each * count, 2 + extra("w")
+        if op & 0xFF00 in (0x4000, 0x4200, 0x4400, 0x4600):
+            if op >> 6 & 3 == 3:                 # move from sr, to ccr, to sr
+                if op & 0xFF00 == 0x4000:
+                    return ((6 if mode == 0 else 8 + fetch("w")),
+                            1 + extra("w"))
+                return 12 + fetch("w"), 1 + extra("w")
+            size = SIZE[op >> 6 & 3]             # negx clr neg not
+            if mode == 0:
+                return (6 if size == "l" else 4), 1
+            return (12 if size == "l" else 8) + fetch(size), 1 + extra(size)
+        if op & 0xFF00 == 0x4A00:                # tst, tas
+            if op >> 6 & 3 == 3:
+                return (4 if mode == 0 else 14 + fetch("b")), 1 + extra("b")
+            size = SIZE[op >> 6 & 3]
+            return 4 + fetch(size), 1 + extra(size)
+        if op & 0xFFC0 == 0x4800:                # nbcd
+            return (6 if mode == 0 else 8 + fetch("b")), 1 + extra("b")
+        raise Unknown("%04x" % op)
+    if top == 5:
+        if op >> 6 & 3 == 3:
+            cc = op >> 8 & 0xF
+            if mode == 1:                        # dbcc
+                if next_pc is not None and next_pc != pc + 4:
+                    return 10, 2
+                return (12 if condition(cc, sr) else 14), 2
+            if mode == 0:                        # scc
+                return (6 if condition(cc, sr) else 4), 1
+            return 8 + fetch("b"), 1 + extra("b")
+        size = SIZE[op >> 6 & 3]                 # addq subq
+        if mode == 0:
+            return (8 if size == "l" else 4), 1
+        if mode == 1:
+            return 8, 1
+        return (12 if size == "l" else 8) + fetch(size), 1 + extra(size)
+    if top == 6:                                 # bra bsr bcc
+        cc = op >> 8 & 0xF
+        length = 2 if op & 0xFF == 0 else 1
+        if cc == 0:
+            return 10, length
+        if cc == 1:
+            return 18, length
+        if next_pc is not None and next_pc != pc + 2 * length:
+            return 10, length
+        return (12 if length == 2 else 8), length
+    if top == 7:
+        return 4, 1                              # moveq
+    if top in (8, 0xC):                          # or and, div mul, bcd, exg
+        opmode = op >> 6 & 7
+        if opmode in (3, 7):
+            if top == 8:                         # divu divs, at their longest
+                return ((140 if opmode == 3 else 158) + fetch("w"),
+                        1 + extra("w"))
+            if mode == 0:
+                value = dn[reg] & 0xFFFF
+            elif key == (7, 4):
+                value = words[1]
+            else:
+                raise Unknown("a multiply from memory")
+            if opmode == 3:                      # mulu: the ones in the source
+                n = bin(value).count("1")
+            else:                                # muls: the changes of bit
+                v = value << 1
+                n = sum(1 for i in range(16)
+                        if (v >> i & 1) != (v >> (i + 1) & 1))
+            return 38 + 2 * n + fetch("w"), 1 + extra("w")
+        if opmode == 4 and mode in (0, 1):       # sbcd abcd
+            return (6 if mode == 0 else 18), 1
+        if top == 0xC and opmode in (5, 6) and mode in (0, 1):
+            return 6, 1                          # exg
+        size = SIZE[opmode & 3]
+        if opmode < 4:
+            if size == "l":
+                return (8 if no_fetch() else 6) + fetch("l"), 1 + extra("l")
+            return 4 + fetch(size), 1 + extra(size)
+        return (12 if size == "l" else 8) + fetch(size), 1 + extra(size)
+    if top in (9, 0xD):                          # sub add, suba adda, subx addx
+        opmode = op >> 6 & 7
+        if opmode in (3, 7):
+            if opmode == 3:
+                return 8 + fetch("w"), 1 + extra("w")
+            return (8 if no_fetch() else 6) + fetch("l"), 1 + extra("l")
+        size = SIZE[opmode & 3]
+        if opmode >= 4 and mode in (0, 1):
+            if mode == 0:
+                return (8 if size == "l" else 4), 1
+            return (30 if size == "l" else 18), 1
+        if opmode < 4:
+            if size == "l":
+                return (8 if no_fetch() else 6) + fetch("l"), 1 + extra("l")
+            return 4 + fetch(size), 1 + extra(size)
+        return (12 if size == "l" else 8) + fetch(size), 1 + extra(size)
+    if top == 0xB:                               # cmp cmpa cmpm eor
+        opmode = op >> 6 & 7
+        if opmode in (3, 7):
+            size = "w" if opmode == 3 else "l"
+            return 6 + fetch(size), 1 + extra(size)
+        size = SIZE[opmode & 3]
+        if opmode < 4:
+            return (6 if size == "l" else 4) + fetch(size), 1 + extra(size)
+        if mode == 1:
+            return (20 if size == "l" else 12), 1
+        if mode == 0:
+            return (8 if size == "l" else 4), 1
+        return (12 if size == "l" else 8) + fetch(size), 1 + extra(size)
+    if top == 0xE:                               # shifts and rotates
+        if op >> 6 & 3 == 3:
+            return 8 + fetch("w"), 1 + extra("w")
+        size = SIZE[op >> 6 & 3]
+        count = dn[op >> 9 & 7] & 63 if op & 0x20 else (op >> 9 & 7 or 8)
+        return (8 if size == "l" else 6) + 2 * count, 1
+    raise Unknown("%04x" % op)
+
+
+# Encodings against the manual's tables: the words, the status register, the
+# data registers, where the machine went next relative to the instruction (None
+# for a fall-through that is not a branch), and the cycles.
+TIMED = [
+    ((0x3000,), 0, None, None, 4),                  # move.w d0,d0
+    ((0x2280,), 0, None, None, 12),                 # move.l d0,(a1)
+    ((0x3018,), 0, None, None, 8),                  # move.w (a0)+,d0
+    ((0x2018,), 0, None, None, 12),                 # move.l (a0)+,d0
+    ((0x2F00,), 0, None, None, 12),                 # move.l d0,-(a7)
+    ((0x203C, 0, 1), 0, None, None, 12),            # move.l #1,d0
+    ((0x303C, 1), 0, None, None, 8),                # move.w #1,d0
+    ((0x3032, 0x1000), 0, None, None, 14),          # move.w 0(a2,d1.w),d0
+    ((0x33B2, 0x1000, 0x2000), 0, None, None, 24),  # move.w 0(a2,d1.w),0(a1,d2.w)
+    ((0x23B2, 0x1000, 0x2000), 0, None, None, 32),  # move.l 0(a2,d1.w),0(a1,d2.w)
+    ((0x13B2, 0x1000, 0x2000), 0, None, None, 24),  # move.b 0(a2,d1.w),0(a1,d2.w)
+    ((0x2D40, 0x0008), 0, None, None, 16),          # move.l d0,8(a6)
+    ((0x202E, 0x0008), 0, None, None, 16),          # move.l 8(a6),d0
+    ((0x2E5F,), 0, None, None, 12),                 # movea.l (a7)+,a7
+    ((0x41EA, 0x0008), 0, None, None, 8),           # lea 8(a2),a0
+    ((0x49FA, 0x0002), 0, None, None, 8),           # lea 2(pc),a4
+    ((0x41F2, 0x1000), 0, None, None, 12),          # lea 0(a2,d1.w),a0
+    ((0x4E75,), 0, None, None, 16),                 # rts
+    ((0x4E92,), 0, None, None, 16),                 # jsr (a2)
+    ((0x4EB9, 0, 0), 0, None, None, 20),            # jsr abs.l
+    ((0x4ED2,), 0, None, None, 8),                  # jmp (a2)
+    ((0x6100, 0x0010), 0, None, None, 18),          # bsr.w
+    ((0x6000, 0x0010), 0, None, None, 10),          # bra.w
+    ((0x6010,), 0, None, None, 10),                 # bra.s
+    ((0x6610,), 0x04, None, 2, 8),                  # bne.s, z set, not taken
+    ((0x6610,), 0x00, None, 0x12, 10),              # bne.s taken
+    ((0x6600, 0x0100), 0x04, None, 4, 12),          # bne.w not taken
+    ((0x51C8, 0xFFFE), 0, None, 0, 10),             # dbf, branch taken
+    ((0x51C8, 0xFFFE), 0, None, 4, 14),             # dbf, counter expired
+    ((0x57C8, 0xFFFE), 0x04, None, 4, 12),          # dbeq, z set: cc true
+    ((0x7001,), 0, None, None, 4),                  # moveq #1,d0
+    ((0xD040,), 0, None, None, 4),                  # add.w d0,d0
+    ((0xD080,), 0, None, None, 8),                  # add.l d0,d0
+    ((0xD0AE, 0x0004), 0, None, None, 18),          # add.l 4(a6),d0
+    ((0xD1C9,), 0, None, None, 8),                  # adda.l a1,a0
+    ((0xD0C9,), 0, None, None, 8),                  # adda.w a1,a0
+    ((0xD1EE, 0x0004), 0, None, None, 18),          # adda.l 4(a6),a0
+    ((0x5240,), 0, None, None, 4),                  # addq.w #1,d0
+    ((0x5280,), 0, None, None, 8),                  # addq.l #1,d0
+    ((0x5288,), 0, None, None, 8),                  # addq.l #1,a0
+    ((0x5340,), 0, None, None, 4),                  # subq.w #1,d0
+    ((0x0680, 0, 1), 0, None, None, 16),            # addi.l #1,d0
+    ((0x0280, 0, 1), 0, None, None, 14),            # andi.l #1,d0
+    ((0xC040,), 0, None, None, 4),                  # and.w d0,d0
+    ((0x0C80, 0, 1), 0, None, None, 14),            # cmpi.l #1,d0
+    ((0xB0AE, 0x0004), 0, None, None, 18),          # cmp.l 4(a6),d0
+    ((0xB080,), 0, None, None, 6),                  # cmp.l d0,d0
+    ((0xB040,), 0, None, None, 4),                  # cmp.w d0,d0
+    ((0xB097,), 0, None, None, 14),                 # cmp.l (a7),d0
+    ((0x0802, 0x0000), 0, None, None, 10),          # btst #0,d2
+    ((0x48E7, 0x0302), 0, None, None, 32),          # movem.l d6-d7/a6,-(a7): 3 registers
+    ((0x4CDF, 0x40C0), 0, None, None, 36),          # movem.l (a7)+,d6-d7/a6
+    ((0x4CEE, 0x40C0, 0x000C), 0, None, None, 40),  # movem.l 12(a6),d6-d7/a6
+    ((0x48E8, 0x40C0, 0x000C), 0, None, None, 36),  # movem.l d6-d7/a6,12(a0)
+    ((0xE248,), 0, None, None, 8),                  # lsr.w #1,d0
+    ((0xE288,), 0, None, None, 10),                 # lsr.l #1,d0
+    ((0xE048,), 0, None, None, 22),                 # lsr.w #8,d0
+    ((0xE268,), 0, (0, 3, 0, 0, 0, 0, 0, 0), None, 12),  # lsr.w d1,d0 with d1 of 3
+    ((0x4840,), 0, None, None, 4),                  # swap d0
+    ((0x4440,), 0, None, None, 4),                  # neg.w d0
+    ((0x4240,), 0, None, None, 4),                  # clr.w d0
+    ((0x4280,), 0, None, None, 6),                  # clr.l d0
+    ((0x4A80,), 0, None, None, 4),                  # tst.l d0
+    ((0x4AAE, 0x0004), 0, None, None, 16),          # tst.l 4(a6)
+    ((0x4A40,), 0, None, None, 4),                  # tst.w d0
+    ((0xD140,), 0, None, None, 4),                  # addx.w d0,d0
+    ((0x9040,), 0, None, None, 4),                  # sub.w d0,d0
+    ((0x90AE, 0x0004), 0, None, None, 18),          # sub.l 4(a6),d0
+    ((0x90C9,), 0, None, None, 8),                  # suba.w a1,a0
+    ((0xC0C1,), 0, (0, 0xFFFF, 0, 0, 0, 0, 0, 0), None, 70),  # mulu.w d1,d0, d1 all ones
+    ((0xC0C1,), 0, (0, 0, 0, 0, 0, 0, 0, 0), None, 38),       # mulu.w d1,d0, d1 zero
+    ((0x4880,), 0, None, None, 4),                  # ext.w d0
+    ((0x4E71,), 0, None, None, 4),                  # nop
+]
+
+
+def cycle_tables():
+    """The tables here against the manual, on the encodings above."""
+    for words, sr, dn, went, cycles in TIMED:
+        pc = 0x1000
+        got, length = cycles_of(words, sr, dn, pc, None if went is None else pc + went)
+        assert got == cycles, "%s: the tables give %d cycles, the manual %d" % (
+            " ".join("%04x" % w for w in words), got, cycles)
+        assert length == len(words), "%s: read as %d words, not %d" % (
+            " ".join("%04x" % w for w in words), length, len(words))
+    print("  %d encodings timed as the manual times them" % len(TIMED))
+
+
+class Cycles:
+    """The cycles the machine takes from here on, and the instructions."""
+
+    def __init__(self, m):
+        self.mu = m.mu
+        self.cycles = 0
+        self.instructions = 0
+        self.pending = None
+        m.mu.hook_add(UC_HOOK_CODE, self._code)
+
+    def _code(self, mu, address, size, data):
+        self._settle(address)
+        raw = bytes(mu.mem_read(address, 10))
+        op = raw[0] << 8 | raw[1]
+        # The registers are read only where the instruction's cycles depend
+        # on one: the data registers for a shift counted in one or a
+        # multiply, the status register for a dbcc or scc on a condition.
+        # Reading the status register inside a hook disturbs Unicorn's
+        # deferred flags on a computed jump, so it is not read on any other.
+        reads = (op >> 12 == 0xE and op & 0x20) or (
+            op >> 12 in (8, 0xC) and op >> 6 & 7 in (3, 7))
+        dn = [mu.reg_read(r) for r in D] if reads else None
+        tests = op >> 12 == 5 and op >> 6 & 3 == 3 and op >> 8 & 0xF >= 2
+        sr = mu.reg_read(UC_M68K_REG_SR) if tests else 0
+        self.pending = (address, raw, sr, dn)
+
+    def _settle(self, next_pc):
+        if self.pending is None:
+            return
+        pc, raw, sr, dn = self.pending
+        self.pending = None
+        words = struct.unpack(">5H", raw)
+        try:
+            cycles, _ = cycles_of(words, sr, dn, pc, next_pc)
+        except Unknown as what:
+            raise AssertionError("the cycle tables do not cover %s at %08x"
+                                 % (what, pc))
+        self.cycles += cycles
+        self.instructions += 1
+
+    def call(self, m, name, **at):
+        """One call, and the cycles it took."""
+        before = self.cycles
+        m.call(name, **at)
+        self._settle(None)
+        return self.cycles - before
+
+
+# --------------------------------------------------------------------------
 # doc/performance.md, read back: every figure it records is one this rig
 # counts, or the rig fails naming the cell.
 
-def instructions(m):
-    """A counter of every instruction the machine runs from here on."""
-    n = [0]
-    m.mu.hook_add(UC_HOOK_CODE, lambda u, a, s, d: n.__setitem__(0, n[0] + 1))
-    return n
+CALLS = ("init", "advance", "read", "take", "jump to row 0", "jump to row 63",
+         "code, bytes")
+# The two example tables, each at DTX0, DTX1 and DTX2 at k of 1, 2 and 4: the
+# widths a column has under each.
+THREE = [(0, 1, [1, 2, 4]), (1, 1, [1, 2, 4]), (2, 1, [1, 2, 4]),
+         (2, 2, [2, 2, 2]), (2, 4, [4, 4, 4])]
+TWENTY_WIDE = ([1, 2, 4] * 7)[:20]
+TWENTY = [(0, 1, TWENTY_WIDE), (1, 1, TWENTY_WIDE), (2, 1, TWENTY_WIDE),
+          (2, 2, [2] * 20), (2, 4, [4] * 20)]
+EXAMPLES = (("three columns", THREE), ("twenty columns", TWENTY))
 
 
 def measured(variant, unit, widths):
-    """The row of the performance table one image gives."""
+    """The column of a call table one image gives, in cycles."""
     blob = write_table(numbers(64, len(widths)), variant, widths, None, unit, 960)
     image, _ = package(blob)
     state = struct.unpack(">I", image[28:32])[0]
     columns = struct.unpack(">I", image[44:48])[0]
     m = Machine(image, state)
-    n = instructions(m)
-
-    def call(name, **at):
-        before = n[0]
-        m.call(name, **at)
-        return n[0] - before
-
-    init = call("init")
-    advance = [call("advance") for _ in range(8)]
-    read = call("read")
-    take = call("take")
-    jump0 = call("jump", d0=0)
-    jump63 = call("jump", d0=63)
+    cycles = Cycles(m)
+    init = cycles.call(m, "init")
+    advance = [cycles.call(m, "advance") for _ in range(8)]
+    read = cycles.call(m, "read")
+    take = cycles.call(m, "take")
+    jump0 = cycles.call(m, "jump", d0=0)
+    jump63 = cycles.call(m, "jump", d0=63)
     return {"init": str(init),
             # one figure where every advance took the same, a range where not
             "advance": str(min(advance)) if min(advance) == max(advance)
@@ -613,27 +1001,108 @@ def measured(variant, unit, widths):
             "code, bytes": str(columns - 48)}
 
 
+def copy_cost(unit):
+    """The cycles of init and 64 rows read and advanced, on a column packed
+    without copies, by the decoder without the copy code and by the one with
+    it. The packager takes the decoder the payload's flag names, so the flag
+    is set on a copy of the file to get the second."""
+    blob = write_table(numbers(64, 3), 2, [unit] * 3, None, unit, 960)
+    flagged = bytearray(blob)
+    flagged[(14 + 3 + 3) // 4 * 4 + 3] |= 1
+    out = []
+    for file in (blob, bytes(flagged)):
+        image, _ = package(file)
+        m = Machine(image, struct.unpack(">I", image[28:32])[0])
+        cycles = Cycles(m)
+        total = cycles.call(m, "init")
+        for _ in range(64):
+            total += cycles.call(m, "read") + cycles.call(m, "advance")
+        out.append(total)
+    return out
+
+
+def performance_tables():
+    """The tables doc/performance.md lists: the example tables in columns,
+    the call tables, and the copy code's cost, each as Markdown."""
+    out = []
+    for name, example in EXAMPLES:
+        out.append("### %s\n" % name.capitalize())
+        out.append("| column | DTX0, DTX1, DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |")
+        out.append("|---|---|---|---|")
+        for i in range(len(example[0][2])):
+            out.append("| c%d | %d | %d | %d |" % (i, example[2][2][i],
+                                                 example[3][2][i], example[4][2][i]))
+        out.append("")
+    calls = {}
+    for name, example in EXAMPLES:
+        got = [measured(variant, unit, widths) for variant, unit, widths in example]
+        calls[name] = got
+        out.append("### %s\n" % name.capitalize())
+        out.append("| call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |")
+        out.append("|---|---|---|---|---|---|")
+        for call in CALLS:
+            out.append("| %s | %s |" % (call, " | ".join(one[call] for one in got)))
+        out.append("")
+    out.append("| k | without | with | more |")
+    out.append("|---|---|---|---|")
+    costs = {}
+    for unit in (1, 2, 4):
+        without, with_ = copy_cost(unit)
+        costs[unit] = (without, with_)
+        out.append("| %d | %d | %d | %d |" % (unit, without, with_, with_ - without))
+    return "\n".join(out), calls, costs
+
+
 def performance():
     """doc/performance.md against the machine, cell by cell."""
     doc = open(os.path.join(ROOT, "doc", "performance.md")).read()
-    listed = {}
+    widths, listed, costs = [], [], {}
     for line in doc.splitlines():
         cell = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cell) == 6 and cell[0] in ("init", "advance", "read", "take",
-                                          "jump to row 0", "jump to row 63",
-                                          "code, bytes"):
-            listed[cell[0]] = cell[1:]
-    columns = [(0, 1, [1, 2, 4]), (1, 1, [1, 2, 4]), (2, 1, [1, 2, 4]),
-               (2, 2, [2, 2, 2]), (2, 4, [4, 4, 4])]
-    got = [measured(variant, unit, widths) for variant, unit, widths in columns]
-    for call, said in listed.items():
-        for at, one in enumerate(got):
-            assert said[at] == one[call], \
-                "doc/performance.md gives %s for %s in column %d, the rig" \
-                " counts %s" % (said[at], call, at + 1, one[call])
-    assert len(listed) == 7, "doc/performance.md lists %d rows, not 7" % len(listed)
+        if len(cell) == 4 and cell[0].startswith("c") and cell[0][1:].isdigit():
+            widths.append([int(c) for c in cell[1:]])
+        elif len(cell) == 6 and cell[0] in CALLS:
+            listed.append(cell)
+        elif len(cell) == 4 and cell[0] in ("1", "2", "4"):
+            costs[int(cell[0])] = [int(c) for c in cell[1:]]
+    tables, calls, measured_costs = performance_tables()
+    at = 0
+    cells = 0
+    for name, example in EXAMPLES:
+        columns = len(example[0][2])
+        assert len(widths) >= at + columns, \
+            "doc/performance.md lists %d columns of %s, not %d" % (
+                len(widths) - at, name, columns)
+        for i in range(columns):
+            said = widths[at + i]
+            is_ = [example[2][2][i], example[3][2][i], example[4][2][i]]
+            assert said == is_, "doc/performance.md gives c%d of %s widths %s," \
+                " the rig measures %s" % (i, name, said, is_)
+        at += columns
+    assert len(widths) == at, "doc/performance.md lists %d columns, not %d" % (
+        len(widths), at)
+    at = 0
+    for name, example in EXAMPLES:
+        rows = listed[at:at + len(CALLS)]
+        assert [row[0] for row in rows] == list(CALLS), \
+            "doc/performance.md's %s table does not list the seven calls" % name
+        for row in rows:
+            for column, one in enumerate(calls[name]):
+                assert row[1 + column] == one[row[0]], \
+                    "doc/performance.md gives %s for %s, %s, column %d; the" \
+                    " rig counts %s" % (row[1 + column], row[0], name,
+                                        column + 1, one[row[0]])
+                cells += 1
+        at += len(CALLS)
+    assert len(listed) == at, "doc/performance.md lists %d call rows, not %d" % (
+        len(listed), at)
+    for unit, (without, with_) in measured_costs.items():
+        assert costs.get(unit) == [without, with_, with_ - without], \
+            "doc/performance.md gives %s for the copy code at k of %d; the rig" \
+            " counts %s" % (costs.get(unit), unit, [without, with_, with_ - without])
+        cells += 3
     print("  %d cells of doc/performance.md, each the figure the rig counts"
-          % (7 * 5))
+          % cells)
 
 
 def main():
@@ -662,7 +1131,7 @@ def main():
         except AssertionError as wrong:
             bad += 1
             print("  %-34s FAILED: %s" % (name, wrong))
-    print("copies from the literal stream, at a ring they pay for")
+    print("copies from the literal stream, at a small ring")
     for name, ring, copies in (("a small ring, plain", 64, False),
                                ("a small ring, copies", 64, True),
                                ("a ring the pattern fits, copies", 128, True)):
@@ -671,6 +1140,12 @@ def main():
         except AssertionError as wrong:
             bad += 1
             print("  %-32s FAILED: %s" % (name, wrong))
+    print("68000 cycles")
+    try:
+        cycle_tables()
+    except AssertionError as wrong:
+        bad += 1
+        print("  FAILED: %s" % wrong)
     print("doc/performance.md, read back")
     try:
         performance()
@@ -683,4 +1158,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if sys.argv[1:] == ["performance"]:
+        # the tables doc/performance.md lists, to paste in after a change
+        print(performance_tables()[0])
+    else:
+        main()

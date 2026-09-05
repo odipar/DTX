@@ -448,8 +448,8 @@ table itself. Nothing carried beside the file enters, and nothing can
 differ from the bytes. The flag is there because no ST4 data set defines
 it and a column packed with copies read by a decoder without the copy code
 gives wrong bytes; the other way round is safe, since a decoder with the
-copy code reads a column without copies as the plain one does, at 14
-instructions more over 64 rows (experiments.md).
+copy code reads a column without copies as the plain one does, at a few
+cycles more over 64 rows (performance.md).
 
 **How many images there are.** DTX0 assembles to one, DTX1 to one, and
 DTX2 to one a build of the decoder built into it: `k` of 1, 2 or 4, each
@@ -475,10 +475,9 @@ than emitting an image that reads wrong.
 
 ## 6. What each call costs
 
-performance.md records it, in instructions counted under emulation, and
-the rig that counts them checks that document against its count. The
-figures are instructions and not cycles, since the emulator counts the
-first and not the second.
+performance.md records it, in 68000 cycles counted under emulation from
+the manual's tables, and the rig that counts them checks that document
+against its count.
 
 The shape, which the figures bear out: under DTX0 and DTX1 every call is
 flat in `R` and a read is linear in `C`. Under DTX2 a read is flat and

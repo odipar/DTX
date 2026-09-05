@@ -4,7 +4,7 @@ What was measured against real tables, and what came out. Every figure
 here is one a test reads back: `ExperimentsTest` checks the two tables of
 bytes against the writer and the packager, `StabilityTest` checks the
 decoder's bytes against rmac, and the rig `68k/test/emu/test_dtx.py`
-counts the instructions.
+counts the cycles.
 
 The numbers table is the rig's: row `r`, column `i` is `r` times `i` plus
 one, modulo 251, at the widths given.
@@ -60,10 +60,11 @@ ST4_wrap.S assembled alone, without the copy code and with it:
 | 4 | 330 | 366 | 36 |
 
 In an image the difference is 32, 32 and 36 bytes: the decoder stands on a
-long, and the 30 rounds up to one. In instructions, on a column without
-copies, the copy code costs 14 over 64 rows read, 0.1 percent, at every
-`k`: the two decoders differ at init, where the one with the copy code
-writes the ring's size into two of its own instructions, and not in a row.
+long, and the 30 rounds up to one. In cycles, on a column without copies,
+the copy code costs what performance.md's last table gives, 0.1 percent,
+at every `k`: the two decoders differ at init, where the one with the copy
+code writes the ring's size into two of its own instructions, and not in a
+row.
 
 ## ST4_wrap against ST4_ring
 
@@ -84,8 +85,8 @@ byte column after a one byte one, was read with one word move on every
 table it passed, and would have faulted on the hardware. The rig watches
 every access now and fails a misaligned one as the 68000 does, and the read
 tests each wide entry and moves bytes where its offset is odd. What that
-cost: a read of three columns went from 32 instructions to 40, DTX1's code
-from 592 bytes to 716 and DTX2's from 1352 to 1476.
+cost: a read of three columns grew by a `btst` and a branch a wide column,
+DTX1's code from 592 bytes to 716 and DTX2's from 1352 to 1476.
 
 ## A column packed with copies, read without them
 
