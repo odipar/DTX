@@ -49,7 +49,7 @@ const (
 // packed with copies from its own literal stream, R5.10.
 const Copies = 1
 
-// Packed is what a DTX2 payload states: the ring, the unit, whether its
+// Packed holds what a DTX2 payload states: the ring, the unit, whether its
 // columns hold copies from the literal stream, and where each column's data
 // set begins in the payload.
 type Packed struct {
@@ -342,7 +342,7 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 		return nil, fmt.Errorf("the code reads DTX%d and the table is DTX%d",
 			code[FormatAt+3], header.Variant)
 	}
-	// The code ends where the format block says the column table begins: the
+	// The code ends where the format block states the column table begins: the
 	// two agree, or the image reads its own last instruction as a column.
 	columns := dtx.GetLong(code, FormatAt+ColumnsAt)
 	if columns != len(code) {
@@ -432,7 +432,7 @@ func equ(name string, value int) string {
 }
 
 // Figures gives what one table settles, as a template reads it: the equates,
-// and no instruction at all. Every figure a loop counts with reaches the
+// and no instruction. Every figure a loop counts with reaches the
 // code at run time instead, out of the table's own header and the column
 // table (doc/tools.md).
 func Figures(file []byte) (string, error) {
@@ -537,7 +537,7 @@ func Code(file []byte, rmac, templates string) ([]byte, error) {
 // Blank zeroes the five fields a combine writes.
 //
 // Built code states no table. The assembler read one to build it, and what
-// it read stands in the format block: zeroing those five is what makes the
+// it read stands in the format block: zeroing those five makes the
 // file a function of the template alone, and what makes code shipped without
 // a combine read a state block of zero bytes rather than some other table's.
 func Blank(code []byte) {

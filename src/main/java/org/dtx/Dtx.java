@@ -113,7 +113,7 @@ public final class Dtx {
     }
 
     /**
-     * The table in {@code file}, whichever plain variant it holds.
+     * The table in {@code file}, under either plain variant.
      *
      * @throws IllegalArgumentException where the variant is not DTX0 or DTX1
      */

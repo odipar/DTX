@@ -130,8 +130,8 @@ public static class Format
 }
 
 /// <summary>
-/// What a file's header states. Length is what the header runs to, which is
-/// the payload's first byte.
+/// What a file's header states. Length is the header's end, the payload's
+/// first byte.
 /// </summary>
 public sealed record Header(int Variant, int Rows, int Repeat, int[] Width,
         int Length)

@@ -99,13 +99,13 @@ func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
 		if got := dtx.GetWord(out, FormatAt+RowBytesAt); got != one.row {
 			t.Fatalf("%s: the row's bytes are %d, not %d", one.name, got, one.row)
 		}
-		// The table stands where the block says, and states the same variant.
+		// The table stands where the block states, and states the same variant.
 		at := dtx.GetLong(out, FormatAt+TableAt)
 		if string(out[at:at+3]) != "DTX" || int(out[at+3]) != one.variant {
 			t.Fatalf("%s: no header at %d", one.name, at)
 		}
 		// The column table stands between the code and the table, and DTX0
-		// has none at all: its two offsets then meet.
+		// has none: its two offsets then meet.
 		columns := dtx.GetLong(out, FormatAt+ColumnsAt)
 		if columns > at {
 			t.Fatalf("%s: the column table at %d stands past the table at %d",
@@ -205,7 +205,7 @@ func TestADataSetThatDoesNotStateThePayloadsUnitIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	at := head.Length + dtx.GetLong(file, head.Length+4+4)
-	file[at+3] = 2 // column 1 now says a unit of 2
+	file[at+3] = 2 // column 1 now states a unit of 2
 	if _, err := ReadPacked(file, head); err == nil {
 		t.Fatal("a payload took a data set stating another unit")
 	}

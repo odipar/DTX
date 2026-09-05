@@ -112,7 +112,7 @@ public static class Variants
         return Table.Of(header.Rows, header.Repeat, header.Width, column);
     }
 
-    /// <summary>The table a file holds, whichever plain variant it is.</summary>
+    /// <summary>The table a file holds, under either plain variant.</summary>
     public static Table Read(byte[] file)
     {
         Header header = Format.ReadHeader(file);

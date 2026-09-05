@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 /**
  * DTX2 through a real ST4 packer.
  *
- * <p>The packer is the copy this repository holds, so these run wherever
- * the build does. The last of them holds that copy to an executable beside
+ * <p>The packer is the copy this repository holds, so these run where the
+ * build does. The last of them holds that copy to an executable beside
  * it, and is the one skipped without one at {@code ST4}.
  */
 final class St4Test {

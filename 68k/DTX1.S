@@ -22,7 +22,7 @@
 ; the word columns, then the long ones, taking each column's displacement and
 ; its place in the row out of the column table.
 ;
-; THE COLUMN TABLE stands behind the code, and the format block says where.
+; THE COLUMN TABLE stands behind the code, and the format block states where.
 ; The packager writes it, grouped by width so each loop walks a run:
 ;
 ;   +0   2  the width-1 columns
@@ -40,7 +40,7 @@
 ;           its class, and where its value stands in the row
 ;
 ; The header runs to 32 bytes under both variants that read one, so a read
-; reaches the entries at one displacement whichever wrote the table.
+; reaches the entries at one displacement under either variant.
 ;
 ; TRUSTED INPUT ONLY. No call checks the table, the state block, the row
 ; number or the address a row goes to.
@@ -214,7 +214,7 @@ advance_next:
 
 DTX_read:
         tst.l   DTX_ROW(a0)
-        bmi.s   read_none
+        bmi.w   read_none
         bsr     DTX_columns
         lea     DTX_COL_ENTRIES(a3),a3
         movea.l DTX_CURSOR+0(a0),a2
@@ -234,7 +234,14 @@ read_words:
 read_word_loop:
         move.w  (a3)+,d1
         move.w  (a3)+,d2
+        btst    #0,d2                   ; odd in the row: bytes, or a 68000
+        bne.s   read_word_odd            ; takes an address error
         move.w  0(a2,d1.w),0(a1,d2.w)
+        dbf     d0,read_word_loop
+        bra.s   read_long_class
+read_word_odd:
+        move.b  0(a2,d1.w),0(a1,d2.w)
+        move.b  1(a2,d1.w),1(a1,d2.w)
         dbf     d0,read_word_loop
 read_long_class:
         movea.l DTX_CURSOR+8(a0),a2
@@ -244,7 +251,16 @@ read_longs:
 read_long_loop:
         move.w  (a3)+,d1
         move.w  (a3)+,d2
+        btst    #0,d2                   ; odd in the row: bytes, as above
+        bne.s   read_long_odd
         move.l  0(a2,d1.w),0(a1,d2.w)
+        dbf     d0,read_long_loop
+        bra.s   read_done
+read_long_odd:
+        move.b  0(a2,d1.w),0(a1,d2.w)
+        move.b  1(a2,d1.w),1(a1,d2.w)
+        move.b  2(a2,d1.w),2(a1,d2.w)
+        move.b  3(a2,d1.w),3(a1,d2.w)
         dbf     d0,read_long_loop
 read_done:
 read_over:
@@ -277,7 +293,14 @@ take_words:
 take_word_loop:
         move.w  (a3)+,d1
         move.w  (a3)+,d2
+        btst    #0,d2                   ; odd in the row: bytes, or a 68000
+        bne.s   take_word_odd            ; takes an address error
         move.w  0(a2,d1.w),0(a1,d2.w)
+        dbf     d0,take_word_loop
+        bra.s   take_long_class
+take_word_odd:
+        move.b  0(a2,d1.w),0(a1,d2.w)
+        move.b  1(a2,d1.w),1(a1,d2.w)
         dbf     d0,take_word_loop
 take_long_class:
         movea.l DTX_CURSOR+8(a0),a2
@@ -287,7 +310,16 @@ take_longs:
 take_long_loop:
         move.w  (a3)+,d1
         move.w  (a3)+,d2
+        btst    #0,d2                   ; odd in the row: bytes, as above
+        bne.s   take_long_odd
         move.l  0(a2,d1.w),0(a1,d2.w)
+        dbf     d0,take_long_loop
+        bra.s   take_done
+take_long_odd:
+        move.b  0(a2,d1.w),0(a1,d2.w)
+        move.b  1(a2,d1.w),1(a1,d2.w)
+        move.b  2(a2,d1.w),2(a1,d2.w)
+        move.b  3(a2,d1.w),3(a1,d2.w)
         dbf     d0,take_long_loop
 take_done:
 take_over:

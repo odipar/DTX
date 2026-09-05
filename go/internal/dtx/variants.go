@@ -95,7 +95,7 @@ func ReadDtx1(file []byte) (*Table, error) {
 	return NewTable(header.Rows, header.Repeat, header.Width, column)
 }
 
-// Read gives the table a file holds, whichever plain variant it is.
+// Read gives the table a file holds, under either plain variant.
 func Read(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
 	if err != nil {

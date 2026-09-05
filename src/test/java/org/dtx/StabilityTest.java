@@ -62,7 +62,7 @@ class StabilityTest {
      * code taken off.
      *
      * <p>The packager's other path combines code the build already made, and
-     * would say nothing about what a template assembles to, so this one
+     * states nothing of what a template assembles to, so this one
      * assembles.
      */
     private static byte[] code(int variant, Shape shape, int unit, int ring,
@@ -134,6 +134,47 @@ class StabilityTest {
         }
         assertEquals(6, apart.size(),
                 "six builds, and no two of them one code: " + sizes);
+    }
+
+    @Test
+    void theDecoderMeasuresWhatExperimentsStates() throws Exception {
+        needsRmac();
+        // doc/experiments.md states ST4_wrap.S's bytes at each unit, with the
+        // copy code and without: assembled alone, here, and held to it.
+        String doc = java.nio.file.Files.readString(
+                Rig.root().resolve("doc/experiments.md"));
+        java.util.regex.Matcher row = java.util.regex.Pattern.compile(
+                "^\\| ([124]) \\| (\\d+) \\| (\\d+) \\| (\\d+) \\|$",
+                java.util.regex.Pattern.MULTILINE).matcher(doc);
+        int held = 0;
+        while (row.find()) {
+            int unit = Integer.parseInt(row.group(1));
+            int without = decoder(unit, false);
+            int with = decoder(unit, true);
+            assertEquals(Integer.parseInt(row.group(2)), without,
+                    "ST4_wrap.S at k of " + unit);
+            assertEquals(Integer.parseInt(row.group(3)), with,
+                    "ST4_wrap.S with the copy code at k of " + unit);
+            assertEquals(Integer.parseInt(row.group(4)), with - without,
+                    "the copy code at k of " + unit);
+            held++;
+        }
+        assertEquals(3, held, "three units in the decoder table");
+    }
+
+    /** ST4_wrap.S assembled alone at this unit, in bytes. */
+    private static int decoder(int unit, boolean copies) throws Exception {
+        Path work = Rig.work("dtxdecoder");
+        Path source = work.resolve("w.S");
+        java.nio.file.Files.writeString(source, "        .68000\n        .text\n"
+                + "ST4_UNIT equ " + unit + "\n"
+                + (copies ? "ST4_WINDOW equ 1\n" : "")
+                + "        include \"ST4_wrap.S\"\n        end\n");
+        Path out = work.resolve("w.bin");
+        Rig.run(List.of(Rig.rmac(), "-m68000", "-fr", "+o3",
+                "-i" + Rig.root().resolve("68k"), "-o", out.toString(),
+                source.toString()));
+        return (int) java.nio.file.Files.size(out);
     }
 
     @Test

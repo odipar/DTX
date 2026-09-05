@@ -21,8 +21,9 @@ by 2, and on a long where it divides by 4.
 | 10 | 4 | `RR`, the row the table repeats to |
 | 14 | `C` | one byte a column, its width: 1, 2 or 4 |
 
-`RR` names a row, so 0 to `R` minus one. `RR` equal to `R` says the table
-does not repeat, and a reader that reaches the last row has no next one.
+`RR` names a row, so 0 to `R` minus one. `RR` equal to `R` marks a table
+that does not repeat, and a reader that reaches the last row has no next
+one.
 
 The header is padded with zero bytes so the payload begins on a long. Its
 length is 14 plus `C`, rounded up to a multiple of 4.
@@ -54,7 +55,7 @@ this header, and the pictures below lay out that same table:
 
 The payload begins on a long. Inside it DTX0 pads nothing, DTX1 pads
 before each column to a word, and DTX2 pads before each data set to a
-long: each variant's section says where. A pad byte is zero.
+long: each variant's section states where. A pad byte is zero.
 
 In DTX0 and DTX1 an offset is arithmetic on `R`, `C` and the widths (R3.3,
 R4.2), and DTX1's pad enters that arithmetic as a fixed term. DTX2
@@ -99,8 +100,8 @@ values are `W[i]` apart, so every value of a two or four byte column sits
 on a word and a 68000 reads it as one. It costs at most a byte a column,
 and only where a column of an odd length precedes another.
 
-The other difference is what one read reaches: a row of DTX0, or a column
-of DTX1.
+The other difference is the reach of one read: a row of DTX0, a column of
+DTX1.
 
 ```
    column 0   column 1                     column 2
@@ -121,14 +122,14 @@ DTX1's column `i` holds and is complete: its own ST4 header, and the
 length of what it unpacks to.
 
 Every data set in a payload is packed at one unit and unpacks through a
-ring of one size, so the payload states both once and then says where the
-data sets are:
+ring of one size, so the payload states both once and then where the data
+sets are:
 
 | offset | bytes | gives |
 |---|---|---|
 | 0 | 2 | `N`, the bytes of the ring a column unpacks through |
 | 2 | 1 | `k`, the unit every data set is packed at: 1, 2 or 4 |
-| 3 | 1 | the flags: bit 0 says every column holds copies from its own literal stream. The other bits are zero |
+| 3 | 1 | the flags: bit 0 marks a payload whose columns hold copies from their own literal streams. The other bits are zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
 R5.8 asks for `N`. A reader takes it once and holds a ring of that many
@@ -141,16 +142,16 @@ every column (R5.4, R5.5).
 
 `k` need not be `W[i]`: a two byte column packs at a unit of 1 or of 2.
 
-**The flags byte.** Bit 0 says every column was packed so that a match
-beyond the ring copies from that column's own literal stream, which ST4
-packs with `-c`. A decoder built without the copy code reads such a column
-wrongly, and nothing in an ST4 data set states which kind it is, so the
-payload states it (R5.10). A payload that states it holds columns that all
-hold copies, and one that does not holds columns that none do.
+**The flags byte.** Bit 0 marks a payload whose every column was packed so
+that a match beyond the ring copies from that column's own literal stream,
+which ST4 packs with `-c`. A decoder built without the copy code reads such
+a column wrongly, and nothing in an ST4 data set states which kind it is, so
+the payload states it (R5.10). A payload that states it holds columns that
+all hold copies, and one that does not holds columns that none do.
 
-A file written before this byte held anything reads zero here, which says
-no copies, and a decoder without the copy code is what such a file always
-asked for.
+A file written before this byte held anything reads zero here, no copies,
+and a decoder without the copy code is the one such a file always asked
+for.
 
 One `k` for the payload buys a reader one decoder. ST4 code is built for a
 unit, and a reader of DTX2 takes every column of a payload through the one
@@ -175,8 +176,8 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 - Its first long is `$53 $34 $07 k`: `'S'`, `'4'`, the ST4 format version
   7, and the unit `k`.
 - Its ST4 header is twenty-eight bytes, and a data set begins on a long
-  so a reader takes that header a long at a time. That is why DTX2 aligns
-  its data sets (R5.9).
+  so a reader takes that header a long at a time. DTX2 aligns its data
+  sets for that (R5.9).
 - A reader built for one unit rejects a data set whose fourth byte gives
   another. The payload's `k` is that same unit (R5.2), and a reader checks
   the two against each other: one compare of a data set's first long
@@ -203,7 +204,7 @@ A reader unpacks a column through its ring rather than into `R` times
 
 ## 3. Not yet written
 
-Where a table states its length, or whether it states one at all.
+Where a table states its length, or whether it states one.
 
 What a reader reports of a table it will not read: a variant not among
 those it reads, an `R` below 1, a `C` outside 1 to 256, a width other than

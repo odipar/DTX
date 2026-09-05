@@ -6,7 +6,7 @@
 #   release/publish.sh [version]      # the six platforms below
 #   TARGETS="linux-x64" release/publish.sh
 #
-# They are built from go/, which is why there are six of them: go build
+# They are built from go/, so there are six of them: go build
 # cross-compiles to any target from any host with nothing installed for it.
 #
 # NO JAVA RUNS HERE. The images come from the Go dtx-blobs, which assembles
@@ -69,9 +69,8 @@ for target in $TARGETS; do
     rm -rf "$OUT/$target"
     mkdir -p "$OUT/$target"
     for tool in $TOOLS; do
-        # CGO off is what makes the binary static and the cross-build work
-        # at all; -s -w drop the symbol and debug tables, which nothing here
-        # reads.
+        # CGO off makes the binary static and lets the cross-build run; -s
+        # -w drop the symbol and debug tables, which nothing here reads.
         (cd go && CGO_ENABLED=0 GOOS=$os GOARCH=$arch \
             go build -ldflags="-s -w" -o "$REPO/$OUT/$target/$tool$ext" \
             ./cmd/"$tool")

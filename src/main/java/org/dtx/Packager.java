@@ -280,7 +280,7 @@ public final class Packager {
         Dtx.Header header = Dtx.header(file);
         if (header.variant() == Dtx.DTX0) {
             // A DTX0 row is one run of bytes: no loop walks a column, so
-            // there is nothing a column table would say.
+            // there is nothing a column table would state.
             return new byte[0];
         }
         int[] width = header.width();
@@ -531,7 +531,7 @@ public final class Packager {
             throw new IllegalStateException("the code reads DTX"
                     + code[FORMAT_AT + 3] + " and the table is DTX" + variant);
         }
-        // The code ends where the format block says the column table
+        // The code ends where the format block states the column table
         // begins: the two agree, or the image reads its own last
         // instruction as a column.
         int columns = Dtx.getLong(code, FORMAT_AT + COLUMNS_AT);
@@ -590,7 +590,7 @@ public final class Packager {
 
     /**
      * The image, from rmac's assembly of the template rather than from the
-     * carried code. The two give the same bytes; this path is what checks
+     * carried code. The two give the same bytes; this path checks
      * that, and what a change to a template is tried through.
      *
      * @param rmac the assembler to run

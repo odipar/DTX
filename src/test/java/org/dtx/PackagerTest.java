@@ -223,7 +223,7 @@ final class PackagerTest {
         byte[] file = packed(64, new int[] {1, 2}, 1, 960);
         Dtx.Header header = Dtx.header(file);
         int at = header.length() + Dtx.getLong(file, header.length() + 4 + 4);
-        file[at + 3] = 2;                       // column 1 now says k of 2
+        file[at + 3] = 2;                       // column 1 now states k of 2
         assertEquals("column 1's data set opens 53340702 and the payload"
                 + " states 53340701: an ST4 data set opens with S4, the"
                 + " format version 7 and the payload's own k",

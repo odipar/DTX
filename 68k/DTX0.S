@@ -13,7 +13,7 @@
 ; at run time rather than at assembly time: DTX_init reads them out of the
 ; format block and the table's own header and writes them into the
 ; instructions that take them. Every DTX0 image holds the same instructions,
-; byte for byte, and the table behind them is what differs.
+; byte for byte; the table behind them differs.
 ;
 ; What that costs is a read-only image. The code writes to itself at init, so
 ; it stands in RAM rather than ROM, and a 68030 caller flushes the instruction
@@ -209,7 +209,7 @@ read_none:
 ; -----------------------------------------------------------------------------
 ; DTX_take. A read and an advance in one call. The read leaves a2 one past the
 ; row it took, which is the cursor the step would work out, so the step stores
-; a2 and does no arithmetic at all.
+; a2 and does no arithmetic.
 
 DTX_take:
         tst.l   DTX_ROW(a0)

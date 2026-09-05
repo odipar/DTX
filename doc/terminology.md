@@ -25,6 +25,10 @@ yields them without end.
 `R`, `C`, `RR` and the column widths are a table's **metadata**. They
 describe it without holding any of it.
 
+A **reader** takes rows out of a table, and a **writer** puts them in. A
+variant is read by one and written by the other, and the table is the same
+in both directions (requirements.md, R1.3).
+
 ---
 
 ## The variants

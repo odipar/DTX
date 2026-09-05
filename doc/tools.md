@@ -1,8 +1,8 @@
 # tools
 
 Each tool is written three times, once in each tree, and the three write
-the same bytes. `test/test_parity.py` runs all of them over a corpus and
-holds them to it.
+the same bytes. `ParityTest` runs all of them over a corpus and holds them
+to it.
 
 In Java each is a script under `bin/`. A script builds first where a source
 is newer than the last build, and then runs the tool out of
@@ -134,10 +134,9 @@ a README and a `.gitignore` of its own and is committed empty of images, so
 the package compiles either way.
 
 This is the one step rmac is needed for. `-Drmac=PATH` names one that is
-not on the path, and a build without either fails at it, saying so. A
-caller who takes a release runs no assembler at all, which is the whole
-of the arrangement: the code is built where it is released, not where a
-table is packaged.
+not on the path, and a build without either fails at it and names which.
+A caller who takes a release runs no assembler: the code is built where it
+is released, not where a table is packaged.
 
 ```
 bin/dtx-blobs DIR [DIR..]
@@ -152,14 +151,14 @@ writes the same eight into directories of your own.
 
 The table each build is assembled from is made rather than read: the code
 does not move with a table, and the five fields one would settle are
-zeroed, so an image states no table at all until a package writes one.
+zeroed, so an image states no table until a package writes one.
 
 A DTX2 image holds the decoder carried at
 [68k/ST4_wrap.S](../68k/ST4_wrap.S), built at the unit the payload states.
 Init fills every ring before it returns, and one column is refilled a row
 after that, so a read takes one value from each ring and never decodes.
 The packager takes the period from the table and fails the package where
-no period holds every rule abi.md 4 states: what it says names the rule
+no period holds every rule abi.md 4 states: what it gives names the rule
 and the figures that break it.
 
 A DTX2 image asks for more of the caller than a plain one. Its state block
@@ -195,19 +194,19 @@ counts in a word.
 `-copies` lets a match beyond the ring copy from the column's own literal
 stream, and it pays at the small rings DTX2 reads through. Measured
 on a table of 512 rows repeating a pattern 37 rows long, at `N` of 64: the
-file goes from 1164 bytes to 272, and its image from 2196 to 1336.
+file goes from 1164 bytes to 272, and its image from 2792 to 1932.
 
 **The payload states it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
 Write is the one tool that reads `-copies` and the packager takes the
-decoder the file asks for. Neither packager has a flag for it.
+decoder the file asks for. No packager has a flag for it.
 
 The flag is there because a decoder built without the copy code reads such
-a column wrongly and no ST4 data set says which kind it is. Measured on the
+a column wrongly and no ST4 data set states which kind it is. Measured on the
 same table, a column packed with copies and read by a decoder without the
 copy code gives row 37 wrong, where the pattern first repeats past the
 ring. The other way round is safe: a decoder with the copy code reads a
-column without copies correctly, at 2.0 to 4.0% more cycles and 32 bytes
-more code.
+column without copies as the plain one does, at 14 instructions more over
+64 rows and 30 to 36 bytes more code (experiments.md).
 
 ## Release
 
@@ -221,8 +220,8 @@ TARGETS="linux-x64" release/publish.sh
 
 **No Java runs.** The images come from the Go `dtx-blobs`, which assembles
 `68k/` with rmac, so the only tool this needs beside Go is that assembler.
-`go build` cross-compiles to any target from any host, which is why one
-machine covers Windows, macOS and Linux on both architectures.
+`go build` cross-compiles to any target from any host, so one machine
+covers Windows, macOS and Linux on both architectures.
 
 It writes `dist/release`: one zip a platform, the eight images, both named
 by the release, and `MANIFEST.txt`, which gives every file's size and
@@ -249,13 +248,15 @@ either. `-pPACKER` runs another where a caller has a newer build.
 python3 68k/test/emu/test_dtx.py
 ```
 
-Two kinds of check.
+Three kinds of check.
 
-**The calls.** Every table of a corpus is packaged at each variant,
-assembled with rmac, and run on a plain 68000 under emulation: every row
-through advance and read, a jump to every row forward and backward, the
-repeat, the end and a read before the first advance. It holds `d6`, `d7`
-and `a6` across every call and a guard band past the row.
+**The calls.** Every table of a corpus is packaged at each variant, with
+the code the build made, and run on a plain 68000 under emulation: every
+row through advance and read, a jump to every row forward and backward,
+the repeat, the end and a read before the first advance. It holds `d6`,
+`d7` and `a6` across every call and a guard band past the row, and it
+watches every access: a word or long at an odd address is a fault here as
+it is on a 68000, which the emulator's own model does not take.
 
 **The round trip.** The same text through Write, through Package and
 through the 68000 at DTX0, DTX1 and DTX2, held to the rows the text states
@@ -267,6 +268,10 @@ calls ST4_wrap's assumption 5 allows: a stopping rule that lets a column
 run one call past its end marker changes no byte a reader gives, and shows
 up only in the count.
 
+**The figures.** performance.md states what each call costs in
+instructions, and the rig counts them again and holds every cell of that
+table to what it counts.
+
 It needs `mvn compile`, [rmac](http://rmac.is-slick.com) on the path or at
 `$RMAC`, and `pip install unicorn`, which brings the emulator it runs the
 code on. `$ST4` names a packer to pack with instead of the carried one.
@@ -276,9 +281,9 @@ code on. `$ST4` names a packer to pack with instead of the carried one.
 **The three trees.** Every tool run in each of them over a corpus, and the
 files held to the same bytes: text written at each variant and each unit, a
 plain file rewritten, the eight images built, and eight tables packaged,
-which reach every image the packager picks from. One input has one output,
-whichever tree a caller took. It needs Go, the .NET SDK and rmac, and is
-skipped without one of them.
+which reach every image the packager picks from. One input has one output
+in every tree. It needs Go, the .NET SDK and rmac, and is skipped without
+one of them.
 
 **The code a variant assembles to.** A corpus a variant at a time, every
 image's code held to the first one's byte for byte, so R, C and RR move the
