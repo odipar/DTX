@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -15,14 +16,51 @@ import (
 	"dtx/internal/st4"
 )
 
+// What -help prints: the synopsis, a line a flag with the default in
+// parentheses, and the section of doc/tools.md that describes the tool. The
+// Java and C# trees print the same text.
+const help = `dtx-write in.csv out.dtx [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER]
+          [-copies[S]]
+
+Writes the table in a comma separated text as a DTX file.
+
+  -vV          the variant, 0, 1 or 2 (0)
+  -wW,W,..     the width of each column in bytes, 1, 2 or 4 (the narrowest
+               that fits each column's values)
+  -rRR         the repeat: the row an advance past the last steps to, R for
+               none (R)
+  -kK          DTX2: the unit, 1, 2 or 4 (1)
+  -mN          DTX2: the ring, in bytes (960)
+  -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)
+  -copies[S]   DTX2: copies from the literal stream, with S seconds of
+               search for a better parse
+  -help        this text
+
+doc/tools.md, Write.
+`
+
+// errUsage is the run given no file to work on, which prints help to
+// standard error and exits with 2.
+var errUsage = errors.New("usage")
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		if errors.Is(err, errUsage) {
+			fmt.Fprint(os.Stderr, help)
+			os.Exit(2)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
 func run(args []string) error {
+	for _, arg := range args {
+		if arg == "-help" || arg == "-h" {
+			fmt.Print(help)
+			return nil
+		}
+	}
 	variant, repeat, unit, ring := dtx.DTX0, -1, 1, 960
 	widths, packer, copies := "", "", ""
 	var named []string
@@ -56,8 +94,7 @@ func run(args []string) error {
 		}
 	}
 	if len(named) != 2 {
-		return fmt.Errorf("dtx-write in.csv out.dtx [-vV] [-wW,W,..] [-rRR]" +
-			" [-kK] [-mN] [-pPACKER] [-copies[S]]")
+		return errUsage
 	}
 	text, err := os.ReadFile(named[0])
 	if err != nil {

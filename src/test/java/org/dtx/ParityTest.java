@@ -1,6 +1,7 @@
 package org.dtx;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -67,14 +68,7 @@ class ParityTest {
         Map<String, byte[]> written = new LinkedHashMap<>();
         Path work = work();
         for (String tree : List.of("java", "go", "cs")) {
-            List<String> command = new ArrayList<>(switch (tree) {
-                case "java" -> List.of("java", "-cp",
-                        Rig.root().resolve("target/classes").toString(),
-                        TOOLS.get(tool));
-                case "go" -> List.of(work.resolve("dtx-" + tool).toString());
-                default -> List.of("dotnet", work.resolve("dtx.dll").toString(),
-                        "dtx-" + tool);
-            });
+            List<String> command = command(tree, tool);
             Path at = work.resolve(out + "." + tree);
             for (String one : argv) {
                 command.add(OUT.equals(one) ? at.toString() : one);
@@ -83,6 +77,41 @@ class ParityTest {
             written.put(tree, Files.readAllBytes(at));
         }
         return written;
+    }
+
+    /** The command that runs {@code tool} in {@code tree}, before its arguments. */
+    private static List<String> command(String tree, String tool) {
+        Path work = work();
+        return new ArrayList<>(switch (tree) {
+            case "java" -> List.of("java", "-cp",
+                    Rig.root().resolve("target/classes").toString(),
+                    TOOLS.get(tool));
+            case "go" -> List.of(work.resolve("dtx-" + tool).toString());
+            default -> List.of("dotnet", work.resolve("dtx.dll").toString(),
+                    "dtx-" + tool);
+        });
+    }
+
+    @Test
+    void everyTreePrintsOneHelp() {
+        for (String tool : TOOLS.keySet()) {
+            Map<String, String> said = new LinkedHashMap<>();
+            for (String tree : List.of("java", "go", "cs")) {
+                // the Go packager combines and does not assemble, so its help
+                // lists neither -a nor -s
+                if (tool.equals("package") && tree.equals("go")) {
+                    continue;
+                }
+                List<String> command = command(tree, tool);
+                command.add("-help");
+                said.put(tree, Rig.run(command));
+            }
+            String one = said.getOrDefault("java", "");
+            for (Map.Entry<String, String> tree : said.entrySet()) {
+                assertEquals(one, tree.getValue(), tool + " -help: the "
+                        + tree.getKey() + " tree prints another text");
+            }
+        }
     }
 
     /** What the three trees wrote, compared with one another. */

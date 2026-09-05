@@ -127,6 +127,10 @@ public final class Blobs {
      * and nothing about them is Java's.
      */
     public static void main(String[] args) throws IOException {
+        if (Help.among(args)) {
+            System.out.print(Help.BLOBS);
+            return;
+        }
         List<Path> into = new ArrayList<>();
         String rmac = "rmac";
         String templates = Packager.carried();
@@ -136,7 +140,7 @@ public final class Blobs {
             } else if (arg.startsWith("-t")) {
                 templates = arg.substring(2);
             } else if (arg.startsWith("-")) {
-                System.err.println("Blobs does not read " + arg);
+                System.err.println("dtx-blobs does not read " + arg);
                 System.exit(2);
                 return;
             } else {
@@ -144,7 +148,7 @@ public final class Blobs {
             }
         }
         if (into.isEmpty()) {
-            System.err.println("Blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]");
+            System.err.print(Help.BLOBS);
             System.exit(2);
             return;
         }

@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -15,14 +16,46 @@ import (
 	"dtx/internal/st4"
 )
 
+// What -help prints: the synopsis, a line a flag with the default in
+// parentheses, and the section of doc/tools.md that describes the tool. The
+// Java and C# trees print the same text.
+const help = `dtx-rewrite in.dtx out.dtx [-kK] [-mN] [-pPACKER] [-copies[S]]
+
+Rewrites a DTX0 or DTX1 file as DTX2: the same rows, widths, R and RR,
+packed.
+
+  -kK          the unit, 1, 2 or 4 (1)
+  -mN          the ring, in bytes (960)
+  -pPACKER     an ST4 executable to pack with (the copy carried here)
+  -copies[S]   copies from the literal stream, with S seconds of search for
+               a better parse
+  -help        this text
+
+doc/tools.md, Rewrite.
+`
+
+// errUsage is the run given no file to work on, which prints help to
+// standard error and exits with 2.
+var errUsage = errors.New("usage")
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		if errors.Is(err, errUsage) {
+			fmt.Fprint(os.Stderr, help)
+			os.Exit(2)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
 func run(args []string) error {
+	for _, arg := range args {
+		if arg == "-help" || arg == "-h" {
+			fmt.Print(help)
+			return nil
+		}
+	}
 	unit, ring := 1, 960
 	packer, copies := "", ""
 	var named []string
@@ -50,8 +83,7 @@ func run(args []string) error {
 		}
 	}
 	if len(named) != 2 {
-		return fmt.Errorf(
-			"dtx-rewrite in.dtx out.dtx [-kK] [-mN] [-pPACKER] [-copies[S]]")
+		return errUsage
 	}
 	in, err := os.ReadFile(named[0])
 	if err != nil {

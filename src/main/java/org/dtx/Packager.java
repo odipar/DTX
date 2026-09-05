@@ -601,8 +601,12 @@ public final class Packager {
 
     /** Reads the DTX file named first and writes the image named second. */
     public static void main(String[] args) throws IOException {
+        if (Help.among(args)) {
+            System.out.print(Help.PACKAGE);
+            return;
+        }
         if (args.length < 2) {
-            System.err.println("Packager in.dtx out.bin [-aRMAC] [-s]");
+            System.err.print(Help.PACKAGE);
             System.exit(2);
             return;
         }
@@ -614,7 +618,7 @@ public final class Packager {
             } else if (args[i].equals("-s")) {
                 defines = true;
             } else {
-                System.err.println("Packager does not read " + args[i]);
+                System.err.println("dtx-package does not read " + args[i]);
                 System.exit(2);
                 return;
             }

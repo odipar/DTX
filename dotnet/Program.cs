@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 /// <summary>
 /// The one entry point: the first argument names the tool, the rest are its
@@ -18,11 +19,14 @@ public static class Program
         string[] rest = args;
         if (!name.StartsWith("dtx-", StringComparison.Ordinal))
         {
-            if (args.Length == 0)
+            if (args.Length == 0 || args.Length == 1 && Dtx.Help.Among(args))
             {
-                Console.Error.WriteLine("usage: dtx <tool> [arguments...]\n"
-                        + "tools: dtx-write dtx-rewrite dtx-package dtx-blobs");
-                return 2;
+                TextWriter to = args.Length == 0 ? Console.Error : Console.Out;
+                to.Write("dtx <tool> [arguments..]\n\n"
+                        + "Runs one of the four tools, each of which prints its"
+                        + " own flags on -help:\n"
+                        + "dtx-write, dtx-rewrite, dtx-package and dtx-blobs.\n");
+                return args.Length == 0 ? 2 : 0;
             }
             name = args[0];
             rest = args[1..];

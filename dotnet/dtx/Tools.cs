@@ -28,6 +28,11 @@ public static class Tools
     /// <summary>Comma separated text into a DTX file of any variant.</summary>
     public static int Write(string[] args)
     {
+        if (Help.Among(args))
+        {
+            Console.Write(Help.Write);
+            return 0;
+        }
         int variant = Format.Dtx0, repeat = -1, unit = 1, ring = 960;
         string widths = "", packer = "", copies = "";
         List<string> named = new();
@@ -52,8 +57,7 @@ public static class Tools
         }
         if (named.Count != 2)
         {
-            Console.Error.WriteLine("dtx-write in.csv out.dtx [-vV] [-wW,W,..]"
-                    + " [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]");
+            Console.Error.Write(Help.Write);
             return 2;
         }
         string text = File.ReadAllText(named[0]);
@@ -97,6 +101,11 @@ public static class Tools
     /// <summary>A DTX0 or DTX1 file into a DTX2 one.</summary>
     public static int Rewrite(string[] args)
     {
+        if (Help.Among(args))
+        {
+            Console.Write(Help.Rewrite);
+            return 0;
+        }
         int unit = 1, ring = 960;
         string packer = "", copies = "";
         List<string> named = new();
@@ -115,8 +124,7 @@ public static class Tools
         }
         if (named.Count != 2)
         {
-            Console.Error.WriteLine("dtx-rewrite in.dtx out.dtx [-kK] [-mN]"
-                    + " [-pPACKER] [-copies[S]]");
+            Console.Error.Write(Help.Rewrite);
             return 2;
         }
         byte[] in_ = File.ReadAllBytes(named[0]);
@@ -132,6 +140,11 @@ public static class Tools
     /// <summary>A DTX file into a standalone 68000 image.</summary>
     public static int Package(string[] args)
     {
+        if (Help.Among(args))
+        {
+            Console.Write(Help.Package);
+            return 0;
+        }
         string rmac = "";
         bool defines = false;
         List<string> named = new();
@@ -148,7 +161,7 @@ public static class Tools
         }
         if (named.Count != 2)
         {
-            Console.Error.WriteLine("dtx-package in.dtx out.bin [-aRMAC] [-s]");
+            Console.Error.Write(Help.Package);
             return 2;
         }
         byte[] file = File.ReadAllBytes(named[0]);
@@ -188,6 +201,11 @@ public static class Tools
     /// </summary>
     public static int Blobs(string[] args)
     {
+        if (Help.Among(args))
+        {
+            Console.Write(Help.Blobs);
+            return 0;
+        }
         string rmac = "rmac", templates = Pack.Templates();
         List<string> into = new();
         foreach (string arg in args)
@@ -203,7 +221,7 @@ public static class Tools
         }
         if (into.Count == 0)
         {
-            Console.Error.WriteLine("dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]");
+            Console.Error.Write(Help.Blobs);
             return 2;
         }
         foreach (string at in into)

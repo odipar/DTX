@@ -19,6 +19,11 @@ In C# the four are one assembly. `dotnet dtx.dll <tool>` names the tool in
 the first argument, and an executable published under a tool's own name is
 that tool, with every argument its own.
 
+Every tool prints its synopsis, a line a flag with the default in
+parentheses, and the section of this document that describes it on
+`-help`, and prints the same to standard error where it is given no file
+to work on. The three trees print one text, which `ParityTest` compares.
+
 | what it does | Java | Go | C# |
 |---|---|---|---|
 | text into a DTX file | `bin/dtx-write` | `dtx-write` | `dtx dtx-write` |
