@@ -208,8 +208,7 @@ column without copies as the plain one does, at 14 instructions more over
 
 ## Release
 
-The four Go commands for six platforms, each containing the eight images,
-and
+The four Go commands for six platforms, each containing the eight images, and
 the images themselves:
 
 ```
@@ -278,13 +277,11 @@ code on. `$ST4` names a packer to pack with instead of the carried one.
 `ParityTest` and `StabilityTest` run under `mvn test` with the rest.
 
 **The three trees.** Every tool run in each of them over a corpus, and the
-files compared byte for byte: text written at each variant and each unit,
-a
-plain file rewritten, the eight images built, and eight tables packaged,
-which reach every image the packager combines with. One input has one
-output
-in every tree. It needs Go, the .NET SDK and rmac, and is skipped without
-one of them.
+files compared byte for byte: text written at each variant and each unit, a
+plain file rewritten, the eight images built, and eight tables packaged, which
+reach every image the packager combines with. One input has one output in
+every tree. It needs Go, the .NET SDK and rmac, and is skipped without one of
+them.
 
 **The code a variant assembles to.** A corpus a variant at a time, every
 image's code compared with the first one's byte for byte, so R, C and RR

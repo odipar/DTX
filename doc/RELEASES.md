@@ -1,7 +1,7 @@
 # releases
 
-No release has been published. What one contains stands here, and each one
-published lists below it.
+What a release contains stands here, and each one published lists below
+it.
 
 ## What a release contains
 
@@ -18,8 +18,8 @@ published lists below it.
   the source commit the release was built from
 
 The version names every file. It is read out of `pom.xml`, or given as the
-script's one argument, and stands at `0.1-SNAPSHOT` until the first release
-is cut.
+script's one argument. The pom names the release being cut, and moves to
+the next `-SNAPSHOT` once it is.
 
 The images are built from `68k/` by rmac on the machine that cuts the
 release, and nowhere else: a caller who takes a release does not run an
@@ -27,4 +27,12 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
-None.
+### 0.1.0, 2026-09-05
+
+<https://github.com/odipar/DTX/releases/tag/v0.1.0>, built from the commit
+tagged `v0.1.0`. The first release, so this lists what there is rather than
+what changed: DTX0, DTX1 and DTX2 as SPEC.md defines them; one 68000 image a
+build, eight in all, under the calling convention of abi.md; the four tools
+of tools.md, as executables for the six platforms; and the ST4 packer
+carried in each tree, so a DTX2 table packs with nothing installed beside
+the tools.

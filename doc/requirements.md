@@ -135,8 +135,7 @@ What R1 to R6 do not yet define. Each is open, and none of it is fixed by
 - What a reader reports of a table it will not read. R6.5 has it report and
   not read further, and leaves what it reports to SPEC.md, which has not
   written it.
-- Whether a variant may contain columns of more than one kind, some packed
-  and
+- Whether a variant may contain columns of more than one kind, some packed and
   some plain.
 - What checks a reader written elsewhere against this repository's. The
   Java, Go and C# trees write the same bytes and a test compares them, and
