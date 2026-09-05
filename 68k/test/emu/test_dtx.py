@@ -50,13 +50,12 @@ ST4 = os.environ.get("ST4", "st4")
 
 IMAGE = 0x10000          # the packaged image
 STATE = 0x30000          # the state block the caller supplies
-ROWBUF = 0x3C000         # where a row goes, past the widest state block
+MARK = 0x3C000           # what a1 goes in as: every call gives it back
 STACK = 0x40000          # the caller's stack
 DONE = 0x50000           # the return address a call comes back to
-GUARD = 0xCC             # what stands around the row, to catch an overrun
 
-SLOT = {"init": 0, "metadata": 4, "jump": 8, "advance": 12, "read": 16,
-        "take": 20}
+
+SLOT = {"init": 0, "metadata": 4, "jump": 8, "advance": 12}
 
 A = [UC_M68K_REG_A0, UC_M68K_REG_A1, UC_M68K_REG_A2, UC_M68K_REG_A3,
      UC_M68K_REG_A4, UC_M68K_REG_A5, UC_M68K_REG_A6, UC_M68K_REG_A7]
@@ -262,9 +261,9 @@ class Machine:
 
     def seed(self):
         self.mu.mem_write(STATE, b"\x00" * max(0x1000, self.state_bytes))
-        self.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
 
-    def call(self, name, d0=0, a0=STATE, a1=ROWBUF):
+
+    def call(self, name, d0=0, a0=STATE, a1=MARK):
         """One call through its slot, back at the sentinel."""
         mu = self.mu
         for r in D + A:
@@ -294,6 +293,7 @@ class Machine:
         return {"d0": mu.reg_read(UC_M68K_REG_D0),
                 "d1": mu.reg_read(UC_M68K_REG_D1),
                 "d2": mu.reg_read(UC_M68K_REG_D2),
+                "d3": mu.reg_read(UC_M68K_REG_D3),
                 "a0": mu.reg_read(UC_M68K_REG_A0),
                 "a1": mu.reg_read(UC_M68K_REG_A1)}
 
@@ -305,13 +305,12 @@ class Machine:
                          begin=at, end=at)
         return hits
 
-    def row(self, wrote, row_bytes):
-        """What a read left in the row, and nothing past it."""
-        out = bytes(self.mu.mem_read(ROWBUF, row_bytes))
-        past = bytes(self.mu.mem_read(ROWBUF + row_bytes, 8))
-        assert past == bytes([GUARD]) * 8, "a read wrote past the row"
-        assert wrote == ROWBUF + row_bytes, \
-            "a read left a1 at %08x, not %08x" % (wrote, ROWBUF + row_bytes)
+    def row(self, at, columns, stride, width):
+        """The row an advance points at, as the caller reads it: one value
+        from the pointer, and the next a stride further on."""
+        out = b""
+        for i in range(columns):
+            out += bytes(self.mu.mem_read(at + i * stride, width))
         return out
 
 
@@ -329,12 +328,16 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
         kind, rows, columns, rr, width, _, row_bytes, want = read_dtx(blob)
     image, _ = package(blob)
 
-    # the format block, doc/abi.md 1, behind the six slots
-    fmt = image[24:24 + 20]
+    # the format block, doc/abi.md 1, behind the four slots
+    fmt = image[16:16 + 28]
     assert fmt[:3] == b"DTX" and fmt[3] == kind, "the format block's variant"
     state_bytes, header_at = struct.unpack(">II", fmt[4:12])
     defined_row, p, n = struct.unpack(">HHH", fmt[12:18])
+    stride = struct.unpack(">I", fmt[24:28])[0]
     assert defined_row == row_bytes, "the format block's row bytes"
+    want_stride = {0: width, 1: (rows * width + 1) // 2 * 2}.get(kind, n)
+    assert stride == want_stride, \
+        "the format block gives a stride of %d, not %d" % (stride, want_stride)
     if kind == 2:
         assert p >= columns, "P is at least C"
         assert n == ring and fmt[18] == unit, "N and k the payload defines"
@@ -356,83 +359,58 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
     assert got["d0"] == rows, "metadata gave R = %d" % got["d0"]
     assert got["d1"] & 0xFFFF == columns, "metadata gave C"
     assert got["d2"] == rr, "metadata gave RR"
-    assert got["a0"] == IMAGE + 24, "metadata gave the format block"
+    assert got["d3"] == stride, "metadata gave a stride of %d, not %d" \
+        % (got["d3"], stride)
+    assert got["a0"] == IMAGE + 16, "metadata gave the format block"
     assert got["a1"] == IMAGE + header_at, "metadata gave the header"
 
     m.call("init")
 
-    # a read before the first advance does not write and gives a1 back
-    got = m.call("read")
-    assert got["a1"] == ROWBUF, "a read on no row moved a1"
-    assert bytes(m.mu.mem_read(ROWBUF, row_bytes)) == bytes([GUARD]) * row_bytes, \
-        "a read on no row wrote bytes"
+    def values(got):
+        """The row an advance or a jump points at, read as a caller reads
+        it: a1 the first value, and a stride to the next column's."""
+        return m.row(got["a1"], columns, stride, width)
 
-    # every row, advance then read
+    # every row, one advance each
     for r in range(rows):
         got = m.call("advance")
         assert got["d0"] == r, "advance gave row %d, not %d" % (got["d0"], r)
-        got = m.call("read")
-        assert m.row(got["a1"], row_bytes) == want[r], \
-            "row %d read %s, not %s" % (r, m.row(got["a1"], row_bytes).hex(),
-                                        want[r].hex())
-        # a second read of one row gives the same bytes
-        m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
-        got = m.call("read")
-        assert m.row(got["a1"], row_bytes) == want[r], "a second read differed"
+        assert values(got) == want[r], \
+            "row %d reads %s, not %s" % (r, values(got).hex(), want[r].hex())
 
     # the end
     got = m.call("advance")
     if rr >= rows:
         assert got["d0"] == 0xFFFFFFFF, "the end gave %08x" % got["d0"]
+        assert values(got) == want[rows - 1], \
+            "the end moved the pointer off the last row"
         got = m.call("advance")
         assert got["d0"] == 0xFFFFFFFF, "the end is not sticky"
-        got = m.call("read")
-        assert m.row(got["a1"], row_bytes) == want[rows - 1], \
-            "a read after the end gave another row"
+        assert values(got) == want[rows - 1], \
+            "a second end moved the pointer off the last row"
     else:
         assert got["d0"] == rr, "the repeat gave row %d, not %d" % (got["d0"], rr)
-        got = m.call("read")
-        assert m.row(got["a1"], row_bytes) == want[rr], "the repeat's row"
+        assert values(got) == want[rr], "the repeat's row"
 
-    # a jump to every row, and a read of it
+    # a jump to every row, forward and backward
     for r in list(range(rows)) + list(reversed(range(rows))):
         got = m.call("jump", d0=r)
         assert got["d0"] == r, "jump gave %d, not %d" % (got["d0"], r)
-        m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
-        got = m.call("read")
-        assert m.row(got["a1"], row_bytes) == want[r], \
-            "the row after a jump to %d" % r
+        assert values(got) == want[r], "the row after a jump to %d" % r
         # the row after the one jumped to
         if r + 1 < rows:
             got = m.call("advance")
             assert got["d0"] == r + 1, "advance after a jump"
-            m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
-            got = m.call("read")
-            assert m.row(got["a1"], row_bytes) == want[r + 1], \
+            assert values(got) == want[r + 1], \
                 "the row after a jump and an advance"
 
-    # DTX_take against DTX_read then DTX_advance: the same row bytes, the
-    # same row number, and the same a1 back.
+    # the pointer stands still while the caller reads: the values at it are
+    # the same read twice, since nothing but an advance moves it
     m.call("init")
-    two = []
     for r in range(rows):
-        m.call("advance")
-        m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
-        wrote = m.call("read")["a1"]
-        two.append((m.row(wrote, row_bytes), wrote))
-    m.seed()
-    m.call("init")
-    m.call("advance")
-    one = []
-    for r in range(rows):
-        m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
-        got = m.call("take")
-        one.append((m.row(got["a1"], row_bytes), got["a1"]))
-        want_row = r + 1 if r + 1 < rows else (rr if rr < rows else 0xFFFFFFFF)
-        assert got["d0"] == want_row, \
-            "take at row %d left the cursor on %d, not %d" \
-            % (r, got["d0"], want_row)
-    assert one == two, "a take gives what a read and an advance give"
+        got = m.call("advance")
+        first = values(got)
+        assert values(got) == first, "the values moved under the caller"
 
     print("  %-40s DTX%d  R=%-5d C=%-3d W=%d row=%-3d P=%-4d state=%-6d image=%d"
           % (name, kind, rows, columns, width, row_bytes, p, state_bytes,
@@ -471,10 +449,12 @@ def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     """Every row a packaged reader of this variant gives, and its image."""
     blob = write_table(csv, variant, width, repeat, unit, ring, copies)
     image, at = package(blob)
-    fmt = image[24:24 + 20]
+    header_at = struct.unpack(">I", image[16 + 8:16 + 12])[0]
+    fmt = image[16:16 + 28]
     assert fmt[:3] == b"DTX" and fmt[3] == variant, "the format block"
     state_bytes = struct.unpack(">I", fmt[4:8])[0]
     row_bytes = struct.unpack(">H", fmt[12:14])[0]
+    stride = struct.unpack(">I", fmt[24:28])[0]
     m = Machine(image, state_bytes)
     # rmac's listing cuts its symbol table off, so the decoder is reached
     # through DTX_resume, which sorts early enough to survive it. A missing
@@ -483,13 +463,15 @@ def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
         assert "DTX_resume" in at, \
             "no DTX_resume in the listing: the rig cannot count the decoder"
     resumes = m.count(IMAGE + at["DTX_resume"]) if "DTX_resume" in at else None
-    rows = m.call("metadata")["d0"]
+    given = m.call("metadata")
+    rows, columns = given["d0"], given["d1"] & 0xFFFF
+    width = image[header_at + 14]
     m.call("init")
     out = []
     for r in range(rows):
-        assert m.call("advance")["d0"] == r, "advance skipped row %d" % r
-        m.mu.mem_write(ROWBUF, bytes([GUARD]) * 0x100)
-        out.append(m.row(m.call("read")["a1"], row_bytes))
+        got = m.call("advance")
+        assert got["d0"] == r, "advance skipped row %d" % r
+        out.append(m.row(got["a1"], columns, stride, width))
     p = struct.unpack(">H", fmt[14:16])[0]
     return out, blob, image, (resumes[0] if resumes else 0), p
 
@@ -971,8 +953,7 @@ class Cycles:
 # doc/performance.md, read back: every figure it records is one this rig
 # counts, or the rig fails naming the cell.
 
-CALLS = ("init", "advance", "read", "take", "jump to row 0", "jump to row 63",
-         "code, bytes")
+CALLS = ("init", "advance", "jump to row 0", "jump to row 63", "code, bytes")
 # The two example tables, both of 64 rows at a ring of 960 bytes and a width
 # of 2: one of three columns and one of twenty. Each is read under DTX0,
 # DTX1, and DTX2 at a unit of 1, 2 and 4.
@@ -985,23 +966,20 @@ def measured(variant, width, unit, columns):
     """The column of a call table one image gives, in cycles."""
     blob = write_table(numbers(64, columns), variant, width, None, unit, 960)
     image, _ = package(blob)
-    state = struct.unpack(">I", image[28:32])[0]
-    code = struct.unpack(">I", image[44:48])[0]
+    state = struct.unpack(">I", image[20:24])[0]
+    code = struct.unpack(">I", image[36:40])[0]
     m = Machine(image, state)
     cycles = Cycles(m)
     init = cycles.call(m, "init")
     advance = [cycles.call(m, "advance") for _ in range(8)]
-    read = cycles.call(m, "read")
-    take = cycles.call(m, "take")
     jump0 = cycles.call(m, "jump", d0=0)
     jump63 = cycles.call(m, "jump", d0=63)
     return {"init": str(init),
             # one figure where every advance took the same, a range where not
             "advance": str(min(advance)) if min(advance) == max(advance)
             else "%d-%d" % (min(advance), max(advance)),
-            "read": str(read), "take": str(take),
             "jump to row 0": str(jump0), "jump to row 63": str(jump63),
-            "code, bytes": str(code - 48)}
+            "code, bytes": str(code - 44)}
 
 
 def copy_cost(unit):
@@ -1015,11 +993,11 @@ def copy_cost(unit):
     out = []
     for file in (blob, bytes(flagged)):
         image, _ = package(file)
-        m = Machine(image, struct.unpack(">I", image[28:32])[0])
+        m = Machine(image, struct.unpack(">I", image[20:24])[0])
         cycles = Cycles(m)
         total = cycles.call(m, "init")
         for _ in range(64):
-            total += cycles.call(m, "read") + cycles.call(m, "advance")
+            total += cycles.call(m, "advance")
         out.append(total)
     return out
 
@@ -1040,14 +1018,18 @@ def performance_tables():
         for call in CALLS:
             out.append("| %s | %s |" % (call, " | ".join(one[call] for one in got)))
         out.append("")
+    # What one value costs the caller: a move of that width off the pointer
+    # an advance gives, at a displacement. The rig times the encoding from
+    # the same tables it counts a call with.
     reads = {}
-    out.append("| width | DTX0 | DTX1 | DTX2 k=1 |")
-    out.append("|---|---|---|---|")
-    for width in (1, 2, 4):
-        row = [measured(variant, width, unit, 20)["read"]
-               for variant, unit in ((0, 1), (1, 1), (2, 1))]
-        reads[width] = row
-        out.append("| %d | %s |" % (width, " | ".join(row)))
+    out.append("| width | the move | cycles |")
+    out.append("|---|---|---|")
+    for width, opcode, name in ((1, 0x1029, "move.b d(a1),d0"),
+                                (2, 0x3029, "move.w d(a1),d0"),
+                                (4, 0x2029, "move.l d(a1),d0")):
+        cost, _ = cycles_of((opcode, 0, 0, 0, 0), 0, None, 0x1000, None)
+        reads[width] = ["`%s`" % name, str(cost)]
+        out.append("| %d | `%s` | %d |" % (width, name, cost))
     out.append("")
     costs = {}
     out.append("| k | without | with | more |")
@@ -1096,9 +1078,9 @@ def performance():
         len(listed), at)
     for width, row in reads.items():
         assert said_reads.get(width) == row, \
-            "doc/performance.md gives %s for a read at a width of %d; the rig" \
-            " counts %s" % (said_reads.get(width), width, row)
-        cells += 3
+            "doc/performance.md gives %s for one value at a width of %d; the" \
+            " rig counts %s" % (said_reads.get(width), width, row)
+        cells += 2
     for unit, (without, with_) in costs.items():
         want = [str(without), str(with_), str(with_ - without)]
         assert said_costs.get(unit) == want, \

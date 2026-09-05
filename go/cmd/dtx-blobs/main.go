@@ -8,7 +8,7 @@
 // and without. This is the one step an assembler is needed for.
 //
 // The table each is assembled from is made here rather than read: the code
-// does not move with a table's shape, and pack.Blank zeroes the five fields
+// does not move with a table's shape, and pack.Blank zeroes the six fields
 // the one used did give, so what comes out is a function of the template
 // alone.
 //

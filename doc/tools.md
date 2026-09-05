@@ -141,7 +141,7 @@ plain one does, at a few cycles more over 64 rows (performance.md) and 32 to
 ## Package
 
 A DTX file of any variant into a standalone 68000 image: the code, then the
-table's bytes, reached PC relative. [abi.md](abi.md) defines the six calls
+table's bytes, reached PC relative. [abi.md](abi.md) defines the four calls
 into the image, and the state block a caller supplies. It combines rather
 than assembles. The code does not move with `R`, `C` or `RR`, so it is built
 ahead of time: one build a variant, one a width under DTX1 and DTX2, and under

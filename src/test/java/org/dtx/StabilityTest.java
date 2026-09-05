@@ -61,7 +61,7 @@ class StabilityTest {
 
     /**
      * The instructions alone: rmac's own assembly of the template for this
-     * table, with the six slots, the format block and what stands behind the
+     * table, with the four slots, the format block and what stands behind the
      * code taken off.
      *
      * <p>The packager's other path combines code the build already made, and
@@ -78,8 +78,9 @@ class StabilityTest {
         // The format block defines where the column table begins, at +20 of
         // it, and the code ends there.
         int columns = Dtx.getLong(image, Packager.FORMAT_AT + Packager.COLUMNS_AT);
-        byte[] out = new byte[columns - 48];
-        System.arraycopy(image, 48, out, 0, out.length);
+        int bodies = Packager.FORMAT_AT + Packager.FORMAT;
+        byte[] out = new byte[columns - bodies];
+        System.arraycopy(image, bodies, out, 0, out.length);
         return out;
     }
 

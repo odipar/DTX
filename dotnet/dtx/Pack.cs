@@ -8,7 +8,7 @@ using System.Text;
 ///
 /// <para>One build is one code, so packaging combines rather than
 /// assembles: it takes the image for the build the table needs, writes the
-/// five fields the table gives into the format block, and appends the
+/// six fields the table gives into the format block, and appends the
 /// column table and the table's bytes. Code assembles a template with rmac,
 /// which is the one step an assembler is needed for. doc/abi.md defines the
 /// image, the format block and the column table.</para>
@@ -22,9 +22,10 @@ public static class Pack
     public const int Park = 12;
     public const int Pointer = 24;
 
-    /// <summary>The format block: what it runs to, where it stands, its fields.</summary>
-    public const int FormatSize = 24;
-    public const int FormatAt = 24;
+    /// <summary>The format block: where it stands, behind the four slots;
+    /// what it runs to, so where the bodies begin; and its fields.</summary>
+    public const int FormatAt = 16;
+    public const int FormatSize = 28;
     public const int StateAt = 4;
     public const int TableAt = 8;
     public const int RowBytesAt = 12;
@@ -33,6 +34,7 @@ public static class Pack
     public const int UnitAt = 18;
     public const int WidthAt = 19;
     public const int ColumnsAt = 20;
+    public const int StrideAt = 24;
 
     /// <summary>What one stream record runs to, one a column under DTX2.</summary>
     public const int Stream = 16;
@@ -99,6 +101,20 @@ public static class Pack
     /// <summary>The state block a packaged DTX2 reader takes.</summary>
     public static int PackedStateBytes(Header header, Packed given) =>
             Ring(header) + given.Ring * header.Columns;
+
+    /// <summary>
+    /// The stride from one column's value to the next, in the row an advance
+    /// points at: the width under DTX0, where a row's values stand one after
+    /// another; the length of a column under DTX1, where the columns lie at
+    /// one stride; and N under DTX2, where every column has a ring of that
+    /// size. DTX_metadata gives it, out of the format block.
+    /// </summary>
+    public static int Stride(Header header, Packed given) => header.Variant switch
+    {
+        Format.Dtx0 => header.Width,
+        Format.Dtx1 => Variants.Stride(header.Rows, header.Width),
+        _ => given.Ring,
+    };
 
     /// <summary>
     /// The period a table of these takes, the smallest that meets every rule
@@ -177,7 +193,7 @@ public static class Pack
     /// format block written to define the three.
     ///
     /// <para>The code is the same bytes any table that follows it, so what a
-    /// combine writes is the five fields the table gives. It checks the
+    /// combine writes is the six fields the table gives. It checks the
     /// three it cannot write: the variant, the width, and under DTX2 the
     /// unit the decoder built into the code decodes at.</para>
     /// </summary>
@@ -237,6 +253,7 @@ public static class Pack
         Format.PutWord(out_, FormatAt + PeriodAt,
                 header.Variant == Format.Dtx2 ? Period(header, given) : 1);
         Format.PutWord(out_, FormatAt + RingAt, given.Ring);
+        Format.PutLong(out_, FormatAt + StrideAt, Stride(header, given));
         return out_;
     }
 
@@ -378,11 +395,11 @@ public static class Pack
     }
 
     /// <summary>
-    /// The five fields a combine writes, zeroed.
+    /// The six fields a combine writes, zeroed.
     ///
     /// <para>Built code does not define a table. The assembler read one to
     /// build it, and what it read stands in the format block: zeroing those
-    /// five is what makes the file a function of the template alone, and what
+    /// six is what makes the file a function of the template alone, and what
     /// makes code shipped without a combine read a state block of zero bytes
     /// rather than some other table's.</para>
     /// </summary>
@@ -393,5 +410,6 @@ public static class Pack
         Format.PutWord(code, FormatAt + RowBytesAt, 0);
         Format.PutWord(code, FormatAt + PeriodAt, 0);
         Format.PutWord(code, FormatAt + RingAt, 0);
+        Format.PutLong(code, FormatAt + StrideAt, 0);
     }
 }

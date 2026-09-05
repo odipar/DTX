@@ -201,7 +201,7 @@ public static class Tools
     ///
     /// <para>The table each is assembled from is made here rather than read:
     /// the code does not move with a table's shape, and Pack.Blank zeroes
-    /// the five fields the one used did give, so what comes out is a
+    /// the six fields the one used did give, so what comes out is a
     /// function of the template alone.</para>
     /// </summary>
     public static int Blobs(string[] args)

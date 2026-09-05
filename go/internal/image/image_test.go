@@ -24,17 +24,17 @@ func TestContainsEveryImageOrNone(t *testing.T) {
 			t.Fatalf("two builds name %s", build.Name())
 		}
 		name[build.Name()] = true
-		if len(bytes) < 24+24 {
+		if len(bytes) < 16+28 {
 			t.Fatalf("%s is %d bytes, too few for a format block",
 				build.Name(), len(bytes))
 		}
-		// doc/abi.md 1: the format block stands at +24 and opens with the
-		// variant this image reads.
-		if string(bytes[24:27]) != "DTX" || int(bytes[27]) != build.Variant {
-			t.Fatalf("%s opens %q at +24, not DTX%d",
-				build.Name(), bytes[24:28], build.Variant)
+		// doc/abi.md 1: the format block stands at +16, behind the four
+		// slots, and opens with the variant this image reads.
+		if string(bytes[16:19]) != "DTX" || int(bytes[19]) != build.Variant {
+			t.Fatalf("%s opens %q at +16, not DTX%d",
+				build.Name(), bytes[16:20], build.Variant)
 		}
-		if got := int(bytes[24+18]); got != build.Unit {
+		if got := int(bytes[16+18]); got != build.Unit {
 			t.Fatalf("%s decodes at a unit of %d, not %d",
 				build.Name(), got, build.Unit)
 		}
@@ -44,7 +44,7 @@ func TestContainsEveryImageOrNone(t *testing.T) {
 		if build.Variant == 0 {
 			want = 0
 		}
-		if got := int(bytes[24+19]); got != want {
+		if got := int(bytes[16+19]); got != want {
 			t.Fatalf("%s reads values of %d bytes, not %d",
 				build.Name(), got, want)
 		}

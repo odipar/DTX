@@ -126,6 +126,82 @@ func TestTheFormatBlockDefinesWhatTheTableFixes(t *testing.T) {
 	}
 }
 
+// The stride a caller adds to reach the next column's value, which
+// DTX_metadata gives out of the format block at +24.
+func TestTheStrideReachesTheNextColumnsValue(t *testing.T) {
+	needsImages(t)
+	for _, one := range []struct {
+		name   string
+		file   []byte
+		stride int
+	}{
+		// DTX0 lays a row's values one after another, so the next column's
+		// value stands one width on.
+		{"DTX0 strides by the width", plain(dtx.DTX0, 64, 3, 2), 2},
+		{"DTX0 at a width of 4", plain(dtx.DTX0, 64, 3, 4), 4},
+		// DTX1 lays a column's values together, so the next column stands a
+		// column's length on: R times the width, up to a word.
+		{"DTX1 strides by a column's length", plain(dtx.DTX1, 64, 3, 2), 128},
+		{"DTX1 at an odd R of one byte values", plain(dtx.DTX1, 3, 3, 1), 4},
+		// DTX2 unpacks each column through its own ring of N bytes.
+		{"DTX2 strides by N", packed(64, 2, 2, 1, 960), 960},
+	} {
+		head, err := dtx.ReadHeader(one.file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var given Packed
+		if head.Variant == dtx.DTX2 {
+			if given, err = ReadPacked(one.file, head); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if got := Stride(head, given); got != one.stride {
+			t.Fatalf("%s: the stride is %d, not %d", one.name, got, one.stride)
+		}
+		out, err := Image(one.file)
+		if err != nil {
+			t.Fatalf("%s: %v", one.name, err)
+		}
+		if got := dtx.GetLong(out, FormatAt+StrideAt); got != one.stride {
+			t.Fatalf("%s: the block gives a stride of %d, not %d",
+				one.name, got, one.stride)
+		}
+	}
+}
+
+// Blank zeroes the six fields a combine writes, so carried code reads zero
+// for each.
+func TestBlankZeroesEveryFieldACombineWrites(t *testing.T) {
+	needsImages(t)
+	carried := image.Read(dtx.DTX2, 2, 1, false)
+	if carried == nil {
+		t.Skip("this build does not contain DTX2-w2-k1.bin")
+	}
+	code := append([]byte(nil), carried...)
+	Blank(code)
+	for _, at := range []struct {
+		name string
+		at   int
+		long bool
+	}{
+		{"the state block's bytes", StateAt, true},
+		{"the table", TableAt, true},
+		{"the row's bytes", RowBytesAt, false},
+		{"P", PeriodAt, false},
+		{"N", RingAt, false},
+		{"the stride", StrideAt, true},
+	} {
+		got := dtx.GetWord(code, FormatAt+at.at)
+		if at.long {
+			got = dtx.GetLong(code, FormatAt+at.at)
+		}
+		if got != 0 {
+			t.Fatalf("%s is %d, not zero", at.name, got)
+		}
+	}
+}
+
 // The state block is the head and one pointer at every width and every C,
 // under DTX0 and DTX1 alike: one width covers the whole table, so one pointer
 // walks every column of it.

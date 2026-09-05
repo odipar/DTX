@@ -15,7 +15,7 @@ same change (requirements.md, R0.6 to R0.9).
 | DTX | This format: a table of `R` rows and `C` columns. The table is data, and a reader of it is code. | README.md |
 | format block | The 24 bytes at +24 of an image: the variant, the state block's bytes, where the table and the column table stand, the row's bytes, `P`, `N`, `k` and `W`. | abi.md 1 |
 | header | The 16 bytes before a payload: `DTX`, the variant, and the metadata. | SPEC.md 1 |
-| image | A table packaged for the 68000: the code, under DTX2 the column table, and the table's bytes in one file, read through six calls. | abi.md 1 |
+| image | A table packaged for the 68000: the code, under DTX2 the column table, and the table's bytes in one file, read through four calls. | abi.md 1 |
 | `k` | The third byte of a DTX2 payload: the unit its data sets are packed at. | SPEC.md 2.3 |
 | long | Four bytes. An offset is on a long where it divides by 4. | SPEC.md |
 | metadata | What describes a table without containing it: `R`, `C`, `RR` and `W`. | terminology.md, tables, rows and columns |

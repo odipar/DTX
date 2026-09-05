@@ -44,10 +44,10 @@ back than a ring of 64:
 
 | written as | file bytes | image bytes |
 |---|---|---|
-| DTX1 | 2064 | 2428 |
-| DTX2, N=64 | 2140 | 3300 |
-| DTX2, N=64, copies | 356 | 1548 |
-| DTX2, N=128, copies | 252 | 1444 |
+| DTX1 | 2064 | 2284 |
+| DTX2, N=64 | 2140 | 3160 |
+| DTX2, N=64, copies | 356 | 1408 |
+| DTX2, N=128, copies | 252 | 1304 |
 
 Without copies the ring is too short for the pattern and DTX2 packs to
 more than DTX1. With them a match beyond the ring copies from the column's
@@ -93,11 +93,11 @@ then tested each wide value and moved bytes where its offset was odd,
 which cost a `btst` and a branch a column and took DTX1's code from 592
 bytes to 716 and DTX2's from 1352 to 1476.
 
-One width a table (R6.3) took the test out again. Every value is the
-table's width, the row it goes to stands on a long, and the payload and
-every ring stand on a long, so at a width of 2 or 4 both sides of the move
-are on that width's boundary. DTX1's code is 316 bytes now and DTX2's
-1080, and the rig's alignment hook passes every table it runs.
+One width a table (R6.3) took the test out again, and the ABI took the
+move with it: an advance gives the pointer at the row's first value and
+the caller reads where the values stand (abi.md 2), so nothing in an image
+moves one. DTX1's code is 176 bytes now and DTX2's 944, and the rig's
+alignment hook passes every table it runs.
 
 ## A column packed with copies, read without them
 

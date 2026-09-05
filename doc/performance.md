@@ -24,80 +24,76 @@ plus one, modulo 251, so the first rows of the three column table are:
 | 1 | 1 | 2 | 3 |
 | 2 | 2 | 4 | 6 |
 
-Every value of a table is one width (R6.3), so a table is `R`, `C` and that
-width and the code is built for it: the width table below is what it costs.
-
 ## What a call costs
 
 ### Three columns
 
 | call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
 |---|---|---|---|---|---|
-| init | 580 | 458 | 7120 | 5722 | 5680 |
-| advance | 130 | 106 | 1398-1508 | 1372-1482 | 594-1386 |
-| read | 140 | 188 | 188 | 188 | 188 |
-| take | 216 | 272 | 1698 | 1672 | 1576 |
-| jump to row 0 | 292 | 166 | 8104 | 6680 | 6652 |
-| jump to row 63 | 292 | 166 | 82424 | 80956 | 64796 |
-| code, bytes | 392 | 316 | 1080 | 1084 | 1092 |
+| init | 370 | 298 | 7044 | 5646 | 5604 |
+| advance | 134 | 122 | 1414-1524 | 1388-1498 | 610-1402 |
+| jump to row 0 | 292 | 166 | 8120 | 6696 | 6668 |
+| jump to row 63 | 292 | 166 | 82440 | 80972 | 64812 |
+| code, bytes | 232 | 176 | 944 | 948 | 956 |
 
 ### Twenty columns
 
 | call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
 |---|---|---|---|---|---|
-| init | 566 | 458 | 52390 | 38710 | 37270 |
-| advance | 130 | 106 | 1834 | 1590 | 1546 |
-| read | 374 | 834 | 834 | 834 | 834 |
-| take | 450 | 918 | 2670 | 2426 | 2382 |
-| jump to row 0 | 292 | 166 | 53810 | 39886 | 38402 |
-| jump to row 63 | 292 | 166 | 96014 | 86218 | 84062 |
-| code, bytes | 392 | 316 | 1080 | 1084 | 1092 |
+| init | 370 | 298 | 52314 | 38634 | 37194 |
+| advance | 134 | 122 | 1850 | 1606 | 1562 |
+| jump to row 0 | 292 | 166 | 53826 | 39902 | 38418 |
+| jump to row 63 | 292 | 166 | 96030 | 86234 | 84078 |
+| code, bytes | 232 | 176 | 944 | 948 | 956 |
+
+There are four calls (abi.md 2), and none of them moves a value: an advance
+gives the pointer at the row's first value and the caller reads from there.
+So a read costs the image nothing, and what it costs the caller stands in
+the table below.
 
 An advance under DTX2 is a range where the columns differ in what their
 refills decode, and one figure where they do not: a row refills one column
 of `P` rows, and a turn past the last column does not refill.
 
 **What is flat and what is not.** Under DTX0 and DTX1 every call is flat in
-`R`, and a read is linear in `C`. Under DTX2 a read is flat and linear in
-`C`, an advance is flat and takes one column's refill, and a jump is not
-flat: it runs the advance's body once a row up to the target, so a jump to
-row 63 costs the 63 rows. A backward jump seeds every ring again first, so
-a jump to row 0 costs one init. A table that repeats costs that at every
-repeat, since the advance from row `R` minus one to `RR` is a jump.
+`R` and in `C`. Under DTX2 an advance is flat and takes one column's
+refill, and a jump is not flat: it runs the advance's body once a row up to
+the target, so a jump to row 63 costs the 63 rows. A backward jump seeds
+every ring again first, so a jump to row 0 costs one init. A table that
+repeats costs that at every repeat, since the advance from row `R` minus
+one to `RR` is a jump.
 
 **Init under DTX2** is `C` decoder seeds and `C` refills of `P` rows, so it
 grows with `C` and with `P`: the init rows of the two tables.
 
-**A read** under DTX0 is one run of bytes, at the widest move the row's
-bytes take. Under DTX1 and DTX2 it is `C` moves and a stride each: one
-value from each column, and the columns lie at one stride because every
-column is the same length.
+## What a value costs the caller
 
-## What the width costs
+An advance leaves the pointer in `a1` and `DTX_metadata` gives the stride,
+so column `i` of the row is one move at `i` strides off `a1`:
 
-A read of the twenty column table, at each width:
+| width | the move | cycles |
+|---|---|---|
+| 1 | `move.b d(a1),d0` | 12 |
+| 2 | `move.w d(a1),d0` | 12 |
+| 4 | `move.l d(a1),d0` | 16 |
 
-| width | DTX0 | DTX1 | DTX2 k=1 |
-|---|---|---|---|
-| 1 | 224 | 834 | 834 |
-| 2 | 374 | 834 | 834 |
-| 4 | 674 | 994 | 994 |
-
-A wider value moves more bytes and the row is longer, so a read grows with
-the width. It does not grow twice over: the loop is the same `C` turns at
-every width, and only the move inside it changes.
+Those are the manual's figures for the move, which the rig reads out of the
+same tables it counts a call with. A caller that reads every column of a
+row makes `C` of them, and one that reads a single column makes one: DTX1
+and DTX2 lay a column's values together, so taking one column of a wide
+table never touches the others (R4.4).
 
 ## What the copy code costs
 
 A column packed without copies, read by the decoder without the copy code
-and by the one with it: the cycles of init and then 64 rows read and
-advanced, on the three column table at each unit.
+and by the one with it: the cycles of init and then 64 advances, on the
+three column table at each unit.
 
 | k | without | with | more |
 |---|---|---|---|
-| 1 | 109806 | 110010 | 204 |
-| 2 | 106914 | 107070 | 156 |
-| 4 | 90726 | 90882 | 156 |
+| 1 | 98862 | 99066 | 204 |
+| 2 | 95970 | 96126 | 156 |
+| 4 | 79782 | 79938 | 156 |
 
 The two decoders differ at init, where the one with the copy code writes
 the ring's size into two of its own instructions, and not in a row.

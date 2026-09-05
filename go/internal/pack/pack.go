@@ -1,8 +1,8 @@
 // Package pack combines a DTX table with the 68000 image that reads it.
 //
 // One build is one code, so nothing here assembles: it takes the image for
-// the build the table needs, writes the five fields the table gives
-// into the format block, and appends the column table and the table's bytes.
+// the build the table needs, writes the six fields the table gives into the
+// format block, and appends the column table and the table's bytes.
 // doc/abi.md defines the image, the format block and the column table.
 package pack
 
@@ -23,10 +23,11 @@ const (
 	Pointer = 24
 )
 
-// The format block: what it runs to, where it stands, and its fields.
+// The format block: what it runs to, where it stands behind the four slots,
+// and its fields.
 const (
-	Format     = 24
-	FormatAt   = 24
+	Format     = 28
+	FormatAt   = 16
 	StateAt    = 4
 	TableAt    = 8
 	RowBytesAt = 12
@@ -35,6 +36,7 @@ const (
 	UnitAt     = 18
 	WidthAt    = 19
 	ColumnsAt  = 20
+	StrideAt   = 24
 )
 
 // Stream is what one stream record runs to, one a column under DTX2.
@@ -84,6 +86,22 @@ func StateBytes(header dtx.Header) int {
 // PackedStateBytes gives the state block a packaged DTX2 reader takes.
 func PackedStateBytes(header dtx.Header, given Packed) int {
 	return Ring(header) + given.Ring*header.Columns
+}
+
+// Stride gives the stride from one column's value to the next, in the row an
+// advance points at: the width under DTX0, where a row's values stand one
+// after another; the length of a column under DTX1, where the columns lie at
+// one stride; and N under DTX2, where every column has a ring of that size.
+// DTX_metadata gives it, out of the format block.
+func Stride(header dtx.Header, given Packed) int {
+	switch header.Variant {
+	case dtx.DTX0:
+		return header.Width
+	case dtx.DTX1:
+		return dtx.StrideDtx1(header.Rows, header.Width)
+	default:
+		return given.Ring
+	}
 }
 
 // Period gives the period a table of these takes, the smallest that meets
@@ -144,7 +162,7 @@ func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
 // and the format block written to define the three.
 //
 // The code is the same bytes any table that follows it, so what a combine
-// writes is the five fields the table gives. It checks the three it cannot
+// writes is the six fields the table gives. It checks the three it cannot
 // write: the variant, the width the code reads values at, and under DTX2 the
 // unit the decoder built into the code decodes at.
 func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
@@ -207,6 +225,7 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 	dtx.PutWord(out, FormatAt+RowBytesAt, header.RowBytes())
 	dtx.PutWord(out, FormatAt+PeriodAt, period)
 	dtx.PutWord(out, FormatAt+RingAt, given.Ring)
+	dtx.PutLong(out, FormatAt+StrideAt, Stride(header, given))
 	return out, nil
 }
 
@@ -357,16 +376,17 @@ func Code(file []byte, rmac, templates string) ([]byte, error) {
 	return code, nil
 }
 
-// Blank zeroes the five fields a combine writes.
+// Blank zeroes the six fields a combine writes.
 //
 // Built code does not define a table. The assembler read one to build it, and
-// what it read stands in the format block: zeroing those five makes the
-// file a function of the template alone, and what makes code shipped without
-// a combine read a state block of zero bytes rather than some other table's.
+// what it read stands in the format block: zeroing those six makes the file
+// a function of the template alone, and what makes code shipped without a
+// combine read a state block of zero bytes rather than some other table's.
 func Blank(code []byte) {
 	dtx.PutLong(code, FormatAt+StateAt, 0)
 	dtx.PutLong(code, FormatAt+TableAt, 0)
 	dtx.PutWord(code, FormatAt+RowBytesAt, 0)
 	dtx.PutWord(code, FormatAt+PeriodAt, 0)
 	dtx.PutWord(code, FormatAt+RingAt, 0)
+	dtx.PutLong(code, FormatAt+StrideAt, 0)
 }
