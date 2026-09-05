@@ -25,7 +25,7 @@ def code(variant, rows, width, rr, ring=960, unit=1, copies=False):
     # rmac's own assembly, which is what this file is about: the packager's
     # other path combines code the build already made, and would say nothing
     # about what a template assembles to.
-    image, _ = T.package(blob, copies, assemble=True)
+    image, _ = T.package(blob, assemble=True)
     # The instructions alone. The six slots are constant, the format block at
     # +24 is data that states the table, and behind the code stand the column
     # table and the table itself, both of which move with C. The format block

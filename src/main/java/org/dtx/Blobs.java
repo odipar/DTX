@@ -67,17 +67,31 @@ public final class Blobs {
         return switch (build.variant()) {
             case Dtx.DTX0 -> Dtx0.write(table);
             case Dtx.DTX1 -> Dtx1.write(table);
-            default -> Dtx2.write(table, Blobs::container, build.unit(), 960);
+            // The seed states the build's own copies flag, since that is
+            // what settles which decoder the template is assembled with.
+            default -> Dtx2.write(table, new Held(build.copies()),
+                    build.unit(), 960);
         };
     }
 
     /**
-     * One ST4 container of these bytes, held rather than packed. The
-     * assembler reads a data set's four stream offsets and nothing in the
-     * streams, so a container whose streams are the column itself settles
-     * every figure the build takes. Nothing decodes it, and nothing here
-     * runs it: the packer that writes a table a caller reads is ST4's own.
+     * A packer that holds a column rather than packing it, and states the
+     * build's own copies flag.
+     *
+     * <p>The assembler reads a data set's four stream offsets and nothing in
+     * the streams, so a container whose streams are the column itself
+     * settles every figure the build takes. Nothing decodes it, and nothing
+     * here runs it: the packer that writes a table a caller reads is ST4's
+     * own.
      */
+    private record Held(boolean copies) implements Packer {
+
+        @Override
+        public byte[] pack(byte[] column, int unit, int ring) {
+            return container(column, unit, ring);
+        }
+    }
+
     private static byte[] container(byte[] column, int unit, int ring) {
         byte[] set = new byte[28 + column.length];
         set[0] = 'S';
@@ -95,7 +109,7 @@ public final class Blobs {
 
     /** The code one build assembles to, with the table's own figures out. */
     public static byte[] code(Build build, Path rmac) {
-        byte[] code = Packager.code(seed(build), rmac, build.copies());
+        byte[] code = Packager.code(seed(build), rmac);
         Packager.blank(code);
         return code;
     }

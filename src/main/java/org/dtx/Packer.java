@@ -22,4 +22,18 @@ public interface Packer {
      *     (R5.4)
      */
     byte[] pack(byte[] column, int unit, int ring);
+
+    /**
+     * Whether a match beyond the ring copies from the column's own literal
+     * stream, which ST4 packs with {@code -c}.
+     *
+     * <p>A decoder built without the copy code reads such a column wrongly,
+     * and nothing in an ST4 data set states which it is. So the payload
+     * states it (R5.10), and it is the packer that says so: what packed a
+     * column is what knows how, and a flag carried beside the file could
+     * disagree with the bytes in it.
+     */
+    default boolean copies() {
+        return false;
+    }
 }

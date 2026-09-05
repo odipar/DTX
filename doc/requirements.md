@@ -83,8 +83,8 @@ before what it describes, and what things are called comes before both.
 - **R5.1** The rows laid out column by column, each column packed with
   ST4.
 - **R5.2** One unit `k` for a payload. The `k` the payload states and the
-  `k` in every data set's own signature are the same, and a reader may
-  check one against the other.
+  `k` in every data set's own signature are the same, and a reader checks
+  one against the other.
 - **R5.3** A reader holds one ST4 decoder, built for that `k`, and takes
   every column of the payload through it. ST4 code is built for a unit,
   and one unit a payload lets one build serve every column.
@@ -103,6 +103,11 @@ before what it describes, and what things are called comes before both.
 - **R5.8** Read back through a ring that does not grow with `R`. A reader
   holds `N` bytes of a column at a time, not the column.
 - **R5.9** An ST4 data set begins on a long.
+- **R5.10** The payload states whether its columns hold copies from their
+  own literal streams. A decoder built without the copy code reads such a
+  column wrongly, and no data set states which kind it is, so a reader
+  that took the answer from anywhere but the file could be given one that
+  disagrees with the bytes.
 
 ## R6. The constraints
 
@@ -113,8 +118,9 @@ What a table may hold, and what a reader does where it holds otherwise.
 - **R6.3** A column's width is 1, 2 or 4 bytes, and no other.
 - **R6.4** `RR` names a row of the table, 0 to `R` minus one, or is `R`
   itself where the table does not repeat.
-- **R6.5** A reader given a table that breaks any of these, or R5.6,
-  reports it and reads no further. What it reports is SPEC.md's.
+- **R6.5** A reader given a table that breaks any of these, or R5.6, or a
+  payload whose data sets do not state its own `k` and ST4's format
+  version 7, reports it and reads no further. What it reports is SPEC.md's.
 
 ## R7. Not yet required
 

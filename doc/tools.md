@@ -60,7 +60,7 @@ the table's bytes, reached PC relative. [abi.md](abi.md) states the six
 calls the image answers, and the state block a caller supplies.
 
 It combines rather than assembles. The code does not move with the table,
-so it is built once and the tool takes the file for the build the table
+so it is built once and the tool takes the image for the build the table
 asks for, writes the five fields the table settles into the format block,
 and appends the column table and the table's bytes. No assembler runs,
 and a caller who takes a release installs none.
@@ -69,11 +69,22 @@ and a caller who takes a release installs none.
 bin/dtx-package in.dtx out.bin
 ```
 
+Two tools do it, and a table packaged either way is the same file. The one
+above is the jar's; the other is a Go executable holding the eight images
+inside it, so it needs neither this repository nor a runtime beside it:
+
+```
+go build -o dtx-package ./cmd/dtx-package    # under go/
+./dtx-package in.dtx out.bin
+```
+
+`test/test_parity.py` packages a corpus both ways and holds the two to the
+same bytes.
+
 | flag | gives |
 |---|---|
 | `-aRMAC` | assemble the template with this rmac rather than take the carried code. The two give the same bytes, and a template edit is tried through this one |
 | `-s` | write the figures rather than the image, for reading or for a build of your own |
-| `-copies` | the columns were packed with `-copies`, so the decoder is built with its copy code |
 
 The image holds one table and the code for that table's variant. What the
 table settles reaches the code at run time, out of the table's own header
@@ -167,13 +178,17 @@ stream, and it pays at the small rings DTX2 reads through. Measured
 on a table of 512 rows repeating a pattern 37 rows long, at `N` of 64: the
 file goes from 1164 bytes to 272, and its image from 2196 to 1336.
 
-**A column packed that way is packaged with `bin/dtx-package -copies`**, or
-it reads wrong bytes: the decoder needs its copy code, the image is then
-code in RAM rather than ROM, and no field of the file says which a column
-is. Measured on the same table, packaging it without the flag reads row 37
-wrong, where the pattern first repeats past the ring. The other way round
-is safe: a decoder with the copy code reads a column without copies
-correctly, at 2.0 to 4.0% more cycles and 32 bytes more code.
+**The payload states it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
+Write is the one tool that reads `-copies` and the packager takes the
+decoder the file asks for. Neither packager has a flag for it.
+
+The flag is there because a decoder built without the copy code reads such
+a column wrongly and no ST4 data set says which kind it is. Measured on the
+same table, a column packed with copies and read by a decoder without the
+copy code gives row 37 wrong, where the pattern first repeats past the
+ring. The other way round is safe: a decoder with the copy code reads a
+column without copies correctly, at 2.0 to 4.0% more cycles and 32 bytes
+more code.
 
 ## The rigs
 
@@ -202,6 +217,18 @@ up only in the count.
 It needs `mvn compile`, [rmac](http://rmac.is-slick.com) on the path or at
 `$RMAC`, `pip install unicorn`, and an ST4 packer at `$ST4` for the packed
 tables.
+
+```
+python3 test/test_parity.py
+```
+
+**The two packagers.** A corpus through the jar and through the Go
+executable, held to the same bytes. Fourteen tables, which reach every
+image the packager picks from: DTX0, DTX1, and DTX2 at each unit with the
+copy code and without. One table has one image, whichever tool a caller
+took.
+
+It needs `mvn package`, Go on the path, and an ST4 packer at `$ST4`.
 
 ## Through Maven
 

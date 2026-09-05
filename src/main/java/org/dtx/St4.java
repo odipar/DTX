@@ -49,6 +49,11 @@ public final class St4 implements Packer {
     }
 
     @Override
+    public boolean copies() {
+        return !copies.isEmpty();
+    }
+
+    @Override
     public byte[] pack(byte[] column, int unit, int ring) {
         try {
             Path work = Files.createTempDirectory("dtx");

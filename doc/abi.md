@@ -458,12 +458,16 @@ A column may be packed with `-c` as well, which lets a match beyond the
 ring copy from the column's own literal stream. That packs a small ring
 far smaller, and it asks one thing of the package: the decoder is built
 with its copy code, which measures 32 bytes more at `k` of 1
-and 2 and 36 at `k` of 4. The packager takes the same word for it, and
-the two have
-to agree: a column packed with copies and packaged without the copy code
-reads wrong bytes, and no field of the file says which it is. The other
-way round is safe, since a decoder with the copy code reads a column
-without copies correctly, at 2.0 to 4.0% more cycles.
+and 2 and 36 at `k` of 4.
+
+The payload says which kind its columns are, in the flags byte SPEC.md 2.3
+states, so the packager reads the decoder a table asks for out of the table
+itself. Nothing carried beside the file settles it, and nothing can
+disagree with the bytes. The flag is there because no ST4 data set states
+it and a column packed with copies read by a decoder without the copy code
+gives wrong bytes; the other way round is safe, since a decoder with the
+copy code reads a column without copies correctly, at 2.0 to 4.0% more
+cycles.
 
 **How many images there are.** DTX0 assembles to one, DTX1 to one, and
 DTX2 to one a build of the decoder built into it: `k` of 1, 2 or 4, each
