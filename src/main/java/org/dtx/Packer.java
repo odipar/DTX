@@ -4,8 +4,8 @@ package org.dtx;
  * What packs one column of a DTX2 payload.
  *
  * <p>DTX2 states that a column is an ST4 data set (R5.1) and nothing more
- * about how ST4 packs. {@link St4} packs with the copy of ST4 this
- * repository holds, {@link St4Beside} runs a packer beside it, and a
+ * about how ST4 packs. {@link St4} packs with the copy of ST4 in this
+ * repository, {@link St4Beside} runs a packer beside it, and a
  * caller that writes DTX2 may supply one of its own. ST4's own repository
  * states the format,
  * and the 68000 decoder carried under {@code 68k/} reads what it packs.
@@ -17,7 +17,7 @@ public interface Packer {
      * {@code column} as one complete ST4 data set: its own header, and the
      * length of what it unpacks to.
      *
-     * @param column the bytes DTX1's column holds
+     * @param column the bytes of DTX1's column
      * @param unit the unit to pack at, 1, 2 or 4, which the data set's own
      *     signature then gives (R5.2)
      * @param ring the bytes no back reference in the data set reaches past
@@ -32,7 +32,7 @@ public interface Packer {
      * <p>A decoder built without the copy code reads such a column wrongly,
      * and nothing in an ST4 data set states which it is. So the payload
      * states it (R5.10), and the packer states it: a flag carried beside
-     * the file could disagree with the bytes in it, and one the packer
+     * the file could differ from the bytes in it, and one the packer
      * wrote cannot.
      */
     default boolean copies() {

@@ -2,10 +2,10 @@ namespace Dtx;
 
 /// <summary>
 /// A table in memory: R rows, C columns, and a row RR it repeats to. Every
-/// variant holds this same table (R1.3), so a variant reads into one and
+/// variant is this same table (R1.3), so a variant reads into one and
 /// writes out of one.
 ///
-/// <para>The values are held column by column, R times a column's width
+/// <para>The values are stored column by column, R times a column's width
 /// bytes each. DTX1 and DTX2 lay them out that way, and DTX0 walks them a
 /// row at a time.</para>
 /// </summary>
@@ -22,7 +22,7 @@ public sealed class Table
         this.column = column;
     }
 
-    /// <summary>R, the rows the table holds.</summary>
+    /// <summary>R, the rows in the table.</summary>
     public int Rows { get; }
 
     /// <summary>RR, the row it repeats to, or R where it does not.</summary>
@@ -59,7 +59,7 @@ public sealed class Table
     /// arrays are copied, so a later write to the caller's does not reach
     /// this table.
     /// </summary>
-    /// <exception cref="ArgumentException">where R6's bounds do not hold, or
+    /// <exception cref="ArgumentException">where R6's bounds are not met, or
     /// a column is not the length its width and rows give</exception>
     public static Table Of(int rows, int repeat, int[] width, byte[][] column)
     {
@@ -98,7 +98,7 @@ public sealed class Table
         return new Table(rows, repeat, (int[])width.Clone(), held);
     }
 
-    /// <summary>Whether two tables hold the same rows, widths, R and RR.</summary>
+    /// <summary>Whether two tables are the same rows, widths, R and RR.</summary>
     public bool Same(Table other)
     {
         if (Rows != other.Rows || Repeat != other.Repeat
@@ -138,8 +138,8 @@ public sealed class Table
 /// What packs one column of a DTX2 payload.
 ///
 /// <para>DTX2 states that a column is an ST4 data set (R5.1) and nothing
-/// more about how ST4 packs. St4Packer packs with the copy this repository
-/// holds, St4Beside runs a packer beside it, and a caller that writes DTX2
+/// more about how ST4 packs. St4Packer packs with the copy in this
+/// repository, St4Beside runs a packer beside it, and a caller that writes DTX2
 /// may supply one of its own.</para>
 /// </summary>
 public interface IPacker
@@ -157,7 +157,7 @@ public interface IPacker
     /// <para>A decoder built without the copy code reads such a column
     /// wrongly, and nothing in an ST4 data set states which it is. So the
     /// payload states it (R5.10), and the packer states it: a flag carried
-    /// beside the file could disagree with the bytes in it, and one the
+    /// beside the file could differ from the bytes in it, and one the
     /// packer wrote cannot.</para>
     /// </summary>
     bool Copies => false;

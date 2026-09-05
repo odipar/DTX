@@ -1,9 +1,9 @@
 // Command dtx-package turns a DTX file into a standalone 68000 image.
 //
 // It combines rather than assembles: the code does not move with the table,
-// so this executable holds the eight images built once and takes the one the
-// table asks for. No assembler runs. doc/tools.md states the tool and
-// doc/abi.md the six calls the image answers.
+// so this executable contains the eight images built once and takes the one the
+// table needs. No assembler runs. doc/tools.md states the tool and
+// doc/abi.md the six calls into the image.
 //
 //	dtx-package in.dtx out.bin
 package main

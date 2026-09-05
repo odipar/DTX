@@ -2,10 +2,10 @@ package org.dtx;
 
 /**
  * A table in memory: {@code R} rows, {@code C} columns, and a row
- * {@code RR} it repeats to. Every variant holds this same table (R1.3), so
+ * {@code RR} it repeats to. Every variant is this same table (R1.3), so
  * a variant reads into one and writes out of one.
  *
- * <p>The values are held column by column, {@code R} times a column's width
+ * <p>The values are stored column by column, {@code R} times a column's width
  * bytes each. DTX1 and DTX2 lay them out that way, and DTX0 walks them a row
  * at a time.
  */
@@ -28,7 +28,7 @@ public final class Table {
      * The arrays are copied, so a later write to the caller's does not reach
      * this table.
      *
-     * @throws IllegalArgumentException where R6's bounds do not hold, or
+     * @throws IllegalArgumentException where R6's bounds are not met, or
      *     where a column is not the length its width and {@code rows} give
      */
     public static Table of(int rows, int repeat, int[] width, byte[][] column) {
@@ -61,7 +61,7 @@ public final class Table {
         return new Table(rows, repeat, width.clone(), held);
     }
 
-    /** {@code R}, the rows the table holds. */
+    /** {@code R}, the rows in the table. */
     public int rows() {
         return rows;
     }
@@ -95,7 +95,7 @@ public final class Table {
         return bytes;
     }
 
-    /** Whether two tables hold the same rows, widths, {@code R} and {@code RR}. */
+    /** Whether two tables are the same rows, widths, {@code R} and {@code RR}. */
     @Override
     public boolean equals(Object other) {
         if (!(other instanceof Table that)) {

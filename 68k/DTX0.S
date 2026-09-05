@@ -7,12 +7,12 @@
 ;
 ; doc/abi.md states the calls, the format block and the state block. One
 ; template a variant: this file reads DTX0 and nothing else, so no call in it
-; tests which variant it holds.
+; tests which variant it contains.
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR and the row's bytes reach it
 ; at run time rather than at assembly time: DTX_init reads them out of the
 ; format block and the table's own header and writes them into the
-; instructions that take them. Every DTX0 image holds the same instructions,
+; instructions that take them. Every DTX0 image contains the same instructions,
 ; byte for byte; the table behind them differs.
 ;
 ; What that costs is a read-only image. The code writes to itself at init, so
@@ -24,12 +24,12 @@
 ; the row's bytes divide by four, a word where they are even, a byte where
 ; they are odd.
 ;
-; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here holds them: _columns is the
+; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here contains them: _columns is the
 ; last label and the code ends on a long, so the packager appends the .dtx
 ; file to what rmac writes and _columns is where it lands. DTX0 has no column
 ; table, so under this variant the table's own header is the first byte there.
 ;
-; TRUSTED INPUT ONLY. No call checks the table, the state block, the row
+; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call takes
 ; without checking.
 ; -----------------------------------------------------------------------------

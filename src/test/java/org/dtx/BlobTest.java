@@ -12,13 +12,13 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 /**
- * The code this repository holds, against the templates it was assembled
+ * The code in this repository, against the templates it was assembled
  * from.
  *
  * <p>The packager combines rather than assembles, so a template edited
  * without {@code bin/dtx-blobs} run after it would ship the code as it stood
- * before the edit. These checks assemble every build again and hold the
- * carried file to it, and hold the combined image to the assembled one.
+ * before the edit. These checks assemble every build again and compare the
+ * carried file with it, and the combined image with the assembled one.
  * They are skipped where no rmac is on the path.
  */
 class BlobTest {
@@ -106,7 +106,7 @@ class BlobTest {
         }
     }
 
-    /** A table of {@code rows} rows and these widths, holding no values. */
+    /** A table of {@code rows} rows and these widths, with no values. */
     private static byte[] table(int variant, int rows, int[] width) {
         byte[][] column = new byte[width.length][];
         for (int i = 0; i < width.length; i++) {

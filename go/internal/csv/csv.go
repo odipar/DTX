@@ -1,16 +1,16 @@
 // Package csv reads a table out of comma separated text: one row a line, one
 // value a column.
 //
-// The first row that holds values gives C. A line that is blank, or whose
+// The first row with values gives C. A line that is blank, or whose
 // first character other than a space is #, is not a row. A value is decimal,
 // or hexadecimal where it opens with $, and negative where it opens with -.
 //
 // A value of W bytes is stored most significant byte first, as every field
 // of the header is, and a negative one in two's complement. A value fits W
 // bytes where it lies from -2^(8W-1) to 2^(8W)-1, so one width takes what a
-// signed column holds and what an unsigned one holds alike. DTX states no
-// more of a column than its width, so which of the two a column holds is the
-// caller's to state elsewhere.
+// signed column's values and an unsigned one's alike. DTX states no
+// more of a column than its width, so which of the two a column is, the
+// caller states elsewhere.
 package csv
 
 import (

@@ -1,7 +1,7 @@
 package org.dtx;
 
 /**
- * DTX0, row by row: {@code R} rows, each holding column 0 through column
+ * DTX0, row by row: {@code R} rows, each column 0 through column
  * {@code C} minus one in order, with nothing between them.
  *
  * <p>A value falls where the widths put it, so a two or four byte column can
@@ -30,7 +30,7 @@ public final class Dtx0 {
     }
 
     /**
-     * The table a DTX0 file holds.
+     * The table in a DTX0 file.
      *
      * @throws IllegalArgumentException where the file is not DTX0, or is
      *     short of the rows its header states

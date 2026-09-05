@@ -17,12 +17,12 @@ import org.junit.jupiter.api.Test;
  * The documents against themselves: every reference that can be followed,
  * every figure that can be recomputed.
  *
- * <p>Ported from YMXR, which holds the same three tests. Two of its checks
+ * <p>Ported from YMXR, which has the same three tests. Two of its checks
  * read documents this repository has not written - a column table, and the
  * figures of an experiment - and they come back with those documents.
  *
- * <p>{@code HouseStyleTest} holds the prose to {@code AGENTS.md} and
- * {@code GlossaryTest} holds the terms to the glossary. This holds the
+ * <p>{@code HouseStyleTest} checks the prose against {@code AGENTS.md} and
+ * {@code GlossaryTest} checks the terms against the glossary. This checks the
  * numbers and the pointers, which drift on their own as a document is
  * edited: a requirement renumbered, a section renamed, a column added, a
  * ratio left over from the figures before it.
@@ -165,7 +165,7 @@ final class ConsistencyTest {
             states(wrong, spec, "row " + n + ", bytes " + n * row + " to "
                     + (n * row + row - 1), "2.1's row " + n);
         }
-        states(wrong, spec, rows * row + " bytes, what the table holds",
+        states(wrong, spec, rows * row + " bytes, the table's values",
                 "2.1's payload");
 
         // 2.2: each column begins on a word

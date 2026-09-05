@@ -3,18 +3,18 @@
 One row a table of the kit: the text it was written from, the options
 `dtx-write` took, what the file runs to, the first sixteen hex digits of
 its sha256, and what reading it exercises. `ConformanceTest` writes every
-table again from these and holds the file in `tables/` to it, so a row here
-is one the writer gives.
+table again from these and compares the file in `tables/` with it, so a
+row here is one the writer gives.
 
 The text is one of two. **numbers R C** is `R` rows of `C` columns where row
-`r`, column `i` holds `r` times `i` plus one, modulo 251. **repeating** is
-512 rows of two columns where row `r` holds `r` modulo 37 and seven times
-that, so a pattern 37 rows long repeats, further back than a ring of 64
-bytes reaches.
+`r`, column `i` is `r` times `i` plus one, modulo 251. **repeating** is 512
+rows of two columns where row `r` is `r` modulo 37 and seven times that,
+so a pattern 37 rows long repeats, further back than a ring of 64 bytes
+reaches.
 
-Beside every `NAME.dtx` stands `NAME.rows`: the rows the table holds, as
-DTX0 lays them out, with nothing between the values. That file is what a
-reader of the table gives back (TASK.md).
+Beside every `NAME.dtx` stands `NAME.rows`: the rows in the table, as DTX0
+lays them out, with nothing between the values. That file is what a reader
+of the table gives back (TASK.md).
 
 | table | text | options | bytes | sha256 | exercises |
 |---|---|---|---|---|---|

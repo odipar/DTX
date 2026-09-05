@@ -21,7 +21,7 @@ func header(variant, rows, repeat int, width []int) []byte {
 	return out
 }
 
-// A plain file whose payload holds no values: the packager reads the header
+// A plain file whose payload has no values: the packager reads the header
 // and the widths and never a value.
 func plain(variant, rows int, width []int) []byte {
 	head := header(variant, rows, rows, width)
@@ -32,14 +32,14 @@ func plain(variant, rows int, width []int) []byte {
 	return append(head, make([]byte, size)...)
 }
 
-// A DTX2 file at this ring and unit. The data sets are held rather than
+// A DTX2 file at this ring and unit. The data sets are stored rather than
 // packed: the packager reads a set's four stream offsets and never a byte
 // of a stream.
 func packed(rows int, width []int, unit, ring int) []byte {
 	return packedCopies(rows, width, unit, ring, false)
 }
 
-// The same, whose payload states that its columns hold copies, R5.10.
+// The same, whose payload states that its columns contain copies, R5.10.
 func packedCopies(rows int, width []int, unit, ring int, copies bool) []byte {
 	head := header(dtx.DTX2, rows, rows, width)
 	payload := make([]byte, 4+4*len(width))
@@ -65,16 +65,16 @@ func packedCopies(rows int, width []int, unit, ring int, copies bool) []byte {
 	return append(head, payload...)
 }
 
-func held(t *testing.T) {
+func needsImages(t *testing.T) {
 	t.Helper()
-	if image.Held() == 0 {
+	if image.Embedded() == 0 {
 		t.Skip("this build holds no images: run mvn process-classes")
 	}
 }
 
-// The format block states back what the table settles, doc/abi.md 1.
+// The format block states back what the table gives, doc/abi.md 1.
 func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
-	held(t)
+	needsImages(t)
 	for _, one := range []struct {
 		name    string
 		file    []byte
@@ -127,7 +127,7 @@ func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
 
 // The five rules of doc/abi.md 4, on the image the packager writes.
 func TestAPackedImageHoldsEveryRuleOfThePeriod(t *testing.T) {
-	held(t)
+	needsImages(t)
 	file := packed(64, []int{1, 2, 4}, 1, 960)
 	out, err := Image(file)
 	if err != nil {
@@ -163,7 +163,7 @@ func TestATableTooWideIsRefused(t *testing.T) {
 // A table packed at one unit does not package against another decoder:
 // the image would read bytes no decoder wrote.
 func TestAUnitTheDecoderDoesNotDecodeIsRefused(t *testing.T) {
-	held(t)
+	needsImages(t)
 	file := packed(64, []int{1, 2}, 1, 960)
 	code, err := image.Code(dtx.DTX2, 2, false) // k of 2 against a table at 1
 	if err != nil {
@@ -178,10 +178,10 @@ func TestAUnitTheDecoderDoesNotDecodeIsRefused(t *testing.T) {
 	}
 }
 
-// The payload states whether its columns hold copies, so the image a table
-// takes is the file's to settle and no word from a caller enters it.
+// The payload states whether its columns contain copies, so the image a table
+// takes is the file's to fix and no word from a caller enters it.
 func TestThePayloadStatesWhetherItsColumnsHoldCopies(t *testing.T) {
-	held(t)
+	needsImages(t)
 	plain, err := Image(packed(64, []int{1, 2}, 1, 960))
 	if err != nil {
 		t.Fatal(err)

@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 /**
  * DTX2 through a real ST4 packer.
  *
- * <p>The packer is the copy this repository holds, so these run where the
- * build does. The last of them holds that copy to an executable beside
+ * <p>The packer is the copy in this repository, so these run where the
+ * build does. The last of them checks that copy against an executable beside
  * it, and is the one skipped without one at {@code ST4}.
  */
 final class St4Test {
@@ -64,7 +64,7 @@ final class St4Test {
     @Test
     void everyColumnIsPackedWithTheOperationLengthTheDecodersCount()
             throws Exception {
-        // ST4_wrap assumption 4 asks for -l65535, and a packer that did not
+        // ST4_wrap assumption 4 needs -l65535, and a packer that did not
         // take the flag would fail rather than pack.
         byte[] file = Dtx2.write(table(), new St4(), 1, 960);
         assertEquals(2, file[3], "the variant");
@@ -101,7 +101,7 @@ final class St4Test {
     void theCarriedPackerPacksWhatAnExecutableBesideItPacks() throws Exception {
         // src/main/java/org/st4 is a copy of ST4's own packer, and a copy
         // that packed otherwise would be a second packer rather than the
-        // same one. Skipped where no executable stands beside this to hold
+        // same one. Skipped where no executable stands beside this to check
         // it to.
         Path beside = packer();
         for (int unit : new int[] {1, 2, 4}) {

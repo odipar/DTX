@@ -11,12 +11,13 @@ advance, the registers that stand across a call, and a guard band past the
 row.
 
 THE ROUND TRIP. The same text through the writer, the packager and the
-68000 at DTX0, DTX1 and DTX2, held to the rows the text states and to one
-another (R1.3). What a row should hold is worked out in this file, from the
+68000 at DTX0, DTX1 and DTX2, compared with the rows the text states and
+with one another (R1.3). What a row should be is worked out in this file,
+from the
 text, by a reader that shares no code with the one under test - so neither
 the writer nor the 68000 is checked against itself. Under DTX2 it also
-counts what the decoder is asked for, which is the one thing a wrong
-stopping rule shows up in: the output does not change when a column is
+counts the decoder's calls, the one thing a wrong stopping rule shows up
+in: the output does not change when a column is
 driven one call past its end marker, but the count does.
 
     python3 68k/test/emu/test_dtx.py
@@ -97,7 +98,7 @@ def read_dtx(blob):
 
 # --------------------------------------------------------------------------
 # An independent CSV reader: doc/tools.md, "The text", in Python. This is
-# what makes the round trip a round trip - the rows a table should hold come
+# what makes the round trip a round trip - the rows a table should give come
 # out of the text the writer was given, not out of the file it wrote.
 
 def csv_values(csv):
@@ -131,7 +132,7 @@ def fits(value, width):
 
 
 def csv_widths(values):
-    """The narrowest width of 1, 2 and 4 that holds every value a column."""
+    """The narrowest width of 1, 2 and 4 that takes every value a column."""
     out = []
     for i in range(len(values[0])):
         taken = 1
@@ -144,7 +145,7 @@ def csv_widths(values):
 
 
 def csv_rows(csv, widths=None):
-    """What each row of `csv` holds, as the bytes a read writes out."""
+    """What each row of `csv` is, as the bytes a read writes out."""
     values = csv_values(csv)
     width = widths or csv_widths(values)
     out = []
@@ -182,7 +183,7 @@ def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960,
         argv.append("-r%d" % repeat)
     if variant == 2:
         argv += ["-k%d" % unit, "-m%d" % ring]
-        # The tree holds a copy of ST4, so no packer stands beside it. $ST4
+        # The tree contains a copy of ST4, so no packer stands beside it. $ST4
         # names one to pack with instead of the carried one.
         if os.environ.get("ST4"):
             argv.append("-p" + ST4)
@@ -199,11 +200,11 @@ def package(blob, assemble=False):
     The image comes from the packager. By default it combines the code the
     build made from 68k/DTX*.S, which is the path a caller takes; with
     `assemble` it runs rmac over the template instead. The two give the
-    same bytes, and BlobTest holds them to that.
+    same bytes, and BlobTest checks that.
 
     The labels come from a run of rmac over the same template and the same
-    figures, for the listing's symbol table alone: the rig counts what the decoder is asked for at
-    ST4_resume's address in it.
+    figures, for the listing's symbol table alone: the rig counts the decoder's
+    calls at ST4_resume's address in it.
     """
     work = tempfile.mkdtemp(prefix="dtx68")
     src = os.path.join(work, "t.dtx")
@@ -212,7 +213,7 @@ def package(blob, assemble=False):
     with open(src, "wb") as f:
         f.write(blob)
     # No -copies: the payload states it (R5.10), so the packager reads
-    # which decoder the table asks for out of the file.
+    # which decoder the table needs out of the file.
     run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img]
         + (["-a" + RMAC] if assemble else []))
     run(["java", "-cp", CLASSES, "org.dtx.Packager", src,
@@ -224,7 +225,7 @@ def package(blob, assemble=False):
     at = {}
     for line in open(lst):
         # rmac lays its symbol table in as many columns as the page fits,
-        # so a line holds one name, address and kind or several.
+        # so a line has one name, address and kind or several.
         cell = line.split()
         for c in range(0, len(cell) - 2, 3):
             if len(cell[c + 1]) == 16 and cell[c + 2] in ("t", "d", "b"):
@@ -323,9 +324,9 @@ class Machine:
 
 def check(name, csv, variant, widths=None, repeat=None, unit=1, ring=960):
     blob = write_table(csv, variant, widths, repeat, unit, ring)
-    if variant == 2:  # noqa: the plain file gives what a row holds
+    if variant == 2:  # noqa: the plain file gives a row's values
         # The table is the same under every variant (R1.3), so what a row
-        # holds is read out of the plain file, by the reader in this rig.
+        # is, is read out of the plain file, by the reader in this rig.
         plain = write_table(csv, 1, widths, repeat)
         _, rows, columns, rr, width, _, row_bytes, want = read_dtx(plain)
         kind = 2
@@ -511,7 +512,7 @@ def roundtrip(name, csv, widths=None, repeat=None, unit=1, ring=960,
                 % (resumes, due)
             asked = "  %d resumes at P=%d" % (resumes, p)
         # The writer's link, where this rig can read the file: the bytes the
-        # writer laid down hold the rows the text gave.
+        # writer laid down are the rows the text gave.
         if variant != 2:
             _, _, _, _, _, _, _, laid = read_dtx(blob)
             assert laid == want, \

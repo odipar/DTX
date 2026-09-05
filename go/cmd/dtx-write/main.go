@@ -124,7 +124,7 @@ func readWidths(given, text string) ([]int, error) {
 	return width, nil
 }
 
-// packerFor gives what packs a column: the port this executable holds, or
+// packerFor gives what packs a column: the port in this executable, or
 // an ST4 executable beside it where -p names one.
 func packerFor(named, copies string) dtx.Packer {
 	if named != "" {

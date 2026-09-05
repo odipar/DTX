@@ -2,7 +2,7 @@ package dtx
 
 import "fmt"
 
-// WriteDtx0 gives table as a DTX0 file: R rows, each holding column 0
+// WriteDtx0 gives table as a DTX0 file: R rows, each column 0
 // through column C minus one in order, with nothing between them.
 //
 // A value falls where the widths put it, so a two or four byte column can
@@ -22,7 +22,7 @@ func WriteDtx0(t *Table) []byte {
 	return out
 }
 
-// ReadDtx0 gives the table a DTX0 file holds.
+// ReadDtx0 gives the table in a DTX0 file.
 func ReadDtx0(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
 	if err != nil {
@@ -72,7 +72,7 @@ func WriteDtx1(t *Table) []byte {
 	return out
 }
 
-// ReadDtx1 gives the table a DTX1 file holds.
+// ReadDtx1 gives the table in a DTX1 file.
 func ReadDtx1(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
 	if err != nil {
@@ -95,7 +95,7 @@ func ReadDtx1(file []byte) (*Table, error) {
 	return NewTable(header.Rows, header.Repeat, header.Width, column)
 }
 
-// Read gives the table a file holds, under either plain variant.
+// Read gives the table in a file, under either plain variant.
 func Read(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
 	if err != nil {
@@ -130,7 +130,7 @@ type Packer interface {
 
 	// Copies states whether a match beyond the ring copies from the
 	// column's own literal stream, which ST4 packs with -c. The packer
-	// states it: a flag carried beside a file could disagree with the bytes
+	// states it: a flag carried beside a file could differ from the bytes
 	// in it, and one the packer wrote cannot (R5.10).
 	Copies() bool
 }
@@ -178,8 +178,8 @@ func WriteDtx2(t *Table, packer Packer, unit, ring int) ([]byte, error) {
 	return out, nil
 }
 
-// Dtx2From gives the DTX2 file of the table a DTX0 or DTX1 file holds. The
-// table is the same under every variant (R1.3), so what comes back holds the
+// Dtx2From gives the DTX2 file of the table in a DTX0 or DTX1 file. The
+// table is the same under every variant (R1.3), so what comes back has the
 // same rows, widths, R and RR as what went in.
 func Dtx2From(plain []byte, packer Packer, unit, ring int) ([]byte, error) {
 	t, err := Read(plain)

@@ -19,11 +19,11 @@ import org.junit.jupiter.api.Test;
  *
  * <p>One input has one output. Java, Go and C# write the same DTX files,
  * rewrite them the same way, build the same eight images and combine the
- * same packages, so a caller who takes any one of them holds the same bytes
+ * same packages, so a caller who takes any one of them has the same bytes
  * at every step.
  *
- * <p>No ST4 packer stands beside this: each tree holds a copy, and what
- * these hold them to is that the three copies pack the same bytes.
+ * <p>No ST4 packer stands beside this: each tree contains a copy, and what
+ * these check is that the three copies pack the same bytes.
  *
  * <p>Skipped where Go, the .NET SDK or rmac is not installed.
  */
@@ -85,7 +85,7 @@ class ParityTest {
         return written;
     }
 
-    /** What the three trees wrote, held to one another. */
+    /** What the three trees wrote, compared with one another. */
     private static void same(String name, Map<String, byte[]> written) {
         byte[] one = written.getOrDefault("java", new byte[0]);
         for (Map.Entry<String, byte[]> held : written.entrySet()) {

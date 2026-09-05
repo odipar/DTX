@@ -7,8 +7,8 @@
 ;
 ; doc/abi.md states the calls, the format block and the state block. One
 ; template a variant: this file reads DTX2 and nothing else, so no call in it
-; tests which variant it holds. org.dtx.Packager picks the template the
-; table's variant asks for.
+; tests which variant it contains. org.dtx.Packager takes the template the
+; table's variant needs.
 ;
 ; DTX2 packs a column with ST4, and this reader follows YMX. Every column
 ; decodes through its own ring; init fills every ring with P rows; and after
@@ -22,29 +22,29 @@
 ; out of the column table; the read's three counts and the row's bytes are
 ; written into the instructions that take them. What still moves the code is
 ; the decoder built into it: k and the copy code are ST4's own assembly
-; parameters, so a table packed at another unit, or with copies, holds other
+; parameters, so a table packed at another unit, or with copies, contains other
 ; instructions.
 ;
-; ONE FILL AND ONE REFILL SERVE EVERY COLUMN. The column table holds a stream
+; ONE FILL AND ONE REFILL FOR EVERY COLUMN. The column table contains a stream
 ; record a column at a fixed stride, so the fill is a loop over the records
 ; and the refill indexes them by the turn. ST4 leaves only d6, d7 and a6
-; alone, so neither holds the loop's state in a register: the record now being
+; alone, so the loop's state is in neither: the record now being
 ; filled stands in the block, and a6 reaches it.
 ;
 ; THE COLUMN TABLE stands behind the code, and the format block states where.
 ; Its header and read entries are DTX1's, and the records follow them:
 ;
 ;   +0   4  stream A, from the payload    +16  4  the ring, in the block
-;   +4   4  stream B                      +20  4  the slot, in the block
+;   +4   4  stream B                      +20  4  the decoder state, in the block
 ;   +8   4  stream C                      +24  2  the width's shift
 ;   +12  4  stream D                      +26  2  the unit's shift
 ;
-; a6 HOLDS THE STATE BLOCK through init, jump and advance, and the caller's
+; a6 IS THE STATE BLOCK through init, jump and advance, and the caller's
 ; a6, d6 and d7 stand parked in the block for the length of the call: ST4
 ; leaves those three alone, and they are the only registers that stand across
 ; an ST4_resume. Read takes the block in a0 and parks nothing.
 ;
-; TRUSTED INPUT ONLY. No call checks the table, the state block, the row
+; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call
 ; takes without checking, ST4_wrap.S its own seven.
 ; -----------------------------------------------------------------------------
@@ -69,14 +69,15 @@ DTX_S_B             equ     4
 DTX_S_C             equ     8
 DTX_S_D             equ     12
 DTX_S_RING          equ     16
-DTX_S_SLOT          equ     20
+DTX_S_DECODER       equ     20
 DTX_S_WSHIFT        equ     24
 DTX_S_KSHIFT        equ     26
 DTX_S_SIZE          equ     32
 
 ; The state block beyond what doc/abi.md 3 states: three cursors, the three
 ; rings their classes begin at, the record a fill is at, and the five figures
-; the table settles. The slots stand at DTX_SLOTS and the rings behind them.
+; the table gives. The decoder states stand at DTX_DECODERS, one a column,
+; and the rings behind them.
 DTX_PAYLOAD         equ     36
 DTX_RECORD          equ     40
 DTX_LEFT            equ     44              ; the columns a fill has left
@@ -86,7 +87,7 @@ DTX_REPEATFIG       equ     64              ; RR
 DTX_PERIODFIG       equ     68              ; P
 DTX_NFIG            equ     72              ; N
 DTX_CFIG            equ     76              ; C, a word
-DTX_SLOTS           equ     80
+DTX_DECODERS        equ     80
 
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
@@ -134,10 +135,10 @@ DTX_streams:
         rts
 
 ; -----------------------------------------------------------------------------
-; The budget one refill asks for, in units: the rows in d3 times the column's
+; The budget one refill takes, in units: the rows in d3 times the column's
 ; width, divided by k. Both are shifts, and both stand at or above zero. The
 ; record stands in a3, and d4 counts: a seed works a budget out between
-; ST4_init and ST4_resume, and d0, d1, d2, a0, a1, a2, a4 and a5 hold the
+; ST4_init and ST4_resume, and d0, d1, d2, a0, a1, a2, a4 and a5 compare the
 ; decoder's state across that.
 
 DTX_budget:
@@ -172,11 +173,11 @@ DTX_wrap:
 .held:
         rts
 
-; The slot of the record in a3, written from the decoder's registers. d4 holds
-; the offset while a3 becomes the slot: nothing else is free.
+; The decoder state of the record in a3, written from the decoder's registers.
+; d4 has the offset while a3 becomes the state: nothing else is free.
 
 DTX_store:
-        move.l  DTX_S_SLOT(a3),d4
+        move.l  DTX_S_DECODER(a3),d4
         movea.l a6,a3
         adda.l  d4,a3
         movem.l d0-d2/a0-a2/a4-a5,(a3)
@@ -208,7 +209,7 @@ seed_column:
         adda.l  DTX_S_D(a3),a5
         movea.l a6,a1
         adda.l  DTX_S_RING(a3),a1
-        move.w  DTX_NFIG+2(a6),d3       ; N, which a ring holds in a word
+        move.w  DTX_NFIG+2(a6),d3       ; N, a ring's bytes, in a word
         bsr     ST4_init
         movea.l DTX_RECORD(a6),a3
         move.l  DTX_PERIODFIG(a6),d3
@@ -332,7 +333,7 @@ DTX_refill:
         move.l  a3,DTX_RECORD(a6)
         bsr     DTX_budget
         movea.l DTX_RECORD(a6),a3
-        move.l  DTX_S_SLOT(a3),d4
+        move.l  DTX_S_DECODER(a3),d4
         movea.l a6,a3
         adda.l  d4,a3
         movem.l (a3)+,d0-d2/a0-a2/a4-a5
@@ -376,7 +377,7 @@ DTX_move:
 
 ; -----------------------------------------------------------------------------
 ; DTX_jump. ST4_resume clobbers d3, d4, d5 and a3, so nothing but a6 and the
-; stack stands across a step: the target is held on the stack.
+; stack stands across a step: the target is on the stack.
 
 DTX_jump:
         movem.l d6-d7/a6,DTX_PARK(a0)
@@ -429,7 +430,7 @@ DTX_advance:
 
 ; -----------------------------------------------------------------------------
 ; DTX_read. The row as DTX0 lays it out, and nothing between the values. One
-; loop a width, over the run of entries that width holds: a column's value
+; loop a width, over the run of entries of that width: a column's value
 ; stands at a displacement off its class cursor, and the ring the class walks
 ; puts every column of it a whole ring apart.
 ;
@@ -560,7 +561,7 @@ take_over:
         cmp.l   DTX_ROWSFIG(a6),d0
         bcc.s   take_over_end           ; RR at R: the end, and it is sticky
         movem.l DTX_PARK(a6),d6-d7/a6
-        bsr     DTX_jump                ; a0 holds the block still
+        bsr     DTX_jump                ; a0 is the block still
         movea.l (a7)+,a1
         rts
 take_over_end:
@@ -583,7 +584,7 @@ take_step:
         include "ST4_wrap.S"
 
 ; rmac cuts its listing's symbol table off before ST4_resume, which sorts
-; late. The emulation rig counts what the decoder is asked for, and reaches
+; late. The emulation rig counts the decoder's calls, and reaches
 ; it through this name instead.
 DTX_resume      equ     ST4_resume
 

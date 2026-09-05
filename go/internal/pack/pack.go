@@ -1,7 +1,7 @@
 // Package pack combines a DTX table with the 68000 image that reads it.
 //
 // One variant is one code, so nothing here assembles: it takes the image for
-// the build the table asks for, writes the five fields the table settles
+// the build the table needs, writes the five fields the table gives
 // into the format block, and appends the column table and the table's bytes.
 // doc/abi.md states the image, the format block and the column table.
 package pack
@@ -49,8 +49,8 @@ const (
 // packed with copies from its own literal stream, R5.10.
 const Copies = 1
 
-// Packed holds what a DTX2 payload states: the ring, the unit, whether its
-// columns hold copies from the literal stream, and where each column's data
+// Packed gives what a DTX2 payload states: the ring, the unit, whether its
+// columns contain copies from the literal stream, and where each column's data
 // set begins in the payload.
 type Packed struct {
 	Ring   int // N
@@ -62,7 +62,7 @@ type Packed struct {
 // ReadPacked reads those out of a DTX2 payload, SPEC.md 2.3.
 //
 // It checks the data sets against it. Every set opens with $53 $34 $07 k, so
-// one compare against the payload's own k holds ST4's signature, its format
+// one compare against the payload's own k checks ST4's signature, its format
 // version and R5.2 at once.
 func ReadPacked(file []byte, header dtx.Header) (Packed, error) {
 	payload := header.Length
@@ -87,7 +87,7 @@ func ReadPacked(file []byte, header dtx.Header) (Packed, error) {
 	return out, nil
 }
 
-// Classes gives the widths a table of these holds, in the order 1, 2, 4.
+// Classes gives the widths among these, in the order 1, 2, 4.
 func Classes(width []int) []int {
 	var out []int
 	for _, w := range []int{1, 2, 4} {
@@ -101,7 +101,7 @@ func Classes(width []int) []int {
 	return out
 }
 
-// Counts gives how many columns each width class holds.
+// Counts gives how many columns are in each width class.
 func Counts(width []int) [3]int {
 	var out [3]int
 	for _, w := range width {
@@ -139,14 +139,14 @@ func Bases(header dtx.Header) [3]int {
 	return out
 }
 
-// Slot gives where the slots stand in the state block, doc/abi.md 3.
-func Slot(header dtx.Header) int {
+// Decoders gives where the decoder states stand in the state block, doc/abi.md 3.
+func Decoders(header dtx.Header) int {
 	return PackedHead
 }
 
 // Ring gives where the rings stand in the state block.
 func Ring(header dtx.Header) int {
-	return Slot(header) + 32*header.Columns()
+	return Decoders(header) + 32*header.Columns()
 }
 
 // RingOf gives where a width class's ring begins in the state block.
@@ -163,7 +163,7 @@ func StateBytes(header dtx.Header) int {
 	if header.Variant == dtx.DTX0 {
 		return Cursor + 4
 	}
-	// DTX1 holds three cursors and the three places their classes begin,
+	// DTX1 has three cursors and the three places their classes begin,
 	// at any widths the table states, so its block does not move with C.
 	if header.Variant == dtx.DTX1 {
 		return 48
@@ -228,7 +228,7 @@ func shift(of int) int {
 	return -1
 }
 
-// ColumnTable gives the table the image holds behind its code: a header, one
+// ColumnTable gives the table behind the image's code: a header, one
 // read entry a column grouped by width so each of a read's three loops walks
 // a run of them, and under DTX2 one stream record a column.
 //
@@ -303,7 +303,7 @@ func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
 			dtx.PutLong(out, rec+8, set+dtx.GetLong(file, payload+set+12))
 			dtx.PutLong(out, rec+12, set+dtx.GetLong(file, payload+set+16))
 			dtx.PutLong(out, rec+16, Ring(header)+i*n)
-			dtx.PutLong(out, rec+20, Slot(header)+32*i)
+			dtx.PutLong(out, rec+20, Decoders(header)+32*i)
 			dtx.PutWord(out, rec+24, shift(w))
 			dtx.PutWord(out, rec+26, kshift)
 		}
@@ -327,7 +327,7 @@ func classOf(w int) int {
 // and the format block written to state the three.
 //
 // The code is the same bytes any table that follows it, so what a combine
-// writes is the five fields the table settles. It checks the two it cannot
+// writes is the five fields the table gives. It checks the two it cannot
 // write: the variant, and under DTX2 the unit the decoder built into the
 // code decodes at.
 func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
@@ -343,7 +343,7 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 			code[FormatAt+3], header.Variant)
 	}
 	// The code ends where the format block states the column table begins: the
-	// two agree, or the image reads its own last instruction as a column.
+	// two match, or the image reads its own last instruction as a column.
 	columns := dtx.GetLong(code, FormatAt+ColumnsAt)
 	if columns != len(code) {
 		return nil, fmt.Errorf("the code runs to %d bytes and the format"+
@@ -378,7 +378,7 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 		}
 	}
 	dtx.PutLong(out, FormatAt+StateAt, state)
-	// The table stands behind both, and only the packager holds the figure:
+	// The table stands behind both, and only the packager has the figure:
 	// the column table's size moves with C, so the assembler could not have
 	// worked it out.
 	dtx.PutLong(out, FormatAt+TableAt, len(code)+len(entries))
@@ -388,12 +388,12 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 	return out, nil
 }
 
-// Image gives the image for this table, from the code this build holds.
+// Image gives the image for this table, from the code this build contains.
 //
 // Which of the eight it takes is the file's to state: the variant, and under
-// DTX2 the unit its data sets are packed at and whether they hold copies
+// DTX2 the unit its data sets are packed at and whether they contain copies
 // from the literal stream (R5.10). No word from a caller enters it, so no
-// word can disagree with the bytes.
+// word can differ from the bytes.
 func Image(file []byte) ([]byte, error) {
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
@@ -431,7 +431,7 @@ func equ(name string, value int) string {
 	return name + pad + "\tequ\t" + strconv.Itoa(value) + "\n"
 }
 
-// Figures gives what one table settles, as a template reads it: the equates,
+// Figures gives what one table gives, as a template reads it: the equates,
 // and no instruction. Every figure a loop counts with reaches the
 // code at run time instead, out of the table's own header and the column
 // table (doc/tools.md).
@@ -473,8 +473,8 @@ func Figures(file []byte) (string, error) {
 		out.WriteString(equ("DTX_PERIOD", period))
 		out.WriteString(equ("DTX_N", given.Ring))
 		out.WriteString(equ("ST4_UNIT", given.Unit))
-		// The payload states whether its columns hold copies (R5.10), so
-		// the decoder built for them is settled by the file. That build
+		// The payload states whether its columns contain copies (R5.10), so
+		// the decoder built for them is fixed by the file. That build
 		// writes the reach into two of its own instructions, and a 68030
 		// caller flushes the instruction cache after every call that seeds
 		// a decoder.

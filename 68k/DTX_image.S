@@ -5,7 +5,7 @@
 ; Robbert's direction. Use it freely, including commercially, as long as your
 ; documentation says you used DTX (see LICENSE).
 ;
-; Included by DTX0.S, DTX1.S and DTX2.S, never assembled on its own. It holds
+; Included by DTX0.S, DTX1.S and DTX2.S, never assembled on its own. It contains
 ; what doc/abi.md 1 states of every image and what no variant changes: the
 ; six slots, the format block, and the one call that reads neither the state
 ; block nor the table's layout.

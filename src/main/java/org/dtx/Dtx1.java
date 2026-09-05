@@ -1,7 +1,7 @@
 package org.dtx;
 
 /**
- * DTX1, column by column: {@code C} columns, each holding its {@code R}
+ * DTX1, column by column: {@code C} columns, each its {@code R}
  * values in row order.
  *
  * <p>A column begins on a word, so where the column before it ends odd a
@@ -52,7 +52,7 @@ public final class Dtx1 {
     }
 
     /**
-     * The table a DTX1 file holds.
+     * The table in a DTX1 file.
      *
      * @throws IllegalArgumentException where the file is not DTX1, or is
      *     short of the columns its header states

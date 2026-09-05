@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
  * is run, and the tables they are run over.
  *
  * <p>A check here drives the built tools rather than the classes behind
- * them, so it holds what a caller gets.
+ * them, so it has what a caller gets.
  */
 final class Rig {
 

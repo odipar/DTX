@@ -7,17 +7,17 @@ import org.st4.St4LiteralCopySearch;
 import org.st4.Units;
 
 /**
- * A {@link Packer} that packs with the copy of ST4 this repository holds.
+ * A {@link Packer} that packs with the copy of ST4 in this repository.
  *
  * <p>{@code src/main/java/org/st4} is that copy, taken from
  * odipar/ST4@498aa25 and not edited here. So a tool writes DTX2 with no
  * packer beside it, and {@link St4Beside} runs one where a caller names it.
  *
- * <p>The packer takes what {@code st4 -f -kK -mN -l65535} gives it, and {@code -c} beside them where the columns hold copies. The
+ * <p>The packer takes what {@code st4 -f -kK -mN -l65535} gives it, and {@code -c} beside them where the columns contain copies. The
  * ring is bytes and the packer counts units, so {@code -m} is the ring
- * divided by the unit, held to what a word offset can state.
+ * divided by the unit, at most what a word offset can state.
  *
- * <p>{@code -l65535} holds ST4_wrap's assumption 4: no operation is longer
+ * <p>{@code -l65535} meets ST4_wrap's assumption 4: no operation is longer
  * than the 65535 units the 68000 decoders count in a word. ST4's own
  * default already fits them, and this states it rather than taking it.
  */
@@ -35,7 +35,7 @@ public final class St4 implements Packer {
     }
 
     /**
-     * A packer that lets a match beyond the ring copy from the column's own
+     * A packer that so that a match beyond the ring copies from the column's own
      * literal stream, which packs a small ring far smaller.
      *
      * @param copies whether to pack copies

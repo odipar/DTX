@@ -18,7 +18,7 @@ func table(t *testing.T, rows int, width []int) *Table {
 	return held
 }
 
-// Every variant holds the same table (R1.3): what goes out comes back.
+// Every variant is the same table (R1.3): what goes out comes back.
 func TestAPlainVariantWritesWhatItReads(t *testing.T) {
 	for _, width := range [][]int{{1}, {1, 2, 4}, {4, 2, 1}, {2, 2}} {
 		for _, rows := range []int{1, 3, 64} {
