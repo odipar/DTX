@@ -2,7 +2,7 @@
 
 The kit an independent reader is written against: thirteen tables under
 `tables/`, one file each and the rows in it beside it, and TASK.md, which
-states what a reader produces from each and the rules it is checked
+defines what a reader produces from each and the rules it is checked
 against.
 
 Every table is written by this repository's own writer from the text and

@@ -89,7 +89,7 @@ from 592 bytes to 716 and DTX2's from 1352 to 1476.
 
 ## A column packed with copies, read without them
 
-Before the payload stated whether its columns contain copies (R5.10), the
+Before the payload defined whether its columns contain copies (R5.10), the
 packager took that from a flag beside the file, and the flag could be
 wrong. Measured on the 512 row table above, packaged without it: row 37
 read wrong, where the pattern first repeats past the ring, and every row

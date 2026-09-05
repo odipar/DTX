@@ -23,7 +23,7 @@ before what it describes, and what things are called comes before both.
 - **R0.8** A term that changes in the glossary changes everywhere in the
   same change.
 - **R0.9** A test reads terminology.md and fails when a term it explains
-  has no glossary entry.
+  does not have a glossary entry.
 - **R0.10** A test reads the documents for what can be recomputed or
   followed: the figures, the citations, the links, the glossary's order,
   the one wrap width.
@@ -40,7 +40,7 @@ before what it describes, and what things are called comes before both.
   not change with the variant: the same `R`, `C` and `RR`, the same column
   widths, and the same rows in the same order.
 - **R1.4** Nothing about what a column contains. A format built on this one
-  states that in its own repository.
+  defines that in its own repository.
 
 ## R2. The variants
 
@@ -49,8 +49,8 @@ before what it describes, and what things are called comes before both.
 - **R2.2** **DTX0**, **DTX1** and **DTX2** are the variants this
   specification defines, in R3, R4 and R5. A variant it does not define
   takes the next number, and **DTXN** names one of those.
-- **R2.3** A table states which variant it is, and a reader which variants
-  it reads. Where either states it is SPEC.md's.
+- **R2.3** A table defines which variant it is, and a reader which variants
+  it reads. Where either defines it is SPEC.md's.
 - **R2.4** A variant's number is fixed once assigned, and a later
   specification assigns a number this one leaves free rather than
   redefining one.
@@ -62,7 +62,7 @@ before what it describes, and what things are called comes before both.
   unpacking nothing and keeping nothing between one row and the next, and
   a writer puts a row down the same way.
 - **R3.3** Finding a row, or a column within one, is arithmetic on `R`,
-  `C` and the widths. There is no index to walk.
+  `C` and the widths. An index is absent.
 - **R3.4** Nothing padded inside the payload. A value falls where the
   widths put it, so a two or four byte column may fall on an odd offset,
   where a 68000 takes it as bytes.
@@ -83,7 +83,7 @@ before what it describes, and what things are called comes before both.
 
 - **R5.1** The rows laid out column by column, each column packed with
   ST4.
-- **R5.2** One unit `k` for a payload. The `k` the payload states and the
+- **R5.2** One unit `k` for a payload. The `k` the payload defines and the
   `k` in every data set's own signature are the same, and a reader checks
   one against the other.
 - **R5.3** A reader has one ST4 decoder, built for that `k`, and takes
@@ -91,8 +91,7 @@ before what it describes, and what things are called comes before both.
   and with one unit a payload one build reads every column.
 - **R5.4** One ring size `N` for a payload. No data set in it reaches back
   further than `N`, so a ring of `N` bytes is enough for any of them, and
-  every
-  data set was packed for the `N` the payload states.
+  every data set was packed for the `N` the payload defines.
 - **R5.5** A reader's rings are all that one size, so they stand at a
   fixed stride from one another and one cursor arithmetic runs every
   column.
@@ -105,9 +104,9 @@ before what it describes, and what things are called comes before both.
 - **R5.8** Read back through a ring that does not grow with `R`. A reader
   has `N` bytes of a column at a time, not the column.
 - **R5.9** An ST4 data set begins on a long.
-- **R5.10** The payload states whether its columns contain copies from their
+- **R5.10** The payload defines whether its columns contain copies from their
   own literal streams. A decoder built without the copy code reads such a
-  column wrongly, and no data set states which kind it is, so a reader that
+  column wrongly, and no data set defines which kind it is, so a reader that
   took it from anywhere but the file could be given one that differs from the
   bytes.
 
@@ -122,18 +121,19 @@ otherwise.
 - **R6.4** `RR` names a row of the table, 0 to `R` minus one, or is `R`
   itself where the table does not repeat.
 - **R6.5** A reader given a table that breaks any of these, or R5.6, or a
-  payload whose data sets do not state its own `k` and ST4's format
-  version 7, reports it and reads no further. What it reports is SPEC.md's.
+  payload whose data sets do not give its own `k` and ST4's format
+  version 7, reports it and does not read further. What it reports is
+  SPEC.md's.
 
 ## R7. Not yet required
 
-What R1 to R6 do not yet state. Each is open, and none of it is fixed by
-[doc/SPEC.md](SPEC.md), which states the format R1 to R6 require.
+What R1 to R6 do not yet define. Each is open, and none of it is fixed by
+[doc/SPEC.md](SPEC.md), which defines the format R1 to R6 require.
 
-- Whether a table states its own length, and whether a reader needs one to
+- Whether a table defines its own length, and whether a reader needs one to
   read it.
 - What a reader reports of a table it will not read. R6.5 has it report and
-  read no further, and leaves what it reports to SPEC.md, which has not
+  not read further, and leaves what it reports to SPEC.md, which has not
   written it.
 - Whether a variant may contain columns of more than one kind, some packed
   and

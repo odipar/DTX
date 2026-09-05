@@ -22,7 +22,7 @@ public static class Format
     /// <summary>The three bytes a file opens with.</summary>
     public static readonly byte[] Magic = { (byte)'D', (byte)'T', (byte)'X' };
 
-    /// <summary>The largest ring a payload can state: N is two bytes.</summary>
+    /// <summary>The largest ring a payload can define: N is two bytes.</summary>
     public const int MaxRing = 65535;
 
     /// <summary>
@@ -45,7 +45,7 @@ public static class Format
         if (file.Length < 16)
         {
             throw new ArgumentException(
-                    $"a file of {file.Length} bytes holds no header");
+                    $"a file of {file.Length} bytes does not contain a header");
         }
         for (int i = 0; i < Magic.Length; i++)
         {
@@ -130,7 +130,7 @@ public static class Format
 }
 
 /// <summary>
-/// What a file's header states. Length is the header's end, the payload's
+/// What a file's header defines. Length is the header's end, the payload's
 /// first byte.
 /// </summary>
 public sealed record Header(int Variant, int Rows, int Repeat, int[] Width,

@@ -111,7 +111,7 @@ func Read(file []byte) (*Table, error) {
 	}
 }
 
-// MaxRing is the largest ring a payload can state, in bytes: N is two bytes.
+// MaxRing is the largest ring a payload can define, in bytes: N is two bytes.
 const MaxRing = 65535
 
 // CopiesFlag is the flags bit at payload byte 3 that marks every column was
@@ -120,7 +120,7 @@ const CopiesFlag = 1
 
 // A Packer makes one ST4 data set of one column.
 //
-// DTX2 states that a column is an ST4 data set (R5.1) and nothing more about
+// DTX2 defines that a column is an ST4 data set (R5.1) and nothing more about
 // how ST4 packs: no packer is kept in this repository, and a caller that
 // writes DTX2 supplies one.
 type Packer interface {
@@ -128,10 +128,10 @@ type Packer interface {
 	// the length of what it unpacks to.
 	Pack(column []byte, unit, ring int) ([]byte, error)
 
-	// Copies states whether a match beyond the ring copies from the
+	// Copies gives whether a match beyond the ring copies from the
 	// column's own literal stream, which ST4 packs with -c. The packer
-	// states it: a flag carried beside a file could differ from the bytes
-	// in it, and one the packer wrote cannot (R5.10).
+	// defines it: a flag carried beside a file could differ from the
+	// bytes in it, and one the packer wrote cannot (R5.10).
 	Copies() bool
 }
 

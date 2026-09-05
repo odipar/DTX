@@ -14,9 +14,9 @@ using System.Globalization;
 /// <para>A value of W bytes is stored most significant byte first, as every
 /// field of the header is, and a negative one in two's complement. A value
 /// fits W bytes where it lies from -2^(8W-1) to 2^(8W)-1, so one width takes
-/// a signed column's values and an unsigned one's alike. DTX
-/// states no more of a column than its width, so which of the two a column
-/// is, the caller states elsewhere.</para>
+/// a signed column's values and an unsigned one's alike. DTX does not
+/// define more of a column than its width, so which of the two a column
+/// is, the caller defines elsewhere.</para>
 /// </summary>
 public static class Csv
 {
@@ -106,7 +106,7 @@ public static class Csv
         }
         if (out_.Count == 0)
         {
-            throw new ArgumentException("the text holds no row");
+            throw new ArgumentException("the text does not contain a row");
         }
         return out_;
     }

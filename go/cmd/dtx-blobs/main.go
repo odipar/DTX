@@ -1,5 +1,5 @@
 // Command dtx-blobs builds the 68000 images the packager combines from, one
-// file a build. doc/tools.md states the tool.
+// file a build. doc/tools.md defines the tool.
 //
 // Eight of them: DTX0, DTX1, and one a build of the decoder built into DTX2,
 // which is a unit of 1, 2 or 4 with the copy code and without. This is the
@@ -31,7 +31,7 @@ func main() {
 }
 
 // plain packs nothing: it hands the column back inside an ST4 data set and
-// states the build's own copies flag.
+// defines the build's own copies flag.
 //
 // The assembler reads a data set's four stream offsets and nothing in the
 // streams, so a data set whose streams are the column itself fixes every

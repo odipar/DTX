@@ -7,7 +7,7 @@ using System.Reflection;
 ///
 /// <para>One variant is one code, and under DTX2 one a build of the decoder
 /// built into it, so the eight are built once and an assembly that packages
-/// a table contains them rather than assembling one. doc/tools.md states how
+/// a table contains them rather than assembling one. doc/tools.md defines how
 /// they are built and doc/abi.md what each of them does.</para>
 ///
 /// <para>They are build output, embedded from build/68k. An assembly built
@@ -49,14 +49,14 @@ public static class Images
     public static byte[]? Read(int variant, int unit, bool copies)
     {
         string name = Name(variant, unit, copies);
-        Assembly held = typeof(Images).Assembly;
-        foreach (string one in held.GetManifestResourceNames())
+        Assembly assembly = typeof(Images).Assembly;
+        foreach (string one in assembly.GetManifestResourceNames())
         {
             if (!one.EndsWith(name, StringComparison.Ordinal))
             {
                 continue;
             }
-            using Stream? stream = held.GetManifestResourceStream(one);
+            using Stream? stream = assembly.GetManifestResourceStream(one);
             if (stream == null)
             {
                 return null;
@@ -75,31 +75,32 @@ public static class Images
     public static byte[] Code(int variant, int unit, bool copies)
     {
         string name = Name(variant, unit, copies);
-        byte[]? held = Read(variant, unit, copies);
-        if (held != null)
+        byte[]? embedded = Read(variant, unit, copies);
+        if (embedded != null)
         {
-            return held;
+            return embedded;
         }
         string? at = Environment.GetEnvironmentVariable("DTX_68K");
         if (string.IsNullOrEmpty(at))
         {
-            throw new InvalidOperationException($"this build holds no {name},"
-                    + " and DTX_68K names no directory holding one");
+            throw new InvalidOperationException($"this build does not contain"
+                    + $" {name}, and DTX_68K does not name a directory"
+                    + " with one");
         }
         return File.ReadAllBytes(Path.Combine(at, name));
     }
 
     /// <summary>How many of the builds this one contains: eight, or none.</summary>
-    public static int Held()
+    public static int Embedded()
     {
-        int held = 0;
+        int embedded = 0;
         foreach (Build build in Builds())
         {
             if (Read(build.Variant, build.Unit, build.Copies) != null)
             {
-                held++;
+                embedded++;
             }
         }
-        return held;
+        return embedded;
     }
 }

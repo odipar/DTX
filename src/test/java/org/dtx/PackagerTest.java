@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
  * The assembly a table is packaged as, and the image rmac makes of it.
  *
  * <p>What the image does is checked by {@code 68k/test/emu/test_dtx.py}, which
- * runs it on a 68000. This checks what the packager states of it: the
+ * runs it on a 68000. This checks what the packager writes of it: the
  * figures the format block gives, the state block's size, and what it will
  * not package.
  */
@@ -26,9 +26,9 @@ final class PackagerTest {
     }
 
     @Test
-    void theFiguresStateOnlyWhatTheImageCannotReadBack() {
+    void theFiguresDefineOnlyWhatTheImageCannotReadBack() {
         // R, C, RR and the widths reach the code at run time, out of the
-        // table's own header and the column table, so no equate states one.
+        // table's own header and the column table, so no equate defines one.
         // What is left is the row's bytes and the state block, which the
         // format block contains and a caller reads before there is a block to
         // read them from.
@@ -39,14 +39,14 @@ final class PackagerTest {
             for (String gone : new String[] {"DTX_ROWS", "DTX_COLUMNS",
                     "DTX_REPEAT", "DTX_VARIANT", "DTX_HEADER"}) {
                 assertTrue(!out.contains(gone + "\tequ\t"),
-                        "DTX" + variant + " states " + gone
+                        "DTX" + variant + " defines " + gone
                                 + ", so its code moves with the table");
             }
         }
     }
 
     @Test
-    void theFiguresHoldNoInstruction() {
+    void theFiguresDoNotContainAnInstruction() {
         // 68k/DTX.S is where every instruction stands. What the packager
         // writes is equates and macro invocations, and a move or a bra in
         // it would be an instruction the template does not contain.
@@ -75,22 +75,22 @@ final class PackagerTest {
     }
 
     @Test
-    void theFiguresStateNoMacroAtAll() {
+    void theFiguresDoNotDefineAMacro() {
         // A template no longer takes a list of macro invocations, one a
-        // column or a width class: the column table states what each of them
-        // stated, and one loop reads it. So the figures are equates and
+        // column or a width class: the column table defines what each of them
+        // defined, and one loop reads it. So the figures are equates and
         // nothing else, and the code they reach does not move with C.
         for (String out : new String[] {Packager.table(table(Dtx.DTX1)),
                 Packager.table(packed(64, new int[] {1, 2}, 1, 960))}) {
             for (String line : out.split("\n")) {
                 assertTrue(!line.trim().startsWith(".macro"),
-                        "the figures state a macro: " + line);
+                        "the figures define a macro: " + line);
             }
         }
     }
 
     @Test
-    void aPackedColumnTableHoldsAStreamRecordAColumn() {
+    void aPackedColumnTableContainsAStreamRecordAColumn() {
         byte[] file = packed(64, new int[] {1, 2}, 1, 960);
         Dtx.Header header = Dtx.header(file);
         byte[] table = Packager.columnTable(file);
@@ -117,7 +117,7 @@ final class PackagerTest {
         return packed(rows, width, unit, ring, false);
     }
 
-    /** The same, whose payload states what the packer packed. */
+    /** The same, whose payload defines what the packer packed. */
     private static byte[] packed(int rows, int[] width, int unit, int ring,
             boolean copies) {
         byte[][] column = new byte[width.length][];
@@ -149,7 +149,7 @@ final class PackagerTest {
     }
 
     @Test
-    void thePeriodIsTheSmallestThatHoldsEveryRule() {
+    void thePeriodIsTheSmallestThatMeetsEveryRule() {
         byte[] file = packed(64, new int[] {1, 2}, 1, 960);
         Dtx.Header header = Dtx.header(file);
         assertEquals(2, Packager.period(header, Packager.packed(file, header)),
@@ -187,7 +187,7 @@ final class PackagerTest {
     }
 
     @Test
-    void aPackedStateBlockHoldsADecoderStateAndARingAColumn() {
+    void aPackedStateBlockContainsADecoderStateAndARingAColumn() {
         byte[] file = packed(64, new int[] {1, 2}, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
@@ -200,33 +200,33 @@ final class PackagerTest {
     }
 
     @Test
-    void theCopyCodeIsAskedForOnlyWhereTheColumnsHoldCopies() {
-        // The payload states it (R5.10), so no word from a caller enters
+    void theCopyCodeIsNeededOnlyWhereTheColumnsContainCopies() {
+        // The payload defines it (R5.10), so no word from a caller enters
         // this: the file fixes which decoder reads it.
         byte[] plain = packed(64, new int[] {1, 2}, 1, 960);
         byte[] copies = packed(64, new int[] {1, 2}, 1, 960, true);
         assertTrue(!Packager.table(plain).contains("ST4_WINDOW"),
-                "a table packed without copies asks for no copy code");
+                "a table packed without copies does not need the copy code");
         assertTrue(Packager.table(copies).contains("ST4_WINDOW\tequ\t1"),
-                "a table packed with copies asks for it");
+                "a table packed with copies needs it");
         assertTrue(!Packager.packed(plain, Dtx.header(plain)).copies(),
-                "the plain payload states no copies");
+                "the plain payload does not flag copies");
         assertTrue(Packager.packed(copies, Dtx.header(copies)).copies(),
-                "the other states them");
+                "the other flags them");
     }
 
     @Test
-    void aDataSetThatDoesNotStateThePayloadsUnitIsRefused() {
-        // R5.2: the k a payload states and the k in every data set's own
+    void aDataSetThatDoesNotDefineThePayloadsUnitIsRefused() {
+        // R5.2: the k a payload defines and the k in every data set's own
         // signature are the same, and the packager checks one against the
         // other. One compare checks ST4's signature, its version and the
         // unit at once.
         byte[] file = packed(64, new int[] {1, 2}, 1, 960);
         Dtx.Header header = Dtx.header(file);
         int at = header.length() + Dtx.getLong(file, header.length() + 4 + 4);
-        file[at + 3] = 2;                       // column 1 now states k of 2
+        file[at + 3] = 2;                       // column 1 now defines k of 2
         assertEquals("column 1's data set opens 53340702 and the payload"
-                + " states 53340701: an ST4 data set opens with S4, the"
+                + " defines 53340701: an ST4 data set opens with S4, the"
                 + " format version 7 and the payload's own k",
                 assertThrows(IllegalArgumentException.class,
                         () -> Packager.packed(file, header)).getMessage());
@@ -239,14 +239,14 @@ final class PackagerTest {
         int at = header.length() + Dtx.getLong(file, header.length() + 4);
         file[at + 2] = 6;                       // the version before this one
         assertEquals("column 0's data set opens 53340601 and the payload"
-                + " states 53340701: an ST4 data set opens with S4, the"
+                + " defines 53340701: an ST4 data set opens with S4, the"
                 + " format version 7 and the payload's own k",
                 assertThrows(IllegalArgumentException.class,
                         () -> Packager.packed(file, header)).getMessage());
     }
 
     @Test
-    void thePackedFiguresStateThePeriodTheRingAndTheUnit() {
+    void thePackedFiguresDefineThePeriodTheRingAndTheUnit() {
         String out = Packager.table(packed(64, new int[] {1, 2}, 1, 960));
         assertTrue(out.contains("DTX_PERIOD\tequ\t2"), "P");
         assertTrue(out.contains("DTX_N\t\tequ\t960"), "N");
@@ -264,7 +264,7 @@ final class PackagerTest {
         byte[] image = Packager.image(table(Dtx.DTX0), rmac);
         assertEquals(0x60, image[0] & 0xFF, "the first slot is a bra.w");
         assertEquals("DTX", new String(image, 24, 3), "the format block at 24");
-        assertEquals(0, image[27], "the variant the format block states");
+        assertEquals(0, image[27], "the variant the format block defines");
         assertEquals(28, Dtx.getLong(image, 28), "the state block's bytes");
         int header = Dtx.getLong(image, 32);
         assertEquals("DTX", new String(image, header, 3),

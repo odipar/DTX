@@ -12,11 +12,11 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 /**
- * doc/experiments.md, read back: every byte figure it states is one the
+ * doc/experiments.md, read back: every byte figure it defines is one the
  * writer and the packager give, or the test names the cell.
  *
  * <p>The images come out of the code the build made, so this runs wherever
- * the build does and needs no assembler.
+ * the build does and does not need an assembler.
  */
 class ExperimentsTest {
 
@@ -48,7 +48,8 @@ class ExperimentsTest {
     /** The rows of one table in the document, by the cells' text. */
     private static List<String[]> rows(String doc, String heading) {
         int at = doc.indexOf("## " + heading);
-        assertTrue(at >= 0, "doc/experiments.md has no section " + heading);
+        assertTrue(at >= 0,
+                "doc/experiments.md does not have a section " + heading);
         int end = doc.indexOf("\n## ", at + 1);
         String section = doc.substring(at, end < 0 ? doc.length() : end);
         List<String[]> out = new ArrayList<>();
@@ -57,19 +58,19 @@ class ExperimentsTest {
         while (row.find()) {
             out.add(new String[] {row.group(1).trim(), row.group(2), row.group(3)});
         }
-        assertTrue(!out.isEmpty(), heading + " states no row of figures");
+        assertTrue(!out.isEmpty(), heading + " does not list a row of figures");
         return out;
     }
 
     @Test
     void whereDtx2BecomesTheSmallerOfTheTwo() throws IOException {
         for (String[] row : rows(doc(), "Where DTX2 becomes the smaller of the two")) {
-            int rowsHeld = Integer.parseInt(row[0]);
-            Table table = Csv.table(numbers(rowsHeld, 3), new int[] {1, 2, 4});
+            int r = Integer.parseInt(row[0]);
+            Table table = Csv.table(numbers(r, 3), new int[] {1, 2, 4});
             int one = Dtx1.write(table).length;
             int two = Dtx2.write(table, new St4(), 1, 960).length;
-            assertEquals(Integer.parseInt(row[1]), one, "DTX1 at R of " + rowsHeld);
-            assertEquals(Integer.parseInt(row[2]), two, "DTX2 at R of " + rowsHeld);
+            assertEquals(Integer.parseInt(row[1]), one, "DTX1 at R of " + r);
+            assertEquals(Integer.parseInt(row[2]), two, "DTX2 at R of " + r);
         }
     }
 

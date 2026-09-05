@@ -12,14 +12,14 @@ import java.util.List;
  * A DTX file as a standalone 68000 image: the code, then the table's bytes,
  * reached PC relative.
  *
- * <p>The code is {@code 68k/DTX.S}, which rmac assembles. This writes no
- * instruction: it states what one table gives, as equates and as lists of
- * macro invocations in {@code DTX_table.i}, and the template turns those
- * into the bodies. The table's bytes follow the code, appended to what rmac
- * writes, so {@code _table} is the last label of the template and the code
- * ends on a long to put the table there.
+ * <p>The code is {@code 68k/DTX.S}, which rmac assembles. This does not
+ * write an instruction: it defines what one table gives, as equates and as
+ * lists of macro invocations in {@code DTX_table.i}, and the template turns
+ * those into the bodies. The table's bytes follow the code, appended to what
+ * rmac writes, so {@code _table} is the last label of the template and the
+ * code ends on a long to put the table there.
  *
- * <p>{@code doc/abi.md} states the five calls, the format block and the
+ * <p>{@code doc/abi.md} defines the five calls, the format block and the
  * state block.
  */
 public final class Packager {
@@ -69,8 +69,8 @@ public final class Packager {
     private static int[] classes(int[] width) {
         List<Integer> out = new ArrayList<>();
         for (int w : new int[] {1, 2, 4}) {
-            for (int held : width) {
-                if (held == w) {
+            for (int one : width) {
+                if (one == w) {
                     out.add(w);
                     break;
                 }
@@ -84,7 +84,7 @@ public final class Packager {
     }
 
     /**
-     * What a DTX2 payload states: the ring, the unit, whether its columns
+     * What a DTX2 payload defines: the ring, the unit, whether its columns
      * contain copies from the literal stream, and where each data set begins.
      */
     record Packed(int ring, int unit, boolean copies, int[] at) {}
@@ -96,7 +96,7 @@ public final class Packager {
      * {@code $53 $34 $07 k}, so one compare against the payload's own
      * {@code k} checks ST4's signature, its format version and R5.2 at once.
      *
-     * @throws IllegalArgumentException where a data set states another
+     * @throws IllegalArgumentException where a data set defines another
      *     version or another unit than the payload does
      */
     static Packed packed(byte[] file, Dtx.Header header) {
@@ -112,7 +112,7 @@ public final class Packager {
             if (said != signature) {
                 throw new IllegalArgumentException(String.format(
                         "column %d's data set opens %08X and the payload"
-                        + " states %08X: an ST4 data set opens with S4, the"
+                        + " defines %08X: an ST4 data set opens with S4, the"
                         + " format version 7 and the payload's own k",
                         i, said, signature));
             }
@@ -150,13 +150,13 @@ public final class Packager {
             if (n < 2 * p * widest) {
                 break;
             }
-            boolean holds = true;
+            boolean meets = true;
             for (int w : width) {
                 long budget = (long) p * w / k;
-                holds &= n % (p * w) == 0 && (long) p * w % k == 0
+                meets &= n % (p * w) == 0 && (long) p * w % k == 0
                         && budget >= 1 && budget <= 65535;
             }
-            if (holds) {
+            if (meets) {
                 return p;
             }
         }
@@ -172,7 +172,7 @@ public final class Packager {
             return CURSOR + 4;
         }
         // DTX1 has three cursors and the three places their classes
-        // begin, at any widths the table states, so its block does not
+        // begin, at any widths the table defines, so its block does not
         // move with C either.
         return header.variant() == Dtx.DTX1
                 ? 48 : CURSOR + 4 * classes(header.width()).length;
@@ -228,7 +228,7 @@ public final class Packager {
         Packed packed = variant == Dtx.DTX2
                 ? packed(file, header) : new Packed(0, 0, false, new int[0]);
         int period = variant == Dtx.DTX2 ? period(header, packed) : 1;
-        // The payload states whether its columns contain copies (R5.10), so
+        // The payload defines whether its columns contain copies (R5.10), so
         // the decoder built for them is fixed by the file and not by a
         // word carried beside it. That build writes the reach into two of
         // its own instructions, and a 68030 caller flushes the instruction
@@ -236,7 +236,7 @@ public final class Packager {
         boolean copies = packed.copies();
 
         StringBuilder out = new StringBuilder();
-        out.append("; What org.dtx.Packager states of one table, for"
+        out.append("; What org.dtx.Packager writes of one table, for"
                         + " 68k/DTX.S to read.\n")
                 .append("; DTX").append(variant).append(", R = ").append(rows)
                 .append(", C = ").append(width.length)
@@ -280,7 +280,7 @@ public final class Packager {
         Dtx.Header header = Dtx.header(file);
         if (header.variant() == Dtx.DTX0) {
             // A DTX0 row is one run of bytes: no loop walks a column, so
-            // there is nothing a column table would state.
+            // there is nothing a column table would define.
             return new byte[0];
         }
         int[] width = header.width();
@@ -435,8 +435,8 @@ public final class Packager {
     /**
      * The five fields a combine writes, zeroed.
      *
-     * <p>Carried code states no table. The assembler read one to build it,
-     * and what it read stands in the format block: zeroing those five is
+     * <p>Carried code does not define a table. The assembler read one to build
+     * it, and what it read stands in the format block: zeroing those five is
      * what makes the file a function of the template alone, and what makes
      * code shipped without a combine read a state block of zero bytes rather
      * than some other table's.
@@ -465,15 +465,15 @@ public final class Packager {
     /**
      * The same, from the templates in {@code templates} rather than from
      * where {@code DTX_68K} puts them. A tool run from outside this
-     * repository has no directory to resolve a relative one against.
+     * repository does not have a directory to resolve a relative one against.
      */
     static byte[] code(byte[] file, Path rmac, String templates) {
         try {
             Path work = Files.createTempDirectory("dtx68");
             try {
-                Path states = work.resolve("DTX_table.i");
+                Path defines = work.resolve("DTX_table.i");
                 Path out = work.resolve("image.bin");
-                Files.writeString(states, table(file));
+                Files.writeString(defines, table(file));
                 Process run = new ProcessBuilder(rmac.toString(), "-m68000",
                         "-fr", "+o3", "-i" + work, "-i" + templates,
                         "-o", out.toString(),
@@ -508,7 +508,7 @@ public final class Packager {
 
     /**
      * One image: this code, the column table, the table's bytes, and the
-     * format block written to state the three.
+     * format block written to define the three.
      *
      * <p>The code is the same bytes any table that follows it, so what a
      * combine writes is the five fields the table gives. It checks the
@@ -531,8 +531,8 @@ public final class Packager {
             throw new IllegalStateException("the code reads DTX"
                     + code[FORMAT_AT + 3] + " and the table is DTX" + variant);
         }
-        // The code ends where the format block states the column table
-        // begins: the two match, or the image reads its own last
+        // The code ends where the format block's column table offset
+        // points: the two match, or the image reads its own last
         // instruction as a column.
         int columns = Dtx.getLong(code, FORMAT_AT + COLUMNS_AT);
         if (columns != code.length) {
@@ -573,7 +573,7 @@ public final class Packager {
     /**
      * The image, combined from the code in this repository.
      *
-     * <p>Which of the eight it takes is the file's to state: the variant,
+     * <p>Which of the eight it takes is the file's to define: the variant,
      * and under DTX2 the unit its data sets are packed at and whether they
      * contain copies from the literal stream (R5.10). No word from a caller
      * enters it, so no word can differ from the bytes.
@@ -607,12 +607,12 @@ public final class Packager {
             return;
         }
         String rmac = null;
-        boolean states = false;
+        boolean defines = false;
         for (int i = 2; i < args.length; i++) {
             if (args[i].startsWith("-a")) {
                 rmac = args[i].substring(2);
             } else if (args[i].equals("-s")) {
-                states = true;
+                defines = true;
             } else {
                 System.err.println("Packager does not read " + args[i]);
                 System.exit(2);
@@ -621,7 +621,7 @@ public final class Packager {
         }
         byte[] file = Files.readAllBytes(Path.of(args[0]));
         Dtx.Header header = Dtx.header(file);
-        if (states) {
+        if (defines) {
             Files.writeString(Path.of(args[1]), table(file));
         } else if (rmac == null) {
             Files.write(Path.of(args[1]), image(file));
@@ -634,7 +634,8 @@ public final class Packager {
         System.out.printf("%s -> DTX%d %s %d bytes, table %d bytes,"
                 + " %d rows, %d columns, state block %d bytes%n",
                 args[0], header.variant(),
-                states ? "figures" : rmac == null ? "image" : "image assembled",
+                defines ? "figures"
+                        : rmac == null ? "image" : "image assembled",
                 bytes, file.length, header.rows(), header.columns(), state);
     }
 }

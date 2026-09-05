@@ -63,4 +63,4 @@ R5.7).
 
 Nothing here. A column is so many bytes wide and no more, and what its
 bytes are for belongs to the format built on this one that reads them.
-That format states it in its own repository.
+That format defines it in its own repository.

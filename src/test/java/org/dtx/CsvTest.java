@@ -24,7 +24,7 @@ final class CsvTest {
             """;
 
     @Test
-    void everyColumnTakesTheNarrowestWidthThatHoldsIt() {
+    void everyColumnTakesTheNarrowestWidthThatFitsIt() {
         assertArrayEquals(new int[] {1, 2, 1}, Csv.widths(TEXT));
     }
 
@@ -80,7 +80,7 @@ final class CsvTest {
         assertEquals("line 1 column 1 gives \"x\", which is not a number",
                 assertThrows(IllegalArgumentException.class,
                         () -> Csv.table("1,x\n")).getMessage());
-        assertEquals("the text holds no row",
+        assertEquals("the text does not contain a row",
                 assertThrows(IllegalArgumentException.class,
                         () -> Csv.table("# nothing but a comment\n")).getMessage());
         assertEquals("row 0 column 0 gives 300, which 1 bytes do not take",

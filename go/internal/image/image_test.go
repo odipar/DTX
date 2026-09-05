@@ -9,10 +9,10 @@ import (
 // A build with the images has all eight, and each is the bytes
 // the Maven build wrote. A tree built without them contains none, which is
 // the other whole state: half of them would be a build gone wrong.
-func TestHoldsEveryImageOrNone(t *testing.T) {
+func TestContainsEveryImageOrNone(t *testing.T) {
 	embedded := Embedded()
 	if embedded == 0 {
-		t.Skip("this build holds no images: run mvn process-classes")
+		t.Skip("this build does not contain images: run mvn process-classes")
 	}
 	if embedded != len(Builds()) {
 		t.Fatalf("holds %d images, not the %d there are", embedded, len(Builds()))
@@ -41,7 +41,7 @@ func TestHoldsEveryImageOrNone(t *testing.T) {
 // would be two readers of one table.
 func TestTheEmbeddedImagesAreWhatTheBuildReleases(t *testing.T) {
 	if Embedded() == 0 {
-		t.Skip("this build holds no images: run mvn process-classes")
+		t.Skip("this build does not contain images: run mvn process-classes")
 	}
 	loose := filepath.Join("..", "..", "..", "build", "68k")
 	if _, err := os.Stat(loose); err != nil {

@@ -19,9 +19,9 @@ import java.util.List;
  * DTX2, which is a unit of 1, 2 or 4 with the copy code and without.
  *
  * <p>The table each is assembled from fixes nothing but the figures the
- * assembler reads, so it is made here rather than read: the columns contain no
- * bytes that decode, and {@link Packager#blank} zeroes the five fields the
- * table did give. What comes out is a function of the template alone.
+ * assembler reads, so it is made here rather than read: the columns do not
+ * contain bytes that decode, and {@link Packager#blank} zeroes the five fields
+ * the table did give. What comes out is a function of the template alone.
  */
 public final class Blobs {
 
@@ -67,7 +67,7 @@ public final class Blobs {
         return switch (build.variant()) {
             case Dtx.DTX0 -> Dtx0.write(table);
             case Dtx.DTX1 -> Dtx1.write(table);
-            // The seed states the build's own copies flag, since that is
+            // The seed defines the build's own copies flag, since that is
             // what fixes which decoder the template is assembled with.
             default -> Dtx2.write(table, new Plain(build.copies()),
                     build.unit(), 960);
@@ -75,8 +75,8 @@ public final class Blobs {
     }
 
     /**
-     * A packer that packs nothing: the column comes back as it is, and states the
-     * build's own copies flag.
+     * A packer that packs nothing: the column comes back as it is, and defines
+     * the build's own copies flag.
      *
      * <p>The assembler reads a data set's four stream offsets and nothing in
      * the streams, so a data set whose streams are the column itself
@@ -162,7 +162,8 @@ public final class Blobs {
                         + " and templates at " + templates
                         + ": the build runs one, and -Drmac=PATH names"
                         + " another. A release holds what it built, and a"
-                        + " caller who takes one runs no assembler.", failed);
+                        + " caller who takes one does not run an assembler.",
+                        failed);
             }
             for (Path at : into) {
                 Files.write(at.resolve(build.name()), code);

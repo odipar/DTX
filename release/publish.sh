@@ -14,8 +14,8 @@
 # The Java tree writes the same bytes and ParityTest checks the two
 # to it, but a release is built from one tree.
 #
-# The executables take no wrapper. Go builds a real executable, so nothing
-# has to find a runtime or a classpath before one runs.
+# The executables do not take a wrapper. Go builds a real executable, so
+# nothing has to find a runtime or a classpath before one runs.
 set -e
 cd "$(dirname "$0")/.."
 REPO=$(pwd)
@@ -28,7 +28,7 @@ TOOLS="dtx-write dtx-rewrite dtx-package dtx-blobs"
 # down, and this reads the text rather than running anything.
 VERSION=${1:-$(sed -n 's/.*<version>\(.*\)<\/version>.*/\1/p' pom.xml | head -1)}
 if [ -z "$VERSION" ]; then
-    echo "publish: pom.xml names no version" >&2
+    echo "publish: pom.xml does not name a version" >&2
     exit 1
 fi
 
@@ -45,9 +45,9 @@ mkdir -p "$OUT/release"
 "$OUT/dtx-blobs" "$IMAGES" "$OUT/release" -a"$RMAC" -t"$REPO/68k"
 rm -f "$OUT/dtx-blobs"
 
-held=$(ls "$IMAGES"/*.bin 2>/dev/null | wc -l | tr -d ' ')
-if [ "$held" != 8 ]; then
-    echo "publish: $held images built, not the 8 there are" >&2
+count=$(ls "$IMAGES"/*.bin 2>/dev/null | wc -l | tr -d ' ')
+if [ "$count" != 8 ]; then
+    echo "publish: $count images built, not the 8 there are" >&2
     exit 1
 fi
 
@@ -61,7 +61,7 @@ for target in $TARGETS; do
     case "$target" in
         *-x64)   arch=amd64 ;;
         *-arm64) arch=arm64 ;;
-        *) echo "publish: $target names no architecture" >&2; exit 1 ;;
+        *) echo "publish: $target does not name an architecture" >&2; exit 1 ;;
     esac
 
     # The directory is where a built tool gets tried out, so the build
@@ -108,7 +108,7 @@ MANIFEST="$OUT/release/MANIFEST.txt"
     echo "name  bytes  sha256  variant  k  copies"
     for image in "$OUT"/release/*.bin; do
         name=$(basename "$image")
-        # DTX0 and DTX1 have no decoder, so neither a unit nor copies.
+        # DTX0 and DTX1 do not have a decoder, so neither a unit nor copies.
         case "$name" in
             DTX2-k*-copies-*) variant=2; k=$(echo "$name" | sed 's/.*-k\([0-9]*\)-copies.*/\1/'); copies=yes ;;
             DTX2-k*)          variant=2; k=$(echo "$name" | sed 's/.*-k\([0-9]*\)-v.*/\1/'); copies=no ;;

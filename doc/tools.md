@@ -12,8 +12,8 @@ repository's.
 
 In Go each is a command under `go/cmd/`, built with `go build ./cmd/NAME`
 under `go/`. None of them takes a wrapper: Go builds an executable, so
-nothing has to find a runtime or a classpath before one runs, and there is
-no `dtx-run` to write.
+nothing has to find a runtime or a classpath before one runs, and no
+`dtx-run` is needed.
 
 In C# the four are one assembly. `dotnet dtx.dll <tool>` names the tool in
 the first argument, and an executable published under a tool's own name is
@@ -58,8 +58,8 @@ where it opens with `-`. A value of `W` bytes is stored most significant
 byte first, as every field of the header is, and a negative one in two's
 complement. A value fits `W` bytes where it lies from -2^(8W-1) to
 2^(8W)-1, so one width takes a signed column's values and an unsigned
-one's alike. DTX states no more of a column than its width (R6.3), so
-which of the two a column is is stated elsewhere or not stated.
+one's alike. DTX does not define more of a column than its width (R6.3), so
+which of the two a column is is defined elsewhere or not defined.
 
 ```
 # a clock, a note and a step
@@ -77,7 +77,7 @@ column 2 a negative value.
 ## Package
 
 A DTX file of any variant into a standalone 68000 image: the code, then
-the table's bytes, reached PC relative. [abi.md](abi.md) states the six
+the table's bytes, reached PC relative. [abi.md](abi.md) defines the six
 calls into the image, and the state block a caller supplies.
 
 It combines rather than assembles. The code does not move with the table,
@@ -107,7 +107,7 @@ The image contains one table and the code for that table's variant. What
 the table gives reaches the code at run time, out of the table's own header
 and the column table behind it, so one variant is one code at any `R`, `C`
 or `RR`. The tool prints the image's bytes and the state block's, and the
-format block states the same figures for a caller to read out of the file.
+format block defines the same figures for a caller to read out of the file.
 
 ## Build the images
 
@@ -135,8 +135,8 @@ the package compiles either way.
 
 This is the one step rmac is needed for. `-Drmac=PATH` names one that is
 not on the path, and a build without either fails at it and names which.
-A caller who takes a release runs no assembler: the code is built where it
-is released, not where a table is packaged.
+A caller who takes a release does not run an assembler: the code is built
+where it is released, not where a table is packaged.
 
 ```
 bin/dtx-blobs DIR [DIR..]
@@ -147,24 +147,24 @@ writes the same eight into directories of your own.
 | flag | gives |
 |---|---|
 | `-aRMAC` | the assembler to run. The default is `rmac` on the path |
-| `-tTEMPLATES` | where `68k/` stands. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository has no directory to resolve a relative one against, so it names this |
+| `-tTEMPLATES` | where `68k/` stands. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository does not have a directory to resolve a relative one against, so it names this |
 
 The table each build is assembled from is made rather than read: the code
 does not move with a table, and the five fields one would give are
-zeroed, so an image states no table until a package writes one.
+zeroed, so an image does not define a table until a package writes one.
 
 A DTX2 image contains the decoder carried at
-[68k/ST4_wrap.S](../68k/ST4_wrap.S), built at the unit the payload states.
+[68k/ST4_wrap.S](../68k/ST4_wrap.S), built at the unit the payload defines.
 Init fills every ring before it returns, and one column is refilled a row
 after that, so a read takes one value from each ring and never decodes.
 The packager takes the period from the table and fails the package where
-no period meets every rule abi.md 4 states: what it gives names the rule
+no period meets every rule abi.md 4 defines: what it gives names the rule
 and the figures that break it.
 
 A DTX2 image needs more of the caller than a plain one. Its state block
 contains a decoder state and a ring a column, so it runs to `NC` bytes
 and more; the
-tool prints the figure and the format block states it.
+tool prints the figure and the format block defines it.
 
 ## Rewrite
 
@@ -183,8 +183,8 @@ bin/dtx-rewrite in.dtx out.dtx -k1 -m960 -pst4
 | `-pPACKER` | as Write reads it |
 | `-copies[S]` | as Write reads it |
 
-Rewrite keeps no packer of its own. `-p` names the one ST4's own repository
-builds, and a column reaches it as a file.
+Rewrite does not keep a packer of its own. `-p` names the one ST4's own
+repository builds, and a column reaches it as a file.
 
 Every column is packed with `-l65535` as well, which meets ST4_wrap's
 assumption 4: no operation longer than the 65535 units a 68000 decoder
@@ -197,12 +197,12 @@ stream, and that saves most at the small rings DTX2 reads through. Measured
 on a table of 512 rows repeating a pattern 37 rows long, at `N` of 64: the
 file goes from 1164 bytes to 272, and its image from 2792 to 1932.
 
-**The payload states it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
+**The payload defines it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
 Write is the one tool that reads `-copies` and the packager takes the
 decoder the file needs. No packager has a flag for it.
 
 The flag is there because a decoder built without the copy code reads such
-a column wrongly and no ST4 data set states which kind it is. Measured on the
+a column wrongly and no ST4 data set defines which kind it is. Measured on the
 same table, a column packed with copies and read by a decoder without the
 copy code gives row 37 wrong, where the pattern first repeats past the
 ring. The other way round is safe: a decoder with the copy code reads a
@@ -240,7 +240,7 @@ Writing DTX2 needs an ST4 packer, and each tree contains one:
 odipar/ST4@498aa25, and `go/internal/st4`, taken from odipar/YMX@498aa25,
 which is that same packer in Go. None is edited here beyond one comment
 naming where it came from, and the three pack the same bytes, which
-`ParityTest` checks. So a release needs no packer beside it
+`ParityTest` checks. So a release does not need a packer beside it
 either. `-pPACKER` runs another where a caller has a newer build.
 
 ## The rigs
@@ -261,16 +261,16 @@ it is on a 68000, which the emulator's own model does not take.
 
 **The round trip.** The same text through Write, through Package and
 through the 68000 at DTX0, DTX1 and DTX2, compared with the rows the text
-states and with one another (R1.3). What a row should be is worked out in
+defines and with one another (R1.3). What a row should be is worked out in
 the rig
-itself, from the text, by a reader that shares no code with the one under
+itself, from the text, by a reader that does not share code with the one under
 test, so neither the writer nor the 68000 is checked against itself. Under
 DTX2 it counts the decoder's calls as well, and compares that with the
 calls ST4_wrap's assumption 5 allows: a stopping rule under which a column
-runs one call past its end marker changes no byte a reader gives, and shows
-up only in the count.
+runs one call past its end marker does not change a byte a reader gives, and
+shows up only in the count.
 
-**The figures.** performance.md states what each call costs in
+**The figures.** performance.md records what each call costs in
 instructions, and the rig counts them again and checks every cell of that
 table against its count.
 
@@ -294,7 +294,7 @@ image's code compared with the first one's byte for byte, so R, C and RR
 move the
 table and not the reader. Under DTX2 the six decoder builds are grouped, no
 two of them one code, and the copy code's size is read back out and
-compared with what doc/abi.md 5 states. It needs rmac.
+compared with what doc/abi.md 5 gives. It needs rmac.
 
 ## Through Maven
 

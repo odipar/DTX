@@ -19,11 +19,11 @@ copy code or without: `k` of 1, 2 or 4, twice each, is six. Eight in all
 | `DTX2-k1`, `DTX2-k2`, `DTX2-k4` | the packed reader, with a decoder at that unit |
 | `DTX2-k1-copies`, `DTX2-k2-copies`, `DTX2-k4-copies` | the same, with the copy code built in |
 
-An image alone states no table. The five fields of its format block that
-come from a table - the state block's bytes, where the table's header
-stands, the row's bytes, `P` and `N` - read zero until a tool writes them,
-so an image shipped uncombined states no table rather than the one it was
-built from.
+An image itself does not define a table. The five fields of its format
+block that come from a table - the state block's bytes, where the table's
+header stands, the row's bytes, `P` and `N` - read zero until a tool writes
+them, so an image shipped uncombined does not define a table, rather than
+the one it was built from.
 
 ## Where they stand
 
@@ -40,6 +40,6 @@ A tool takes the image for the table - the variant from the header, and
 under DTX2 the unit at payload byte 2 and the copies flag at byte 3 -
 writes the five fields, and appends the column table and the table's bytes
 behind the code. Nothing from beside the file enters it, so nothing can
-differ from the bytes. abi.md 1 lays the image out, abi.md 5 states the
-combine, and abi.md 4 states the rules a DTX2 table is checked against
+differ from the bytes. abi.md 1 lays the image out, abi.md 5 defines the
+combine, and abi.md 4 defines the rules a DTX2 table is checked against
 first.

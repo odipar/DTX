@@ -94,7 +94,7 @@ final class ConsistencyTest {
                 + "\nits headings are " + headings);
     }
 
-    /** Every row of the glossary's table: its term, what it states, and
+    /** Every row of the glossary's table: its term, what it defines, and
      * where it points. */
     private static List<String[]> glossaryRows(String glo) {
         List<String[]> out = new ArrayList<>();
@@ -111,12 +111,12 @@ final class ConsistencyTest {
         return out;
     }
 
-    /** The number words the pictures' captions state a small count in. */
+    /** The number words the pictures' captions give a small count in. */
     private static final List<String> WORD = List.of("zero", "one", "two",
             "three", "four", "five", "six", "seven", "eight", "nine", "ten");
 
     /**
-     * SPEC.md's pictures against the example table the same section states.
+     * SPEC.md's pictures against the example table the same section defines.
      * Every count a caption gives is recomputed from `R`, `C` and the
      * widths, so a caption reworded away from what its picture draws fails
      * here rather than standing.
@@ -127,7 +127,7 @@ final class ConsistencyTest {
         Matcher example = Pattern.compile("A table of `R` = (\\d+) rows and "
                 + "`C` = (\\d+) columns, of widths (\\d+), (\\d+) and "
                 + "(\\d+),").matcher(spec);
-        assertTrue(example.find(), "SPEC.md states no example table");
+        assertTrue(example.find(), "SPEC.md does not define an example table");
         int rows = Integer.parseInt(example.group(1));
         int columns = Integer.parseInt(example.group(2));
         assertTrue(columns == 3, "the example has grown past three columns"
@@ -149,23 +149,24 @@ final class ConsistencyTest {
                 "^ +0 +3 +4 +8 +10 +14 +(\\d+) +(\\d+)$", Pattern.MULTILINE)
                 .matcher(spec);
         if (!offsets.find()) {
-            wrong.add("the header picture draws no offsets");
+            wrong.add("the header picture does not draw offsets");
         } else {
-            holds(wrong, offsets.group(1), named, "the widths begin at");
-            holds(wrong, offsets.group(2), padded, "the header runs to");
+            draws(wrong, offsets.group(1), named, "the widths begin at");
+            draws(wrong, offsets.group(2), padded, "the header runs to");
         }
         for (int w : width) {
-            states(wrong, spec, "| " + w + " |", "the header picture's width " + w);
+            defines(wrong, spec, "| " + w + " |",
+                    "the header picture's width " + w);
         }
 
         // 2.1: a row is the sum of the widths, the payload `R` of them
-        states(wrong, spec, "a row of the example: " + sum + ", " + WORD.get(row)
-                + " bytes", "2.1's row");
+        defines(wrong, spec, "a row of the example: " + sum + ", "
+                + WORD.get(row) + " bytes", "2.1's row");
         for (int n = 0; n < rows; n++) {
-            states(wrong, spec, "row " + n + ", bytes " + n * row + " to "
+            defines(wrong, spec, "row " + n + ", bytes " + n * row + " to "
                     + (n * row + row - 1), "2.1's row " + n);
         }
-        states(wrong, spec, rows * row + " bytes, the table's values",
+        defines(wrong, spec, rows * row + " bytes, the table's values",
                 "2.1's payload");
 
         // 2.2: each column begins on a word
@@ -174,15 +175,16 @@ final class ConsistencyTest {
             packed += packed % 2;
             packed += rows * w;
         }
-        states(wrong, spec, packed + " bytes: the table's " + rows * row + ", and "
-                + WORD.get(packed - rows * row) + " byte of pad", "2.2's payload");
+        defines(wrong, spec, packed + " bytes: the table's " + rows * row
+                + ", and " + WORD.get(packed - rows * row) + " byte of pad",
+                "2.2's payload");
         assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
                 + "\nthe example is `R` = " + rows + ", `C` = " + columns
                 + ", widths " + sum);
     }
 
-    /** Adds to {@code wrong} where SPEC.md does not state {@code figure}. */
-    private static void states(List<String> wrong, String spec, String figure,
+    /** Adds to {@code wrong} where SPEC.md does not define {@code figure}. */
+    private static void defines(List<String> wrong, String spec, String figure,
             String what) {
         if (!spec.contains(figure)) {
             wrong.add(what + " should read \"" + figure + '"');
@@ -190,7 +192,7 @@ final class ConsistencyTest {
     }
 
     /** Adds to {@code wrong} where a picture's number is not {@code figure}. */
-    private static void holds(List<String> wrong, String drawn, int figure,
+    private static void draws(List<String> wrong, String drawn, int figure,
             String what) {
         if (Integer.parseInt(drawn) != figure) {
             wrong.add(what + " " + figure + ", and the picture draws " + drawn);
@@ -198,7 +200,7 @@ final class ConsistencyTest {
     }
 
     /**
-     * The ST4 figures, in each of the four sentences that state one. SPEC.md
+     * The ST4 figures, in each of the four sentences that define one. SPEC.md
      * 2.3 gives the size of an ST4 header and the version byte of a data
      * set's first long, its stored against packed bullet gives the size
      * again, and the glossary's ST4 header row gives both. Both figures move
@@ -206,15 +208,17 @@ final class ConsistencyTest {
      * fails here.
      */
     @Test
-    void everyDocumentStatesTheSameSt4Figures() throws IOException {
+    void everyDocumentDefinesTheSameSt4Figures() throws IOException {
         String spec = read(SPEC);
         Matcher first = Pattern.compile("first long is `\\$53 \\$34 "
                 + "\\$([0-9A-F]{2}) k`: `'S'`, `'4'`, the ST4 format"
                 + " version\\s+(\\d+), and the unit").matcher(spec);
-        assertTrue(first.find(), "SPEC.md 2.3 states no ST4 signature");
+        assertTrue(first.find(),
+                "SPEC.md 2.3 does not define an ST4 signature");
         Matcher opens = Pattern.compile("ST4 header is ([a-z-]+) bytes")
                 .matcher(spec);
-        assertTrue(opens.find(), "SPEC.md 2.3 states no ST4 header size");
+        assertTrue(opens.find(),
+                "SPEC.md 2.3 does not define an ST4 header size");
         String bytes = opens.group(1);
         String signature = "`$53 $34 $" + first.group(1) + " k`";
         String term = "";
@@ -223,7 +227,8 @@ final class ConsistencyTest {
                 term = row[1];
             }
         }
-        assertTrue(!term.isEmpty(), "the glossary holds no ST4 header row");
+        assertTrue(!term.isEmpty(),
+                "the glossary does not contain an ST4 header row");
 
         List<String> wrong = new ArrayList<>();
         int third = Integer.parseInt(first.group(1), 16);
@@ -231,12 +236,13 @@ final class ConsistencyTest {
             wrong.add("the signature's third byte gives version " + third
                     + ", and the sentence beside it reads " + first.group(2));
         }
-        states(wrong, spec, "shorter than " + bytes + " is smaller stored",
+        defines(wrong, spec, "shorter than " + bytes + " is smaller stored",
                 "2.3's run that is smaller stored than packed");
-        states(wrong, term, bytes + " bytes", "the glossary's ST4 header size");
-        states(wrong, term, signature, "the glossary's ST4 signature");
+        defines(wrong, term, bytes + " bytes",
+                "the glossary's ST4 header size");
+        defines(wrong, term, signature, "the glossary's ST4 signature");
         assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
-                + "\nSPEC.md 2.3 states " + bytes + " bytes and " + signature);
+                + "\nSPEC.md 2.3 defines " + bytes + " bytes and " + signature);
     }
 
     @Test
@@ -327,13 +333,13 @@ final class ConsistencyTest {
                 wrong.add(script + " is not executable");
             }
         }
-        assertTrue(!named.isEmpty(), "tools.md gives no script");
+        assertTrue(!named.isEmpty(), "tools.md does not give a script");
         assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
                 + "\ntools.md gives " + named);
     }
 
     @Test
-    void everyDocumentHoldsOneWrapWidth() throws IOException {
+    void everyDocumentKeepsOneWrapWidth() throws IOException {
         List<String> wide = new ArrayList<>();
         for (Path p : DOCUMENTS) {
             List<String> lines = Files.readAllLines(p);

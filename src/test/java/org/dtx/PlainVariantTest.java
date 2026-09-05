@@ -89,7 +89,7 @@ final class PlainVariantTest {
     }
 
     @Test
-    void aFileShortOfWhatItsHeaderStatesIsRejected() {
+    void aFileShortOfWhatItsHeaderDefinesIsRejected() {
         byte[] file = Dtx0.write(Example.table());
         byte[] cut = Example.at(file, 0, file.length - 1);
         assertEquals("a payload of 20 bytes is short of 21", assertThrows(

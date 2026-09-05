@@ -8,9 +8,9 @@
 // A value of W bytes is stored most significant byte first, as every field
 // of the header is, and a negative one in two's complement. A value fits W
 // bytes where it lies from -2^(8W-1) to 2^(8W)-1, so one width takes what a
-// signed column's values and an unsigned one's alike. DTX states no
+// signed column's values and an unsigned one's alike. DTX does not define
 // more of a column than its width, so which of the two a column is, the
-// caller states elsewhere.
+// caller defines elsewhere.
 package csv
 
 import (
@@ -105,7 +105,7 @@ func rows(text string) ([][]int64, error) {
 		out = append(out, row)
 	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("the text holds no row")
+		return nil, fmt.Errorf("the text does not contain a row")
 	}
 	return out, nil
 }
@@ -159,7 +159,7 @@ func value(cell string, line, column int) (int64, error) {
 	}
 }
 
-// fits states whether value lies from -2^(8W-1) to 2^(8W)-1.
+// fits gives whether value lies from -2^(8W-1) to 2^(8W)-1.
 func fits(value int64, width int) bool {
 	return value >= -(int64(1)<<(8*width-1)) && value <= int64(1)<<(8*width)-1
 }

@@ -19,11 +19,11 @@ import org.junit.jupiter.api.Test;
  * The conformance kit under doc/conformance, checked against the writer.
  *
  * <p>Every table in the kit is written here, from the text and options
- * SOURCES.md states, and compared byte for byte with the file in the tree; beside
- * each table stands the rows in it, as DTX0 lays them out, and a reader of
- * it gives those back. A table the tree does not have yet is written,
- * and SOURCES.generated.md beside the kit lists what SOURCES.md then has to
- * say.
+ * SOURCES.md defines, and compared byte for byte with the file in the tree;
+ * beside each table stands the rows in it, as DTX0 lays them out, and a
+ * reader of it gives those back. A table the tree does not have yet is
+ * written, and SOURCES.generated.md beside the kit lists what SOURCES.md
+ * then has to say.
  */
 class ConformanceTest {
 
@@ -110,10 +110,10 @@ class ConformanceTest {
         return out;
     }
 
-    private static String sha256(byte[] held) {
+    private static String sha256(byte[] bytes) {
         try {
             return HexFormat.of().formatHex(
-                    MessageDigest.getInstance("SHA-256").digest(held));
+                    MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (NoSuchAlgorithmException gone) {
             throw new IllegalStateException(gone);
         }
@@ -147,17 +147,17 @@ class ConformanceTest {
         List<String> wrong = new ArrayList<>();
         for (Source source : KIT) {
             byte[] table = write(source);
-            byte[] held = rows(source);
+            byte[] kept = rows(source);
             Path at = tables.resolve(source.name() + ".dtx");
             Path rowsAt = tables.resolve(source.name() + ".rows");
             if (!Files.exists(at)) {
                 Files.write(at, table);
-                Files.write(rowsAt, held);
+                Files.write(rowsAt, kept);
                 wrong.add(source.name() + ": written, was not in the tree");
             } else {
                 assertArrayEquals(table, Files.readAllBytes(at),
                         source.name() + ".dtx is not the table the writer writes");
-                assertArrayEquals(held, Files.readAllBytes(rowsAt),
+                assertArrayEquals(kept, Files.readAllBytes(rowsAt),
                         source.name() + ".rows is not the rows the table holds");
             }
             String row = row(source, table);

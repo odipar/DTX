@@ -15,11 +15,11 @@ import org.st4.Units;
  *
  * <p>The packer takes what {@code st4 -f -kK -mN -l65535} gives it, and {@code -c} beside them where the columns contain copies. The
  * ring is bytes and the packer counts units, so {@code -m} is the ring
- * divided by the unit, at most what a word offset can state.
+ * divided by the unit, at most what a word offset can give.
  *
  * <p>{@code -l65535} meets ST4_wrap's assumption 4: no operation is longer
  * than the 65535 units the 68000 decoders count in a word. ST4's own
- * default already fits them, and this states it rather than taking it.
+ * default already fits them, and this defines it rather than taking it.
  */
 public final class St4 implements Packer {
 
@@ -29,7 +29,7 @@ public final class St4 implements Packer {
     private final boolean copies;
     private final double seconds;
 
-    /** A packer that packs no copies from the literal stream. */
+    /** A packer that does not pack copies from the literal stream. */
     public St4() {
         this(false, 0);
     }

@@ -2,7 +2,7 @@
 //
 // It combines rather than assembles: the code does not move with the table,
 // so this executable contains the eight images built once and takes the one the
-// table needs. No assembler runs. doc/tools.md states the tool and
+// table needs. No assembler runs. doc/tools.md defines the tool and
 // doc/abi.md the six calls into the image.
 //
 //	dtx-package in.dtx out.bin

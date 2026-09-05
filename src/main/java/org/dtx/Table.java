@@ -46,7 +46,7 @@ public final class Table {
         if (repeat < 0 || repeat > rows) {
             throw new IllegalArgumentException("RR is 0 to R, not " + repeat);
         }
-        byte[][] held = new byte[column.length][];
+        byte[][] kept = new byte[column.length][];
         for (int i = 0; i < column.length; i++) {
             if (width[i] != 1 && width[i] != 2 && width[i] != 4) {
                 throw new IllegalArgumentException("column " + i
@@ -56,9 +56,9 @@ public final class Table {
                 throw new IllegalArgumentException("column " + i + " holds "
                         + column[i].length + " bytes, not " + rows * width[i]);
             }
-            held[i] = column[i].clone();
+            kept[i] = column[i].clone();
         }
-        return new Table(rows, repeat, width.clone(), held);
+        return new Table(rows, repeat, width.clone(), kept);
     }
 
     /** {@code R}, the rows in the table. */

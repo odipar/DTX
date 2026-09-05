@@ -13,14 +13,14 @@ import (
 // CopiesFlag reaches it as -c, or -cS for a search of S seconds, or is
 // empty for none. A column packed that way so that a match beyond the ring
 // copies from its own literal stream, which packs a small ring far smaller;
-// the payload then states it (R5.10) and the reader of it takes a decoder
+// the payload then defines it (R5.10) and the reader of it takes a decoder
 // built with the copy code.
 type Beside struct {
 	Path       string
 	CopiesFlag string
 }
 
-// Copies states whether this packer packs copies from the literal stream.
+// Copies gives whether this packer packs copies from the literal stream.
 func (p Beside) Copies() bool {
 	return p.CopiesFlag != ""
 }
@@ -49,7 +49,7 @@ func (p Beside) Pack(column []byte, unit, ring int) ([]byte, error) {
 	}
 	packed, err := os.ReadFile(out)
 	if err != nil {
-		return nil, fmt.Errorf("%s wrote no data set: %s", p.Path, said)
+		return nil, fmt.Errorf("%s did not write a data set: %s", p.Path, said)
 	}
 	return packed, nil
 }

@@ -1,6 +1,6 @@
 // Command dtx-rewrite turns a DTX0 or DTX1 file into a DTX2 one. The table
 // is the same under every variant (R1.3), so what comes back has the same
-// rows, widths, R and RR as what went in. doc/tools.md states the tool.
+// rows, widths, R and RR as what went in. doc/tools.md defines the tool.
 //
 //	dtx-rewrite in.dtx out.dtx [-kK] [-mN] [-pPACKER] [-copies[S]]
 package main
