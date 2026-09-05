@@ -2,9 +2,9 @@ package org.dtx;
 
 /**
  * What each tool prints on {@code -help}: its synopsis, a line a flag with
- * the default in parentheses, and the section of doc/tools.md that describes
- * it. The Go and C# trees print the same text, and {@code ParityTest}
- * compares the three.
+ * the default in parentheses, examples, and the section of doc/tools.md that
+ * describes it. The Go and C# trees print the same text, and
+ * {@code ParityTest} compares the three.
  *
  * <p>A tool given no file to work on prints the same text to standard error
  * and exits with 2.
@@ -44,6 +44,18 @@ final class Help {
                            search for a better parse
               -help        this text
 
+            Examples
+
+              dtx-write t.csv t.dtx -v2 -k1 -m960
+                  text into a DTX2 file, at a unit of 1 and a ring of 960 bytes
+              dtx-write t.dtx again.dtx -k2 -copies
+                  a DTX2 file repacked at a unit of 2, with copies from the
+                  literal stream
+              dtx-write t.dtx t.csv
+                  a DTX file of any variant read out as text
+              dtx-write t.csv t.dtx -v1 -w1,2,4 -r32
+                  text into a DTX1 file at the widths given, repeating at row 32
+
             doc/tools.md, Write.
             """;
 
@@ -59,6 +71,17 @@ final class Help {
                            an image
               -help        this text
 
+            Examples
+
+              dtx-package t.dtx t.bin
+                  the image of a table, from the code the build made
+              dtx-package t.dtx t.bin -a/usr/local/bin/rmac
+                  the same, with the code assembled from the templates by that
+                  rmac
+              dtx-package t.dtx t.i -s
+                  the table's figures as assembler equates, for a build of your
+                  own
+
             doc/tools.md, Package.
             """;
 
@@ -73,6 +96,13 @@ final class Help {
               -tTEMPLATES  the directory the templates are read from (68k, or what
                            DTX_68K names)
               -help        this text
+
+            Examples
+
+              dtx-blobs build/68k
+                  the eight images into build/68k, with the rmac on the path
+              dtx-blobs build/68k go/internal/image/data -a/usr/local/bin/rmac
+                  into two directories, with that rmac
 
             doc/tools.md, Build the images.
             """;

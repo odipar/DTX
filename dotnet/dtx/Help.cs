@@ -2,8 +2,8 @@ namespace Dtx;
 
 /// <summary>
 /// What each tool prints on -help: its synopsis, a line a flag with the
-/// default in parentheses, and the section of doc/tools.md that describes
-/// it. The Java and Go trees print the same text, and ParityTest compares
+/// default in parentheses, examples, and the section of doc/tools.md that
+/// describes it. The Java and Go trees print the same text, and ParityTest compares
 /// the three. A tool given no file to work on prints the same text to
 /// standard error and exits with 2.
 /// </summary>
@@ -40,6 +40,18 @@ public static class Help
             + "               search for a better parse\n"
             + "  -help        this text\n"
             + "\n"
+            + "Examples\n"
+            + "\n"
+            + "  dtx-write t.csv t.dtx -v2 -k1 -m960\n"
+            + "      text into a DTX2 file, at a unit of 1 and a ring of 960 bytes\n"
+            + "  dtx-write t.dtx again.dtx -k2 -copies\n"
+            + "      a DTX2 file repacked at a unit of 2, with copies from the\n"
+            + "      literal stream\n"
+            + "  dtx-write t.dtx t.csv\n"
+            + "      a DTX file of any variant read out as text\n"
+            + "  dtx-write t.csv t.dtx -v1 -w1,2,4 -r32\n"
+            + "      text into a DTX1 file at the widths given, repeating at row 32\n"
+            + "\n"
             + "doc/tools.md, Write.\n";
 
     public const string Package =
@@ -54,6 +66,17 @@ public static class Help
             + "               an image\n"
             + "  -help        this text\n"
             + "\n"
+            + "Examples\n"
+            + "\n"
+            + "  dtx-package t.dtx t.bin\n"
+            + "      the image of a table, from the code the build made\n"
+            + "  dtx-package t.dtx t.bin -a/usr/local/bin/rmac\n"
+            + "      the same, with the code assembled from the templates by that\n"
+            + "      rmac\n"
+            + "  dtx-package t.dtx t.i -s\n"
+            + "      the table's figures as assembler equates, for a build of your\n"
+            + "      own\n"
+            + "\n"
             + "doc/tools.md, Package.\n";
 
     public const string Blobs =
@@ -67,6 +90,13 @@ public static class Help
             + "  -tTEMPLATES  the directory the templates are read from (68k, or what\n"
             + "               DTX_68K names)\n"
             + "  -help        this text\n"
+            + "\n"
+            + "Examples\n"
+            + "\n"
+            + "  dtx-blobs build/68k\n"
+            + "      the eight images into build/68k, with the rmac on the path\n"
+            + "  dtx-blobs build/68k go/internal/image/data -a/usr/local/bin/rmac\n"
+            + "      into two directories, with that rmac\n"
             + "\n"
             + "doc/tools.md, Build the images.\n";
 }

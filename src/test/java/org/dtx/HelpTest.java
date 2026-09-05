@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 /**
  * What {@code -help} prints, read back against the tool it describes:
  * every flag in the synopsis has its line, {@code -help} is among them,
+ * every example is a command line for the tool followed by what it does,
  * the doc/tools.md section named is a heading there, and the text fits a
  * terminal. Then each Java tool is run with {@code -help} and prints it.
  */
@@ -49,6 +50,44 @@ final class HelpTest {
                     wrong.add(one.getKey() + ": a line runs to "
                             + line.length());
                 }
+            }
+        }
+        assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong));
+    }
+
+    @Test
+    void everyExampleIsACommandLineForTheToolFollowedByWhatItDoes() {
+        List<String> wrong = new ArrayList<>();
+        for (Map.Entry<String, String> one : HELP.entrySet()) {
+            String text = one.getValue();
+            String tool = text.substring(0, text.indexOf(' '));
+            int at = text.indexOf("\nExamples\n\n");
+            if (at < 0) {
+                wrong.add(one.getKey() + ": no Examples");
+                continue;
+            }
+            int start = at + "\nExamples\n\n".length();
+            String block = text.substring(start, text.indexOf("\n\n", start));
+            int commands = 0;
+            boolean explained = true;
+            for (String line : block.split("\n")) {
+                if (line.startsWith("  " + tool + " ")) {
+                    if (!explained) {
+                        wrong.add(one.getKey() + ": an example without a"
+                                + " line saying what it does");
+                    }
+                    commands++;
+                    explained = false;
+                } else if (line.startsWith("      ") && commands > 0) {
+                    explained = true;
+                } else {
+                    wrong.add(one.getKey() + ": \"" + line + "\" is neither"
+                            + " a command line nor what one does");
+                }
+            }
+            if (commands < 2 || !explained) {
+                wrong.add(one.getKey() + ": " + commands + " example(s), the"
+                        + " last " + (explained ? "" : "not ") + "explained");
             }
         }
         assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong));
