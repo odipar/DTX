@@ -1,9 +1,25 @@
 # tools
 
-Each tool is a script under `bin/`. A script builds first where a source is
-newer than the last build, and then runs the tool out of `target/classes`.
-Paths reach the tool as the caller gave them, so a relative one is relative
-to the caller's directory and not to this repository's.
+Each tool is written twice, once in each tree, and the two write the same
+bytes. `test/test_parity.py` runs both over a corpus and holds them to it.
+
+In Java each is a script under `bin/`. A script builds first where a source
+is newer than the last build, and then runs the tool out of
+`target/classes`. Paths reach the tool as the caller gave them, so a
+relative one is relative to the caller's directory and not to this
+repository's.
+
+In Go each is a command under `go/cmd/`, built with `go build ./cmd/NAME`
+under `go/`. There is no `dtx-run` there: Go builds an executable, so
+nothing has to find a classpath first.
+
+| what it does | Java | Go |
+|---|---|---|
+| text into a DTX file | `bin/dtx-write` | `dtx-write` |
+| a plain file into a DTX2 one | `bin/dtx-rewrite` | `dtx-rewrite` |
+| a DTX file into a 68000 image | `bin/dtx-package` | `dtx-package` |
+| the eight images the packager combines from | `bin/dtx-blobs` | `dtx-blobs` |
+| find the classpath and run one of the above | `bin/dtx-run` | none needed |
 
 ## Write
 
@@ -69,17 +85,13 @@ and a caller who takes a release installs none.
 bin/dtx-package in.dtx out.bin
 ```
 
-Two tools do it, and a table packaged either way is the same file. The one
-above is the jar's; the other is a Go executable holding the eight images
-inside it, so it needs neither this repository nor a runtime beside it:
+The Go one holds the eight images inside it, so it needs neither this
+repository nor a runtime beside it:
 
 ```
 go build -o dtx-package ./cmd/dtx-package    # under go/
 ./dtx-package in.dtx out.bin
 ```
-
-`test/test_parity.py` packages a corpus both ways and holds the two to the
-same bytes.
 
 | flag | gives |
 |---|---|
@@ -222,13 +234,14 @@ tables.
 python3 test/test_parity.py
 ```
 
-**The two packagers.** A corpus through the jar and through the Go
-executable, held to the same bytes. Fourteen tables, which reach every
-image the packager picks from: DTX0, DTX1, and DTX2 at each unit with the
-copy code and without. One table has one image, whichever tool a caller
-took.
+**The two trees.** Every tool run both ways over a corpus, and the files
+held to the same bytes: text written at each variant and each unit, a plain
+file rewritten, the eight images built, and fourteen tables packaged, which
+reach every image the packager picks from. One input has one output,
+whichever tree a caller took.
 
-It needs `mvn package`, Go on the path, and an ST4 packer at `$ST4`.
+It needs `mvn package`, Go on the path, rmac on it or at `$RMAC`, and an
+ST4 packer at `$ST4`.
 
 ## Through Maven
 
