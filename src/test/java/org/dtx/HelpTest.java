@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Test;
 final class HelpTest {
 
     private static final Map<String, String> HELP = Map.of(
-            "Write", Help.WRITE, "Rewrite", Help.REWRITE,
-            "Packager", Help.PACKAGE, "Blobs", Help.BLOBS);
+            "Write", Help.WRITE, "Packager", Help.PACKAGE,
+            "Blobs", Help.BLOBS);
 
     @Test
     void everyFlagInTheSynopsisHasItsLine() {

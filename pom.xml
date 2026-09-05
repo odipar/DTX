@@ -23,7 +23,7 @@
         <!-- Every package is null-marked and enforced. -->
         <nullaway.packages>org.dtx</nullaway.packages>
         <nullaway.severity>ERROR</nullaway.severity>
-        <!-- CLI arguments for exec:exec@write and exec:exec@rewrite
+        <!-- CLI arguments for exec:exec@write and exec:exec@blobs
              (-Dargs="..."). -->
         <args></args>
     </properties>
@@ -121,19 +121,6 @@
                         <configuration>
                             <executable>java</executable>
                             <commandlineArgs>-ea -cp %classpath org.dtx.Blobs ${project.build.outputDirectory}/org/dtx/68k ${project.basedir}/build/68k ${project.basedir}/go/internal/image/data -a${rmac} -t${project.basedir}/68k</commandlineArgs>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <!-- A DTX0 or DTX1 file into a DTX2 one:
-                               mvn -q compile exec:exec@rewrite \
-                                   -Dargs="in.dtx out.dtx -k1 -m960 -pst4" -->
-                        <id>rewrite</id>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>java</executable>
-                            <commandlineArgs>-ea -cp %classpath org.dtx.Rewrite ${args}</commandlineArgs>
                         </configuration>
                     </execution>
                 </executions>

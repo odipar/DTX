@@ -6,10 +6,12 @@ import java.util.List;
 /**
  * A table out of comma separated text: one row a line, one value a column.
  *
- * <p>The first row with values gives {@code C}. A line that is blank,
- * or whose first character other than a space is {@code #}, is not a row.
- * A value is decimal, or hexadecimal where it opens with {@code $}, and
- * negative where it opens with {@code -}.
+ * <p>The first row of numbers gives {@code C}. A line that is blank, or
+ * whose first character other than a space is {@code #}, is not a row, and
+ * neither is a line before the first row of numbers in which no cell is a
+ * number: a line of column names, or a line describing the table. A value
+ * is decimal, or hexadecimal where it opens with {@code $}, and negative
+ * where it opens with {@code -}.
  *
  * <p>A value of {@code W} bytes is stored most significant byte first, as
  * every field of the header is, and a negative one in two's complement. A
@@ -17,6 +19,12 @@ import java.util.List;
  * one width takes a signed column's values and an unsigned one's
  * alike. DTX does not define more of a column than its width, so which of
  * the two a column is, the caller defines elsewhere.
+ *
+ * <p>A table is written out the other way as well: a comment that gives the
+ * shape, a line of column names, then one row a line, each value the
+ * unsigned number its bytes give. Read back, the comment gives the widths
+ * and the repeat where the caller does not give them, and the names are
+ * passed over, so the text a table was written as reads back to that table.
  */
 public final class Csv {
 
@@ -24,18 +32,24 @@ public final class Csv {
     }
 
     /**
-     * The rows of {@code text}, each column at the narrowest width that
-     * takes every value of it, and repeating at {@code R}.
+     * The rows of {@code text}, each column at the width the first comment
+     * gives or else the narrowest that takes every value of it, repeating at
+     * the row the first comment gives or else at {@code R}.
      */
     public static Table table(String text) {
         List<long[]> row = rows(text);
-        return table(row, narrowest(row), row.size());
+        int repeat = repeat(text);
+        return table(row, widths(text), repeat < 0 ? row.size() : repeat);
     }
 
-    /** The rows of {@code text} at the given widths, repeating at {@code R}. */
+    /**
+     * The rows of {@code text} at the given widths, repeating at the row the
+     * first comment gives or else at {@code R}.
+     */
     public static Table table(String text, int[] width) {
         List<long[]> row = rows(text);
-        return table(row, width, row.size());
+        int repeat = repeat(text);
+        return table(row, width, repeat < 0 ? row.size() : repeat);
     }
 
     /**
@@ -52,11 +66,94 @@ public final class Csv {
     }
 
     /**
-     * The narrowest width of 1, 2 and 4 that takes every value of each
-     * column of {@code text}.
+     * The widths the first comment of {@code text} gives, or else the
+     * narrowest width of 1, 2 and 4 that takes every value of each column.
      */
     public static int[] widths(String text) {
-        return narrowest(rows(text));
+        String given = comment(text, "widths ");
+        if (given.isEmpty()) {
+            return narrowest(rows(text));
+        }
+        String[] cell = given.split(",");
+        int[] width = new int[cell.length];
+        for (int i = 0; i < cell.length; i++) {
+            width[i] = Integer.parseInt(cell[i].strip());
+        }
+        return width;
+    }
+
+    /**
+     * The repeat the first comment of {@code text} gives, or -1 where it
+     * does not give one.
+     */
+    public static int repeat(String text) {
+        String given = comment(text, "RR ");
+        return given.isEmpty() ? -1 : Integer.parseInt(given);
+    }
+
+    /**
+     * {@code table} as text: a comment giving {@code R}, {@code C}, the
+     * widths and {@code RR}; a line of column names, {@code c0} onward; then
+     * one row a line, one value a column, each the unsigned number its bytes
+     * give. {@link #table(String)} reads it back to the same table.
+     */
+    public static String text(Table table) {
+        StringBuilder out = new StringBuilder();
+        out.append("# ").append(table.rows()).append(" rows, ")
+                .append(table.columns()).append(" columns, widths ");
+        for (int i = 0; i < table.columns(); i++) {
+            out.append(i == 0 ? "" : ",").append(table.width(i));
+        }
+        out.append(", RR ").append(table.repeat()).append('\n');
+        for (int i = 0; i < table.columns(); i++) {
+            out.append(i == 0 ? "c" : ",c").append(i);
+        }
+        out.append('\n');
+        for (int r = 0; r < table.rows(); r++) {
+            for (int i = 0; i < table.columns(); i++) {
+                int width = table.width(i);
+                out.append(i == 0 ? "" : ",")
+                        .append(get(table.column(i), r * width, width));
+            }
+            out.append('\n');
+        }
+        return out.toString();
+    }
+
+    /**
+     * What follows {@code key} in the first comment of {@code text}, up to a
+     * comma followed by a space or the end of the line, or empty where the
+     * text does not open with a comment giving it. The comment is the one
+     * {@link #text(Table)} writes: {@code # 3 rows, 3 columns, widths 1,2,1,
+     * RR 3}.
+     */
+    private static String comment(String text, String key) {
+        for (String line : text.split("\n", -1)) {
+            String read = line.strip();
+            if (read.isEmpty()) {
+                continue;
+            }
+            if (!read.startsWith("#")) {
+                return "";
+            }
+            int at = read.indexOf(key);
+            if (at < 0) {
+                return "";
+            }
+            String rest = read.substring(at + key.length());
+            int end = rest.indexOf(", ");
+            return (end < 0 ? rest : rest.substring(0, end)).strip();
+        }
+        return "";
+    }
+
+    /** The unsigned number of {@code width} bytes at {@code at}. */
+    private static long get(byte[] in, int at, int width) {
+        long value = 0;
+        for (int i = 0; i < width; i++) {
+            value = value << 8 | in[at + i] & 0xFF;
+        }
+        return value;
     }
 
     private static Table table(List<long[]> row, int[] width, int repeat) {
@@ -97,6 +194,10 @@ public final class Csv {
                 continue;
             }
             String[] cell = read.split(",", -1);
+            if (columns < 0 && !aNumberAmong(cell)) {
+                // a line of column names, or one describing the table
+                continue;
+            }
             if (columns < 0) {
                 columns = cell.length;
                 if (columns > 256) {
@@ -118,6 +219,29 @@ public final class Csv {
                     "the text does not contain a row");
         }
         return out;
+    }
+
+    /** Whether a cell of the line is a number, as {@link #value} reads one. */
+    private static boolean aNumberAmong(String[] cell) {
+        for (String one : cell) {
+            String read = one.strip();
+            boolean hex = read.startsWith("$") || read.startsWith("-$");
+            String digits = read.startsWith("-$") ? read.substring(2)
+                    : hex || read.startsWith("-") ? read.substring(1) : read;
+            if (digits.isEmpty()) {
+                continue;
+            }
+            boolean number = true;
+            for (int i = 0; i < digits.length(); i++) {
+                if (Character.digit(digits.charAt(i), hex ? 16 : 10) < 0) {
+                    number = false;
+                }
+            }
+            if (number) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** The narrowest width each column of {@code row} takes. */

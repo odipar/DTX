@@ -51,40 +51,14 @@ const Copies = 1
 
 // Packed gives what a DTX2 payload defines: the ring, the unit, whether its
 // columns contain copies from the literal stream, and where each column's data
-// set begins in the payload.
-type Packed struct {
-	Ring   int // N
-	Unit   int // k
-	Copies bool
-	At     []int
-}
+// set begins in the payload. The DTX2 reader in dtx reads the same payload,
+// so the one reader is there.
+type Packed = dtx.Packed
 
-// ReadPacked reads those out of a DTX2 payload, SPEC.md 2.3.
-//
-// It checks the data sets against it. Every set opens with $53 $34 $07 k, so
-// one compare against the payload's own k checks ST4's signature, its format
-// version and R5.2 at once.
+// ReadPacked reads those out of a DTX2 payload, SPEC.md 2.3, and checks the
+// data sets against it: dtx.ReadPacked.
 func ReadPacked(file []byte, header dtx.Header) (Packed, error) {
-	payload := header.Length
-	unit := int(file[payload+2])
-	out := Packed{
-		Ring:   dtx.GetWord(file, payload),
-		Unit:   unit,
-		Copies: file[payload+3]&Copies != 0,
-		At:     make([]int, header.Columns()),
-	}
-	signature := 0x53340700 + unit
-	for i := range out.At {
-		out.At[i] = dtx.GetLong(file, payload+4+4*i)
-		said := dtx.GetLong(file, payload+out.At[i])
-		if said != signature {
-			return Packed{}, fmt.Errorf("column %d's data set opens %08X and"+
-				" the payload defines %08X: an ST4 data set opens with S4, the"+
-				" format version 7 and the payload's own k",
-				i, said, signature)
-		}
-	}
-	return out, nil
+	return dtx.ReadPacked(file, header)
 }
 
 // Classes gives the widths among these, in the order 1, 2, 4.

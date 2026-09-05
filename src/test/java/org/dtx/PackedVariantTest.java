@@ -118,4 +118,32 @@ final class PackedVariantTest {
         }
         return at;
     }
+
+    @Test
+    void aDtx2FileReadsBackToTheTableItWasWrittenFrom() {
+        Table table = Csv.table(Rig.numbers(64, 3), new int[] {1, 2, 4}, 16);
+        for (int unit : new int[] {1, 2, 4}) {
+            Table wide = Csv.table(Rig.numbers(64, 2),
+                    new int[] {unit, 4}, 16);
+            byte[] file = Dtx2.write(wide, new St4(), unit, 960);
+            assertEquals(wide, Dtx2.read(file), "k of " + unit);
+            assertEquals(wide, Dtx.read(file), "k of " + unit + " through Dtx.read");
+        }
+        byte[] copies = Dtx2.write(table, new St4(true, 0), 1, 64);
+        assertEquals(table, Dtx2.read(copies), "packed with copies at a ring of 64");
+        byte[] plain = Dtx1.write(table);
+        assertEquals(Dtx2.read(Dtx2.from(plain, new St4(), 1, 960)), table,
+                "DTX1 to DTX2 and back");
+        assertEquals(Dtx2.read(Dtx2.from(copies, new St4(), 2, 960)), table,
+                "DTX2 to DTX2 at another unit and back");
+    }
+
+    @Test
+    void aDataSetOpeningWithAnotherUnitIsRefusedOnRead() {
+        Table table = Csv.table(Rig.numbers(8, 1), new int[] {2}, 8);
+        byte[] file = Dtx2.write(table, new St4(), 2, 960);
+        file[Dtx.headerLength(1) + 2] = 1;
+        assertThrows(IllegalArgumentException.class, () -> Dtx2.read(file));
+    }
+
 }

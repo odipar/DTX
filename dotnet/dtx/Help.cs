@@ -20,16 +20,19 @@ public static class Help
     }
 
     public const string Write =
-              "dtx-write in.csv out.dtx [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER]\n"
-            + "          [-copies[S]]\n"
+              "dtx-write in out [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]\n"
             + "\n"
-            + "Writes the table in a comma separated text as a DTX file.\n"
+            + "Writes the table in the first file to the second. The first is a DTX file\n"
+            + "of any variant, or comma separated text; the second is a DTX file of\n"
+            + "variant V, or text where its name ends in .csv.\n"
             + "\n"
-            + "  -vV          the variant, 0, 1 or 2 (0)\n"
-            + "  -wW,W,..     the width of each column in bytes, 1, 2 or 4 (the narrowest\n"
-            + "               that fits each column's values)\n"
+            + "  -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for\n"
+            + "               text)\n"
+            + "  -wW,W,..     text: the width of each column in bytes, 1, 2 or 4 (what the\n"
+            + "               text's first comment gives, or else the narrowest that fits\n"
+            + "               each column's values)\n"
             + "  -rRR         the repeat: the row an advance past the last steps to, R for\n"
-            + "               none (R)\n"
+            + "               none (what the file or the text's first comment gives, or R)\n"
             + "  -kK          DTX2: the unit, 1, 2 or 4 (1)\n"
             + "  -mN          DTX2: the ring, in bytes (960)\n"
             + "  -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)\n"
@@ -38,21 +41,6 @@ public static class Help
             + "  -help        this text\n"
             + "\n"
             + "doc/tools.md, Write.\n";
-
-    public const string Rewrite =
-              "dtx-rewrite in.dtx out.dtx [-kK] [-mN] [-pPACKER] [-copies[S]]\n"
-            + "\n"
-            + "Rewrites a DTX0 or DTX1 file as DTX2: the same rows, widths, R and RR,\n"
-            + "packed.\n"
-            + "\n"
-            + "  -kK          the unit, 1, 2 or 4 (1)\n"
-            + "  -mN          the ring, in bytes (960)\n"
-            + "  -pPACKER     an ST4 executable to pack with (the copy carried here)\n"
-            + "  -copies[S]   copies from the literal stream, with S seconds of search for\n"
-            + "               a better parse\n"
-            + "  -help        this text\n"
-            + "\n"
-            + "doc/tools.md, Rewrite.\n";
 
     public const string Package =
               "dtx-package in.dtx out.bin [-aRMAC] [-s]\n"

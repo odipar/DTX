@@ -24,16 +24,19 @@ final class Help {
     }
 
     static final String WRITE = """
-            dtx-write in.csv out.dtx [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER]
-                      [-copies[S]]
+            dtx-write in out [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
 
-            Writes the table in a comma separated text as a DTX file.
+            Writes the table in the first file to the second. The first is a DTX file
+            of any variant, or comma separated text; the second is a DTX file of
+            variant V, or text where its name ends in .csv.
 
-              -vV          the variant, 0, 1 or 2 (0)
-              -wW,W,..     the width of each column in bytes, 1, 2 or 4 (the narrowest
-                           that fits each column's values)
+              -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for
+                           text)
+              -wW,W,..     text: the width of each column in bytes, 1, 2 or 4 (what the
+                           text's first comment gives, or else the narrowest that fits
+                           each column's values)
               -rRR         the repeat: the row an advance past the last steps to, R for
-                           none (R)
+                           none (what the file or the text's first comment gives, or R)
               -kK          DTX2: the unit, 1, 2 or 4 (1)
               -mN          DTX2: the ring, in bytes (960)
               -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)
@@ -42,22 +45,6 @@ final class Help {
               -help        this text
 
             doc/tools.md, Write.
-            """;
-
-    static final String REWRITE = """
-            dtx-rewrite in.dtx out.dtx [-kK] [-mN] [-pPACKER] [-copies[S]]
-
-            Rewrites a DTX0 or DTX1 file as DTX2: the same rows, widths, R and RR,
-            packed.
-
-              -kK          the unit, 1, 2 or 4 (1)
-              -mN          the ring, in bytes (960)
-              -pPACKER     an ST4 executable to pack with (the copy carried here)
-              -copies[S]   copies from the literal stream, with S seconds of search for
-                           a better parse
-              -help        this text
-
-            doc/tools.md, Rewrite.
             """;
 
     static final String PACKAGE = """

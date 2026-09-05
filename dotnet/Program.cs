@@ -23,9 +23,9 @@ public static class Program
             {
                 TextWriter to = args.Length == 0 ? Console.Error : Console.Out;
                 to.Write("dtx <tool> [arguments..]\n\n"
-                        + "Runs one of the four tools, each of which prints its"
+                        + "Runs one of the three tools, each of which prints its"
                         + " own flags on -help:\n"
-                        + "dtx-write, dtx-rewrite, dtx-package and dtx-blobs.\n");
+                        + "dtx-write, dtx-package and dtx-blobs.\n");
                 return args.Length == 0 ? 2 : 0;
             }
             name = args[0];
@@ -34,7 +34,6 @@ public static class Program
         switch (name)
         {
             case "dtx-write": return Dtx.Tools.Write(rest);
-            case "dtx-rewrite": return Dtx.Tools.Rewrite(rest);
             case "dtx-package": return Dtx.Tools.Package(rest);
             case "dtx-blobs": return Dtx.Tools.Blobs(rest);
             default:

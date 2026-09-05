@@ -100,4 +100,46 @@ final class CsvTest {
                 + " bytes takes", assertThrows(IllegalArgumentException.class,
                         () -> Csv.table("4294967296\n")).getMessage());
     }
+
+    @Test
+    void aTableWrittenAsTextOpensWithItsShapeAndItsColumnNames() {
+        Table table = Csv.table(TEXT);
+        assertEquals("""
+                # 3 rows, 3 columns, widths 1,2,1, RR 3
+                c0,c1,c2
+                1,300,254
+                2,301,255
+                3,302,0
+                """, Csv.text(table));
+    }
+
+    @Test
+    void theTextATableWasWrittenAsReadsBackToThatTable() {
+        Table table = Csv.table(TEXT, new int[] {4, 2, 2}, 1);
+        Table back = Csv.table(Csv.text(table));
+        assertEquals(table, back, "the same widths and repeat, through the"
+                + " comment the text opens with");
+        assertEquals(4, back.width(0));
+        assertEquals(1, back.repeat());
+    }
+
+    @Test
+    void aLineOfNamesBeforeTheRowsIsNotARow() {
+        Table named = Csv.table("a table of two columns\nleft, right\n1, 2\n3, 4\n");
+        assertEquals(2, named.rows());
+        assertArrayEquals(new byte[] {1, 3}, named.column(0));
+        assertThrows(IllegalArgumentException.class,
+                () -> Csv.table("1, 2\nleft, right\n"),
+                "a line of names among the rows is not a row of numbers");
+    }
+
+    @Test
+    void theWidthsAndRepeatGivenOutrankTheComment() {
+        String text = "# 2 rows, 1 columns, widths 4, RR 0\nc0\n1\n2\n";
+        assertEquals(4, Csv.table(text).width(0));
+        assertEquals(0, Csv.table(text).repeat());
+        assertEquals(1, Csv.table(text, new int[] {1}).width(0));
+        assertEquals(2, Csv.table(text, new int[] {1}, 2).repeat());
+    }
+
 }

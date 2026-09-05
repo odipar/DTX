@@ -100,9 +100,12 @@ class ConformanceTest {
 
     /** The rows in a table, as DTX0 lays them out: what a reader gives. */
     private static byte[] rows(Source source) {
-        Table table = source.repeat() == null
+        return rows(source.repeat() == null
                 ? Csv.table(source.text(), source.width())
-                : Csv.table(source.text(), source.width(), source.repeat());
+                : Csv.table(source.text(), source.width(), source.repeat()));
+    }
+
+    private static byte[] rows(Table table) {
         byte[] plain = Dtx0.write(table);
         int header = Dtx.headerLength(table.columns());
         byte[] out = new byte[plain.length - header];
@@ -174,4 +177,24 @@ class ConformanceTest {
                 + "\ndoc/conformance/SOURCES.generated.md holds every row as the"
                 + " writer gives it; SOURCES.md takes them.");
     }
+
+    /**
+     * The Java reader against the kit: every table in it, read through
+     * {@link Dtx#read}, gives the rows beside it. The DTX2 tables go through
+     * the copy of ST4 in this repository, so this is the one check here of
+     * a reader that unpacks rather than the 68000 one.
+     */
+    @Test
+    void everyTableInTheKitReadsBackToItsRows() throws IOException {
+        Path tables = kit().resolve("tables");
+        for (Source source : KIT) {
+            Table table = Dtx.read(Files.readAllBytes(
+                    tables.resolve(source.name() + ".dtx")));
+            assertArrayEquals(
+                    Files.readAllBytes(tables.resolve(source.name() + ".rows")),
+                    rows(table), source.name() + ": the Java reader gives"
+                            + " other rows than the kit");
+        }
+    }
+
 }

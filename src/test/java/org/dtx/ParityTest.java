@@ -33,7 +33,6 @@ class ParityTest {
     /** What each tool is written as, in the Java tree. */
     private static final Map<String, String> TOOLS = Map.of(
             "write", "org.dtx.Write",
-            "rewrite", "org.dtx.Rewrite",
             "package", "org.dtx.Packager",
             "blobs", "org.dtx.Blobs");
 
@@ -69,7 +68,7 @@ class ParityTest {
         Path work = work();
         for (String tree : List.of("java", "go", "cs")) {
             List<String> command = command(tree, tool);
-            Path at = work.resolve(out + "." + tree);
+            Path at = work.resolve(tree + "-" + out);
             for (String one : argv) {
                 command.add(OUT.equals(one) ? at.toString() : one);
             }
@@ -151,22 +150,28 @@ class ParityTest {
     }
 
     @Test
-    void everyTreeRewritesTheSameWay() throws IOException {
-        Path plain = work().resolve("plain.dtx");
-        Path text = work().resolve("r.csv");
-        Files.writeString(text, Rig.numbers(64, 3));
-        List<String> argv = new ArrayList<>(List.of("java", "-cp",
-                Rig.root().resolve("target/classes").toString(),
-                "org.dtx.Write", text.toString(), plain.toString()));
-        argv.addAll(Rig.writeArgs(Dtx.DTX1, new int[] {1, 2, 4}, 32, 1, 960, false));
-        Rig.run(argv);
-        for (List<String> flags : List.of(List.of("-k1", "-m960"),
-                List.of("-k2", "-m960"), List.of("-k1", "-m960", "-copies"))) {
-            List<String> run = new ArrayList<>();
-            run.add(plain.toString());
-            run.add(OUT);
-            run.addAll(flags);
-            same("rewrite " + flags, each("rewrite", run, "r"));
+    void everyTreeWritesTheSameFileFromADtxFile() throws IOException {
+        Path work = work();
+        Path plain = work.resolve("plain.dtx");
+        Files.write(plain, Rig.write(work, Rig.numbers(64, 3), 1,
+                new int[] {1, 2, 4}, null, 1, 960, false));
+        Path packed = work.resolve("packed.dtx");
+        Files.write(packed, Rig.write(work, Rig.numbers(64, 3), 2,
+                new int[] {1, 2, 4}, null, 1, 960, false));
+        record Case(String name, Path in, List<String> flags, String out) {}
+        for (Case one : List.of(
+                new Case("DTX1 to DTX2, k of 1", plain, List.of("-v2", "-k1", "-m960"), "r.dtx"),
+                new Case("DTX1 to DTX2, k of 2", plain, List.of("-v2", "-k2", "-m960"), "r.dtx"),
+                new Case("DTX1 to DTX2, with copies", plain, List.of("-v2", "-k1", "-m960", "-copies"), "r.dtx"),
+                new Case("DTX2 to DTX2, k of 2", packed, List.of("-k2"), "r.dtx"),
+                new Case("DTX2 to DTX2, copies at a ring of 64", packed, List.of("-m64", "-copies"), "r.dtx"),
+                new Case("DTX2 to DTX0", packed, List.of("-v0"), "r.dtx"),
+                new Case("DTX2 to DTX1, repeating at 16", packed, List.of("-v1", "-r16"), "r.dtx"),
+                new Case("DTX2 to text", packed, List.of(), "r.csv"),
+                new Case("DTX1 to text", plain, List.of(), "r.csv"))) {
+            List<String> argv = new ArrayList<>(List.of(one.in().toString(), OUT));
+            argv.addAll(one.flags());
+            same(one.name(), each("write", argv, one.out()));
         }
     }
 

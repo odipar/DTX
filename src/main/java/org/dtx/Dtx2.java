@@ -1,5 +1,9 @@
 package org.dtx;
 
+import java.util.Arrays;
+import org.st4.St4Decompressor;
+import org.st4.St4Format;
+
 /**
  * DTX2, column by column and packed: {@code C} ST4 data sets, one a column,
  * behind an offset each.
@@ -74,11 +78,55 @@ public final class Dtx2 {
     }
 
     /**
-     * The DTX2 file of the table in a DTX0 or DTX1 file. The table is the
-     * same under every variant (R1.3), so what comes back has the same
-     * rows, widths, {@code R} and {@code RR} as what went in.
+     * The DTX2 file of the table in a DTX file of any variant. The table is
+     * the same under every variant (R1.3), so what comes back has the same
+     * rows, widths, {@code R} and {@code RR} as what went in, and a DTX2
+     * file comes back packed at the unit and ring given here.
      */
-    public static byte[] from(byte[] plain, Packer packer, int unit, int ring) {
-        return write(Dtx.read(plain), packer, unit, ring);
+    public static byte[] from(byte[] file, Packer packer, int unit, int ring) {
+        return write(Dtx.read(file), packer, unit, ring);
+    }
+
+    /**
+     * The table in a DTX2 file, each column unpacked with the copy of ST4 in
+     * this repository. A data set runs from its offset to the next offset
+     * above it, or to the end of the file.
+     *
+     * @throws IllegalArgumentException where the file is not DTX2, a data set
+     *     does not open with the payload's own unit (R5.2), or a column
+     *     unpacks to other than {@code R} times its width
+     */
+    public static Table read(byte[] file) {
+        Dtx.Header header = Dtx.header(file);
+        if (header.variant() != Dtx.DTX2) {
+            throw new IllegalArgumentException(
+                    "variant " + header.variant() + " is not DTX2");
+        }
+        Packager.Packed packed = Packager.packed(file, header);
+        int[] at = packed.at();
+        byte[][] column = new byte[header.columns()][];
+        for (int i = 0; i < column.length; i++) {
+            int from = header.length() + at[i];
+            int to = file.length;
+            for (int other : at) {
+                int begins = header.length() + other;
+                if (begins > from && begins < to) {
+                    to = begins;
+                }
+            }
+            St4Format.Container set = St4Format.read(
+                    Arrays.copyOfRange(file, from, to));
+            byte[] out = St4Decompressor.decode(set.control(), set.literal(),
+                    set.byteOffsets(), set.wordOffsets(), set.unit(),
+                    set.size(), set.window(), set.rewind()).output();
+            int bytes = header.rows() * header.width()[i];
+            if (out.length != bytes) {
+                throw new IllegalArgumentException("column " + i
+                        + " unpacks to " + out.length + " bytes, not the "
+                        + bytes + " of R rows at its width");
+            }
+            column[i] = out;
+        }
+        return Table.of(header.rows(), header.repeat(), header.width(), column);
     }
 }
