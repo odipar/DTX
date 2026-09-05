@@ -37,7 +37,7 @@ bin/dtx-write in.csv out.dtx -v2 -k1 -m960 -pst4
 | `-rRR` | the row the table repeats to, 0 to `R`. The default is `R`, where the table does not repeat |
 | `-kK` | the unit a DTX2 column is packed at, and `R` divides by it (R5.6). The default is 1 |
 | `-mN` | the ring a DTX2 column unpacks through, in bytes, 1 to 65535 (R5.4). The default is 960 |
-| `-pPACKER` | the ST4 executable a DTX2 file is packed by. The default is `st4` on the path |
+| `-pPACKER` | an ST4 executable to pack with, instead of the copy held here. Nothing needs one: name it to pack with a build newer than the copy |
 | `-copies[S]` | a match beyond the ring copies from the column's own literal stream, and `-copiesS` searches `S` seconds for a better parse. It reaches the packer as `-c`. YMX spells it the same way |
 
 `-k`, `-m` and `-p` reach a DTX2 file alone: no other variant packs.
@@ -175,7 +175,7 @@ bin/dtx-rewrite in.dtx out.dtx -k1 -m960 -pst4
 |---|---|
 | `-kK` | the unit every column is packed at: 1, 2 or 4, and `R` divides by it (R5.6). The default is 1 |
 | `-mN` | the ring in bytes, 1 to 65535 (R5.4). The default is 960 |
-| `-pPACKER` | the ST4 executable to run. The default is `st4` on the path |
+| `-pPACKER` | as Write reads it |
 | `-copies[S]` | as Write reads it |
 
 Rewrite keeps no packer of its own. `-p` names the one ST4's own repository
@@ -227,9 +227,10 @@ packaging a table with the host's own executables, from a directory that is
 not this repository, so an executable holding no image fails there rather
 than in a release.
 
-Writing DTX2 asks for an ST4 packer, which no tree here holds and the
-format states as a separate program (SPEC.md 2.3). That is the one thing a
-caller supplies, and the language it is written in is its own.
+Writing DTX2 asks for an ST4 packer, and both trees hold a copy of one:
+`src/main/java/org/st4`, taken from odipar/ST4@498aa25 and not edited here.
+So a release needs no packer beside it either. `-pPACKER` runs another
+where a caller has a newer build.
 
 ## The rigs
 

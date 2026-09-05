@@ -1,99 +1,75 @@
 package org.dtx;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import org.st4.St4Compressor;
+import org.st4.St4EventOptimizer;
+import org.st4.St4Format;
+import org.st4.St4LiteralCopySearch;
+import org.st4.Units;
 
 /**
- * A {@link Packer} that runs an ST4 packer beside this one.
+ * A {@link Packer} that packs with the copy of ST4 this repository holds.
  *
- * <p>No ST4 packer is kept in this repository, so a column is packed by the
- * executable ST4's own repository builds. The unit and the ring reach it as
- * {@code -kK} and {@code -mN}, where {@code -m} counts units and {@code N}
- * is in bytes.
+ * <p>{@code src/main/java/org/st4} is that copy, taken from
+ * odipar/ST4@498aa25 and not edited here. So a tool writes DTX2 with no
+ * packer beside it, and {@link St4Beside} runs one where a caller names it.
  *
- * <p>Every column is packed with {@code -l65535}, which holds ST4_wrap's
- * assumption 4: no operation is longer than the 65535 units the 68000
- * decoders count in a word. ST4's own default already fits them, and this
- * states it rather than taking it.
+ * <p>What reaches the packer is what {@code st4 -f -kK -mN -l65535} reaches
+ * it with, and {@code -c} beside them where the columns hold copies. The
+ * ring is bytes and the packer counts units, so {@code -m} is the ring
+ * divided by the unit, held to what a word offset can state.
  *
- * <p>{@code copies} reaches the packer as {@code -c}, or {@code -cS} for a
- * search of {@code S} seconds. A column packed that way lets a match beyond
- * the ring copy from its own literal stream, which packs a small ring far
- * smaller; the reader of it takes a decoder built with
- * {@code ST4_WINDOW equ 1}, which {@code org.dtx.Packager -c} emits.
+ * <p>{@code -l65535} holds ST4_wrap's assumption 4: no operation is longer
+ * than the 65535 units the 68000 decoders count in a word. ST4's own
+ * default already fits them, and this states it rather than taking it.
  */
 public final class St4 implements Packer {
 
-    private final Path packer;
-    private final String copies;
+    /** The longest operation, ST4_wrap assumption 4. */
+    private static final int MAX_OP = 65535;
 
-    /** A packer that runs the executable at {@code packer}. */
-    public St4(Path packer) {
-        this(packer, "");
+    private final boolean copies;
+    private final double seconds;
+
+    /** A packer that packs no copies from the literal stream. */
+    public St4() {
+        this(false, 0);
     }
 
     /**
-     * A packer that runs the executable at {@code packer}, letting a match
-     * beyond the ring copy from the literal stream.
+     * A packer that lets a match beyond the ring copy from the column's own
+     * literal stream, which packs a small ring far smaller.
      *
-     * @param copies {@code -c}, or {@code -cS} for a search of {@code S}
-     *     seconds, or empty for none
+     * @param copies whether to pack copies at all
+     * @param seconds how long to search beyond the opening passes for a
+     *     better parse, or zero for those passes alone. A search of no
+     *     seconds is the same parse every run; one of some seconds is not
      */
-    public St4(Path packer, String copies) {
-        this.packer = packer;
+    public St4(boolean copies, double seconds) {
         this.copies = copies;
+        this.seconds = seconds;
     }
 
     @Override
     public boolean copies() {
-        return !copies.isEmpty();
+        return copies;
     }
 
     @Override
     public byte[] pack(byte[] column, int unit, int ring) {
-        try {
-            Path work = Files.createTempDirectory("dtx");
-            try {
-                Path in = work.resolve("column");
-                Path out = work.resolve("column.st4");
-                Files.write(in, column);
-                List<String> command = new ArrayList<>(List.of(
-                        packer.toString(), "-f", "-k" + unit,
-                        "-m" + ring / unit, "-l65535"));
-                if (!copies.isEmpty()) {
-                    command.add(copies);
-                }
-                command.add(in.toString());
-                command.add(out.toString());
-                Process run = new ProcessBuilder(command)
-                        .redirectErrorStream(true).start();
-                byte[] said = run.getInputStream().readAllBytes();
-                if (run.waitFor() != 0 || !Files.exists(out)) {
-                    throw new IllegalStateException(packer + " gave "
-                            + new String(said).trim());
-                }
-                return Files.readAllBytes(out);
-            } finally {
-                try (var walk = Files.walk(work)) {
-                    walk.sorted(java.util.Comparator.reverseOrder())
-                            .forEach(path -> {
-                                try {
-                                    Files.deleteIfExists(path);
-                                } catch (IOException gone) {
-                                    throw new UncheckedIOException(gone);
-                                }
-                            });
-                }
-            }
-        } catch (IOException failed) {
-            throw new UncheckedIOException(failed);
-        } catch (InterruptedException stopped) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(stopped);
+        String problem = St4Format.checkUnit(unit);
+        if (!problem.isEmpty()) {
+            throw new IllegalArgumentException(problem);
         }
+        // A word offset is stored scaled to bytes, so the window is a byte
+        // figure: 32512 units at k=4 would not fit the word.
+        int offsetLimit = Math.min(ring / unit, St4Format.maxOffsetUnits(unit));
+        int[] units = Units.split(column, unit);
+        var parsed = copies
+                ? St4LiteralCopySearch.optimize(units, unit, offsetLimit,
+                        MAX_OP, seconds, false)
+                : St4EventOptimizer.optimize(units, unit, offsetLimit, false);
+        St4Compressor.Result result = St4Compressor.compress(
+                parsed, units, unit, MAX_OP, -1, offsetLimit);
+        return org.st4.St4.container(result);
     }
 }

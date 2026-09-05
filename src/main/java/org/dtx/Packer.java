@@ -4,8 +4,10 @@ package org.dtx;
  * What packs one column of a DTX2 payload.
  *
  * <p>DTX2 states that a column is an ST4 data set (R5.1) and nothing more
- * about how ST4 packs: no packer is kept in this repository, and a caller
- * that writes DTX2 supplies one. ST4's own repository states the format,
+ * about how ST4 packs. {@link St4} packs with the copy of ST4 this
+ * repository holds, {@link St4Beside} runs a packer beside it, and a
+ * caller that writes DTX2 may supply one of its own. ST4's own repository
+ * states the format,
  * and the 68000 decoder carried under {@code 68k/} reads what it packs.
  */
 @FunctionalInterface
