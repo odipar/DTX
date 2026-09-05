@@ -150,7 +150,7 @@ and the ring does not grow as `R` does.
 One `N` for the payload does for the rings what one `k` does for the code:
 no data set reaches back further than `N`, so one ring size is enough for
 them all, the rings stand at a fixed stride from one another, and one
-cursor arithmetic runs every column (R5.4, R5.5).
+pointer arithmetic runs every column (R5.4, R5.5).
 
 `k` need not be `W`: a table of two byte values packs at a unit of 1 or of
 2, and one of one byte values at a unit of 4.

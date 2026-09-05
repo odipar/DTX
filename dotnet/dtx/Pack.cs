@@ -20,7 +20,7 @@ public static class Pack
     public const int Turn = 4;
     public const int Decoded = 8;
     public const int Park = 12;
-    public const int Cursor = 24;
+    public const int Pointer = 24;
 
     /// <summary>The format block: what it runs to, where it stands, its fields.</summary>
     public const int FormatSize = 24;
@@ -41,8 +41,8 @@ public static class Pack
     /// decoder states.</summary>
     public const int PackedHead = 56;
 
-    /// <summary>The state block DTX0 and DTX1 take: the head, and one cursor.</summary>
-    public const int Plain = Cursor + 4;
+    /// <summary>The state block DTX0 and DTX1 take: the head, and one pointer.</summary>
+    public const int Plain = Pointer + 4;
 
     /// <summary>
     /// What a DTX2 payload defines: the ring, the unit, whether its columns
@@ -92,7 +92,7 @@ public static class Pack
     /// The state block a plain reader of this table takes, in bytes.
     ///
     /// <para>The same under DTX0 and DTX1, and the same at every C: every
-    /// column is one width, so one cursor walks them all.</para>
+    /// column is one width, so one pointer walks them all.</para>
     /// </summary>
     public static int StateBytes(Header header) => Plain;
 
@@ -149,7 +149,7 @@ public static class Pack
     {
         if (header.Variant != Format.Dtx2)
         {
-            // Every column is one width, so a cursor and a stride walk them
+            // Every column is one width, so a pointer and a stride walk them
             // all: what a plain read takes is arithmetic on R, C and the
             // width, and no column table is written.
             return Array.Empty<byte>();
@@ -303,7 +303,7 @@ public static class Pack
                 .Append(Equ("DTX_TURN", Turn))
                 .Append(Equ("DTX_DECODED", Decoded))
                 .Append(Equ("DTX_PARK", Park))
-                .Append(Equ("DTX_CURSOR", Cursor))
+                .Append(Equ("DTX_POINTER", Pointer))
                 .Append('\n')
                 .Append(Equ("DTX_WIDTH", header.Width))
                 .Append(Equ("DTX_ROWBYTES", header.RowBytes))

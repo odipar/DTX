@@ -19,7 +19,7 @@
 ; it stands in RAM rather than ROM, and a 68030 caller flushes the instruction
 ; cache after DTX_init. A 68000 writes to its own code freely.
 ;
-; DTX0 lays the rows one after another, so one cursor walks them and a read is
+; DTX0 lays the rows one after another, so one pointer walks them and a read is
 ; one run of bytes. The move that run takes is installed as well: a long where
 ; the row's bytes divide by four, a word where they are even, a byte where
 ; they are odd. The width every value takes does not reach this file: a row is
@@ -73,7 +73,7 @@
 
 ; -----------------------------------------------------------------------------
 ; DTX_init. It writes the table's figures into the instructions below and
-; leaves the cursor a row below row 0, so the advance into row 0 steps like
+; leaves the pointer a row below row 0, so the advance into row 0 steps like
 ; any other advance.
 
 DTX_init:
@@ -124,9 +124,9 @@ init_ready:
         DTX_INSTALL_W d5,read_count
         DTX_INSTALL_W d5,take_count
 
-; The cursor a row below row 0.
+; The pointer a row below row 0.
         suba.l  d2,a1
-        move.l  a1,DTX_CURSOR(a0)
+        move.l  a1,DTX_POINTER(a0)
         rts
 
 ; The payload's first byte in a1 and the header in a2. Where the table stands
@@ -142,7 +142,7 @@ DTX_payload:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_jump. The cursor is the payload plus the row times the row's bytes: two
+; DTX_jump. The pointer is the payload plus the row times the row's bytes: two
 ; mulu.w make that 32 by 16 product at any row's bytes.
 
 DTX_jump:
@@ -161,7 +161,7 @@ jump_low:
         move.l  d1,d5
         bsr     DTX_payload
         adda.l  d5,a1
-        move.l  a1,DTX_CURSOR(a0)
+        move.l  a1,DTX_POINTER(a0)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -182,20 +182,20 @@ advance_end:
         rts
 advance_next:
         move.l  d0,DTX_ROW(a0)
-        move.l  DTX_CURSOR(a0),d1
+        move.l  DTX_POINTER(a0),d1
 advance_step:
         addi.l  #0,d1                   ; installed: the row's bytes
-        move.l  d1,DTX_CURSOR(a0)
+        move.l  d1,DTX_POINTER(a0)
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_read. One run of bytes from the cursor, at the move and the count init
+; DTX_read. One run of bytes from the pointer, at the move and the count init
 ; installed.
 
 DTX_read:
         tst.l   DTX_ROW(a0)
         bmi.s   read_none
-        movea.l DTX_CURSOR(a0),a2
+        movea.l DTX_POINTER(a0),a2
 read_count:
         move.w  #0,d0                   ; installed: the moves a row takes
 read_run:
@@ -207,13 +207,13 @@ read_none:
 
 ; -----------------------------------------------------------------------------
 ; DTX_take. A read and an advance in one call. The read leaves a2 one past the
-; row it took, which is the cursor the step would work out, so the step stores
+; row it took, which is the pointer the step would work out, so the step stores
 ; a2 and does not do arithmetic.
 
 DTX_take:
         tst.l   DTX_ROW(a0)
         bmi.w   DTX_advance             ; no row: step to row 0 without a write
-        movea.l DTX_CURSOR(a0),a2
+        movea.l DTX_POINTER(a0),a2
 take_count:
         move.w  #0,d0                   ; installed: the moves a row takes
 take_run:
@@ -240,7 +240,7 @@ take_over:
         rts
 take_next:
         move.l  d0,DTX_ROW(a0)
-        move.l  a2,DTX_CURSOR(a0)       ; where the read ended
+        move.l  a2,DTX_POINTER(a0)       ; where the read ended
         rts
 
 ; -----------------------------------------------------------------------------

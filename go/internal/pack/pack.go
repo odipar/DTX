@@ -20,7 +20,7 @@ import (
 
 // The state block's fields, from doc/abi.md 3.
 const (
-	Cursor = 24
+	Pointer = 24
 )
 
 // The format block: what it runs to, where it stands, and its fields.
@@ -44,8 +44,8 @@ const Stream = 16
 // decoder states.
 const PackedHead = 56
 
-// Plain is the state block DTX0 and DTX1 take: the head, and one cursor.
-const Plain = Cursor + 4
+// Plain is the state block DTX0 and DTX1 take: the head, and one pointer.
+const Plain = Pointer + 4
 
 // Copies is the flags bit at payload byte 3 that marks every column was
 // packed with copies from its own literal stream, R5.10.
@@ -76,7 +76,7 @@ func Ring(header dtx.Header) int {
 // StateBytes gives the state block a plain reader of this table takes.
 //
 // The same under DTX0 and DTX1, and the same at every C: every column is one
-// width, so one cursor walks them all.
+// width, so one pointer walks them all.
 func StateBytes(header dtx.Header) int {
 	return Plain
 }
@@ -116,7 +116,7 @@ func Period(header dtx.Header, given Packed) (int, error) {
 // ColumnTable gives the table behind the image's code: one stream record a
 // column, four longs each, and nothing else.
 //
-// DTX0 and DTX1 do not have one. Every column is one width, so a cursor and
+// DTX0 and DTX1 do not have one. Every column is one width, so a pointer and
 // a stride walk them all: what a plain read takes is arithmetic on R, C and
 // the width.
 func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
@@ -287,7 +287,7 @@ func Figures(file []byte) (string, error) {
 	out.WriteString(equ("DTX_TURN", Turn))
 	out.WriteString(equ("DTX_DECODED", Decoded))
 	out.WriteString(equ("DTX_PARK", Park))
-	out.WriteString(equ("DTX_CURSOR", Cursor))
+	out.WriteString(equ("DTX_POINTER", Pointer))
 	out.WriteString("\n")
 	out.WriteString(equ("DTX_WIDTH", header.Width))
 	out.WriteString(equ("DTX_ROWBYTES", header.RowBytes()))

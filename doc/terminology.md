@@ -18,10 +18,10 @@ and one table takes one of the three (requirements.md, R6.3), so a column
 of another width is another table, and a reader built for a width reads
 the tables of that width.
 
-**Yielding** is one row at a time and in order. A **clock** advances to a
+**Yielding** is one row at a time and in order. A **cursor** advances to a
 next row, and has its own place in the table: the first advance gives
 row 0, the next row 1, and the advance after row `R` minus one gives row
-`RR`, or nothing where the table does not repeat. Two clocks on one table
+`RR`, or nothing where the table does not repeat. Two cursors on one table
 have two places, and neither moves the other's.
 
 `R` counts the rows in a table, not the rows it yields. One that repeats

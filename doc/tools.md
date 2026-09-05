@@ -85,7 +85,7 @@ of a column than its width, so which of the two a column is is defined
 elsewhere or not defined.
 
 ```
-# a clock, a note and a step
+# a time, a note and a step
 0, $0100, -2
 1, $0101, -1
 2, $0102,  0
@@ -175,7 +175,7 @@ in one instruction, and a table of another width takes another build. Under
 DTX0 a read is one run of bytes, so one build reads every width.
 
 Under DTX0 and DTX1 the table's bytes follow the code with nothing between
-them. Every column is one width and one length, so a cursor and a stride
+them. Every column is one width and one length, so a pointer and a stride
 reach them all and the packager does not write an entry a column. Under DTX2
 one stream record a column stands there, four longs each, giving where that
 column's four streams begin (abi.md 1). The tool prints the image's bytes
@@ -232,7 +232,7 @@ A DTX2 image contains the decoder carried at
 Init fills every ring before it returns, and one column is refilled a row
 after that, so a read takes one value from each ring and never decodes.
 Every ring is `N` bytes and every column one width, so column `i`'s ring
-stands `i` rings past column 0's and one cursor arithmetic runs them all
+stands `i` rings past column 0's and one pointer arithmetic runs them all
 (R5.5). The packager takes the period from the table and fails the package
 where no period meets every rule abi.md 4 defines: what it gives names the
 rule and the figures that break it.
