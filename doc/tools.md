@@ -227,10 +227,13 @@ packaging a table with the host's own executables, from a directory that is
 not this repository, so an executable holding no image fails there rather
 than in a release.
 
-Writing DTX2 asks for an ST4 packer, and both trees hold a copy of one:
-`src/main/java/org/st4`, taken from odipar/ST4@498aa25 and not edited here.
-So a release needs no packer beside it either. `-pPACKER` runs another
-where a caller has a newer build.
+Writing DTX2 asks for an ST4 packer, and each tree holds one:
+`src/main/java/org/st4`, taken from odipar/ST4@498aa25, and
+`go/internal/st4`, taken from odipar/YMX@498aa25, which is that same packer
+in Go. Neither is edited here beyond one comment naming where it came from,
+and the two pack the same bytes, which `test/test_parity.py` holds them to.
+So a release needs no packer beside it either. `-pPACKER` runs another where
+a caller has a newer build.
 
 ## The rigs
 

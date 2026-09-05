@@ -33,6 +33,11 @@ Attribution
   no packer beside this one. ST4's own license puts its compressor under
   the BSD 3-Clause License, which is below, and this repository holds a
   copy of that compressor.
+* go/internal/st4 is the same packer in Go, a carried copy of
+  odipar/YMX@498aa25's go/internal/st4, whose own package comment names
+  the Java it is a port of. One line of that comment is edited here to
+  name where the copy came from, and beside.go is DTX's own. The BSD
+  3-Clause License below covers it as it covers the Java.
 * 68k/ST4_wrap.S is a carried copy of that repository's file, at
   odipar/ST4@02f3cc0, so a packaged DTX2 reader holds a decoder. ST4's
   license lets a decompressor be used freely, on the one condition that
@@ -43,8 +48,7 @@ BSD 3-Clause License (the carried ST4 compressor)
 
 Copyright (c) 2026 Robbert van Dalen, and (c) 2021 Einar Saukas, from whose
 ZX1 compressor ST4's is derived through ST1. This covers
-src/main/java/org/st4 and the port of it under go/internal/st4, and nothing
-else here.
+src/main/java/org/st4 and go/internal/st4, and nothing else here.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:

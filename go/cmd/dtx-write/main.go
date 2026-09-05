@@ -24,7 +24,7 @@ func main() {
 
 func run(args []string) error {
 	variant, repeat, unit, ring := dtx.DTX0, -1, 1, 960
-	widths, packer, copies := "", "st4", ""
+	widths, packer, copies := "", "", ""
 	var named []string
 	for _, arg := range args {
 		var err error
@@ -84,7 +84,7 @@ func run(args []string) error {
 		out = dtx.WriteDtx1(table)
 	case dtx.DTX2:
 		out, err = dtx.WriteDtx2(table,
-			st4.Packer{Path: packer, CopiesFlag: copies}, unit, ring)
+			packerFor(packer, copies), unit, ring)
 	default:
 		return fmt.Errorf("the variant is 0, 1 or 2, not %d", variant)
 	}
@@ -122,4 +122,28 @@ func readWidths(given, text string) ([]int, error) {
 		}
 	}
 	return width, nil
+}
+
+// packerFor gives what packs a column: the port this executable holds, or
+// an ST4 executable beside it where -p names one.
+func packerFor(named, copies string) dtx.Packer {
+	if named != "" {
+		return st4.Beside{Path: named, CopiesFlag: copies}
+	}
+	if copies == "" {
+		return st4.Packer{}
+	}
+	return st4.Packer{CopiesFlag: true, Seconds: seconds(copies)}
+}
+
+// seconds gives what -copiesS searches for, or zero.
+func seconds(copies string) float64 {
+	if len(copies) <= 2 {
+		return 0
+	}
+	out, err := strconv.ParseFloat(copies[2:], 64)
+	if err != nil {
+		return 0
+	}
+	return out
 }

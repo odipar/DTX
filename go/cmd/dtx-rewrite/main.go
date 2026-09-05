@@ -24,7 +24,7 @@ func main() {
 
 func run(args []string) error {
 	unit, ring := 1, 960
-	packer, copies := "st4", ""
+	packer, copies := "", ""
 	var named []string
 	for _, arg := range args {
 		var err error
@@ -58,7 +58,7 @@ func run(args []string) error {
 		return err
 	}
 	out, err := dtx.Dtx2From(in,
-		st4.Packer{Path: packer, CopiesFlag: copies}, unit, ring)
+		packerFor(packer, copies), unit, ring)
 	if err != nil {
 		return err
 	}
@@ -73,4 +73,28 @@ func run(args []string) error {
 		" k=%d, N=%d\n", header.Variant, len(in), len(out), header.Rows,
 		header.Columns(), unit, ring)
 	return nil
+}
+
+// packerFor gives what packs a column: the port this executable holds, or
+// an ST4 executable beside it where -p names one.
+func packerFor(named, copies string) dtx.Packer {
+	if named != "" {
+		return st4.Beside{Path: named, CopiesFlag: copies}
+	}
+	if copies == "" {
+		return st4.Packer{}
+	}
+	return st4.Packer{CopiesFlag: true, Seconds: seconds(copies)}
+}
+
+// seconds gives what -copiesS searches for, or zero.
+func seconds(copies string) float64 {
+	if len(copies) <= 2 {
+		return 0
+	}
+	out, err := strconv.ParseFloat(copies[2:], 64)
+	if err != nil {
+		return 0
+	}
+	return out
 }

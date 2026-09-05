@@ -22,7 +22,7 @@ driven one call past its end marker, but the count does.
     python3 68k/test/emu/test_dtx.py
 
 Needs `mvn compile`, rmac on the path or at $RMAC, `pip install unicorn`,
-and an ST4 packer at $ST4 for the packed tables.
+and, where a packer newer than the carried one is wanted, one at $ST4.
 """
 
 import os
@@ -181,7 +181,11 @@ def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960,
     if repeat is not None:
         argv.append("-r%d" % repeat)
     if variant == 2:
-        argv += ["-k%d" % unit, "-m%d" % ring, "-p" + ST4]
+        argv += ["-k%d" % unit, "-m%d" % ring]
+        # The tree holds a copy of ST4, so no packer stands beside it. $ST4
+        # names one to pack with instead, where a newer build is wanted.
+        if os.environ.get("ST4"):
+            argv.append("-p" + ST4)
         if copies:
             argv.append("-copies")
     run(argv)

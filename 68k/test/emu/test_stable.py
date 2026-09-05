@@ -12,7 +12,7 @@ Under DTX2 the decoder is built for one unit and for copies or not, so k and
     python3 68k/test/emu/test_stable.py
 
 Needs `mvn compile`, rmac on the path or at $RMAC, `pip install unicorn`, and
-an ST4 packer at $ST4.
+and, where a packer newer than the carried one is wanted, one at $ST4.
 """
 import sys
 sys.path.insert(0, '68k/test/emu')

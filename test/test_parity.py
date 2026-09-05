@@ -8,8 +8,9 @@ the jar hold the same bytes at every step.
 
     python3 test/test_parity.py
 
-Needs `mvn package`, Go on the path, rmac on it or at $RMAC, and an ST4
-packer at $ST4 for the packed tables.
+Needs `mvn package`, Go on the path, and rmac on it or at $RMAC. No ST4
+packer beside this one: both trees hold a copy, and what this holds them to
+is that the two copies pack the same bytes.
 """
 import os
 import subprocess
@@ -114,8 +115,7 @@ def main():
             ("DTX2, k of 4", ["-v2", "-w4,4,4", "-k4", "-m960"]),
             ("DTX2, with copies", ["-v2", "-w1,4,2", "-k1", "-m960",
                                    "-copies"])]:
-        one, other = both(work, classes, "write",
-                          [text, None] + argv + ["-p" + ST4], "w")
+        one, other = both(work, classes, "write", [text, None] + argv, "w")
         bad += report(name, one, other)
 
     print()
@@ -126,8 +126,7 @@ def main():
     for name, argv in [("k of 1", ["-k1", "-m960"]),
                        ("k of 2", ["-k2", "-m960"]),
                        ("with copies", ["-k1", "-m960", "-copies"])]:
-        one, other = both(work, classes, "rewrite",
-                          [plain, None] + argv + ["-p" + ST4], "r")
+        one, other = both(work, classes, "rewrite", [plain, None] + argv, "r")
         bad += report(name, one, other)
 
     print()
