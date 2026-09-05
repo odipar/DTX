@@ -42,10 +42,10 @@
 ;   +0   4  stream A, from the payload    +8   4  stream C
 ;   +4   4  stream B                      +12  4  stream D
 ;
-; a6 IS THE STATE BLOCK through init, jump and advance, and the caller's
-; a6, d6 and d7 stand parked in the block for the length of the call: ST4
-; leaves those three alone, and they are the only registers that stand across
-; an ST4_resume. Read takes the block in a0 and does not park.
+; a6 IS THE STATE BLOCK through init, jump and advance, and the caller's a6
+; stands parked in the block for the length of the call. ST4 leaves d6, d7
+; and a6 alone, and nothing here touches d6 or d7, so a6 is the one register
+; to put back.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call
@@ -64,19 +64,20 @@ DTX_S_C             equ     8
 DTX_S_D             equ     12
 DTX_S_SIZE          equ     16
 
-; The state block beyond what doc/abi.md 3 defines: the payload, the column
-; a fill is at, the five figures the table gives, and where the rings begin.
-; The decoder states stand at DTX_DECODERS, 32 a column, and the rings behind
-; them, N a column.
-DTX_PAYLOAD         equ     28
-DTX_FILL            equ     32              ; a word: the column a fill is at
-DTX_CFIG            equ     34              ; C, a word
-DTX_RINGS           equ     36              ; where the rings begin, in the block
-DTX_ROWSFIG         equ     40              ; R
-DTX_REPEATFIG       equ     44              ; RR
-DTX_PERIODFIG       equ     48              ; P
-DTX_NFIG            equ     52              ; N
-DTX_DECODERS        equ     56
+; The state block beyond what doc/abi.md 3 defines: the payload, where the
+; stream records stand, the column a fill is at, the five figures the table
+; gives, and where the rings begin. The decoder states stand at
+; DTX_DECODERS, 32 a column, and the rings behind them, N a column.
+DTX_PAYLOAD         equ     20
+DTX_RECORDS         equ     24              ; where the stream records stand
+DTX_FILL            equ     28              ; a word: the column a fill is at
+DTX_CFIG            equ     30              ; C, a word
+DTX_RINGS           equ     32              ; where the rings begin, in the block
+DTX_ROWSFIG         equ     36              ; R
+DTX_REPEATFIG       equ     40              ; RR
+DTX_PERIODFIG       equ     44              ; P
+DTX_NFIG            equ     48              ; N
+DTX_DECODERS        equ     52
 
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
@@ -110,17 +111,19 @@ DTX_columns:
 ; stride. d4 works them out: ST4 clobbers it, and it stands in none of the
 ; decoder's state.
 
-; The stream record in a3.
+; The stream record in a3. Where the records stand is worked out once, at
+; init, and a record is 16 bytes, so the multiply is a shift.
 DTX_record:
-        bsr     DTX_columns
+        movea.l DTX_RECORDS(a6),a3
+        moveq   #0,d4
         move.w  DTX_FILL(a6),d4
-        mulu.w  #DTX_S_SIZE,d4
+        lsl.l   #4,d4
         adda.l  d4,a3
         rts
 
-; The ring's first byte in a1. N reaches the multiply in a register: d5 is
-; ST4's to clobber like d4, and a multiply of two registers is one shape the
-; rig times.
+; The ring's first byte in a1. N is any size a word takes, so this one is a
+; multiply. N reaches it in a register: d5 is ST4's to clobber like d4, and
+; a multiply of two registers is one shape the rig times.
 DTX_ring:
         move.w  DTX_FILL(a6),d4
         move.w  DTX_NFIG+2(a6),d5
@@ -130,36 +133,38 @@ DTX_ring:
         adda.l  d4,a1
         rts
 
-; The decoder state in a3.
+; The decoder state in a3. A state is 32 bytes, so the multiply is a shift.
 DTX_state:
+        moveq   #0,d4
         move.w  DTX_FILL(a6),d4
-        mulu.w  #32,d4
-        movea.l a6,a3
-        adda.w  #DTX_DECODERS,a3
+        lsl.l   #5,d4
+        lea     DTX_DECODERS(a6),a3
         adda.l  d4,a3
         rts
 
-; -----------------------------------------------------------------------------
 ; The budget one refill takes, in units: the rows in d3 times the width,
-; divided by k. Both are assembly-time constants, so this is a shift either
-; way and nothing at all where they are equal. d3 and d4 are ST4's to
-; clobber, and a seed works a budget out between ST4_init and ST4_resume.
+; divided by k. Both are assembly-time constants, so the two are one shift
+; of what the width is over the unit, and nothing at all where they are
+; equal. A macro rather than a subroutine: at a ratio of one there is
+; nothing to call, and at any other one instruction is cheaper than
+; reaching a subroutine and coming back.
 
-DTX_budget:
-        .if     DTX_WIDTH>1
+        .macro  DTX_BUDGET
+        .if     (DTX_WIDTH)=(2*ST4_UNIT)
         add.l   d3,d3
         .endif
-        .if     DTX_WIDTH>2
-        add.l   d3,d3
+        .if     (DTX_WIDTH)=(4*ST4_UNIT)
+        lsl.l   #2,d3
         .endif
-        .if     ST4_UNIT>1
+        .if     (2*DTX_WIDTH)=(ST4_UNIT)
         lsr.l   #1,d3
         .endif
-        .if     ST4_UNIT>2
-        lsr.l   #1,d3
+        .if     (4*DTX_WIDTH)=(ST4_UNIT)
+        lsr.l   #2,d3
         .endif
-        rts
+        .endm
 
+; -----------------------------------------------------------------------------
 ; The write pointer goes back to the ring start where a refill landed on the
 ; ring end. N divides by P times the width, so a full refill lands on the end
 ; or short of it and the compare is exact: no call is counted anywhere. The
@@ -212,7 +217,7 @@ seed_column:
         move.w  DTX_NFIG+2(a6),d3       ; N, a ring's bytes, in a word
         bsr     ST4_init
         move.l  DTX_PERIODFIG(a6),d3
-        bsr     DTX_budget
+        DTX_BUDGET
         bsr     ST4_resume
         bsr     DTX_wrap
         bsr     DTX_store
@@ -236,11 +241,13 @@ seed_column:
 ; them, and then a seed.
 
 DTX_init:
-        movem.l d6-d7/a6,DTX_PARK(a0)
+        move.l  a6,DTX_PARK(a0)
         movea.l a0,a6
 
         bsr     DTX_payload             ; a1 the payload, a2 the header
         move.l  a1,DTX_PAYLOAD(a6)
+        bsr     DTX_columns
+        move.l  a3,DTX_RECORDS(a6)
         move.l  4(a2),d0                ; R
         move.l  d0,DTX_ROWSFIG(a6)
         move.l  10(a2),d0               ; RR
@@ -265,7 +272,7 @@ DTX_init:
         move.l  d2,DTX_RINGS(a6)
 
         bsr     DTX_seed
-        movem.l DTX_PARK(a6),d6-d7/a6
+        movea.l DTX_PARK(a6),a6
         rts
 
 ; -----------------------------------------------------------------------------
@@ -300,7 +307,7 @@ DTX_refill:
         cmp.w   DTX_CFIG(a6),d1
         bcc.w   DTX_turn                ; a turn past the last column
         move.w  d1,DTX_FILL(a6)
-        bsr     DTX_budget
+        DTX_BUDGET
         bsr     DTX_state
         movem.l (a3)+,d0-d2/a0-a2/a4-a5
         bsr     ST4_resume
@@ -330,7 +337,7 @@ DTX_turn:
 ; stack stands across a step: the target is on the stack.
 
 DTX_jump:
-        movem.l d6-d7/a6,DTX_PARK(a0)
+        move.l  a6,DTX_PARK(a0)
         movea.l a0,a6
         move.l  d0,-(a7)
         move.l  DTX_ROW(a6),d4
@@ -350,7 +357,7 @@ DTX_jump:
 .there:
         move.l  (a7)+,d0
         movea.l DTX_POINTER(a6),a1
-        movem.l DTX_PARK(a6),d6-d7/a6
+        movea.l DTX_PARK(a6),a6
         rts
 
 ; -----------------------------------------------------------------------------
@@ -358,7 +365,7 @@ DTX_jump:
 ; a1 comes back the pointer at column 0's value for the row.
 
 DTX_advance:
-        movem.l d6-d7/a6,DTX_PARK(a0)
+        move.l  a6,DTX_PARK(a0)
         movea.l a0,a6
         move.l  DTX_ROW(a6),d0
         addq.l  #1,d0
@@ -367,19 +374,19 @@ DTX_advance:
         move.l  DTX_REPEATFIG(a6),d0
         cmp.l   DTX_ROWSFIG(a6),d0
         bcc.s   .over                   ; RR at R: the end, and it is sticky
-        movem.l DTX_PARK(a6),d6-d7/a6
+        movea.l DTX_PARK(a6),a6
         bra.w   DTX_jump                ; the repeat is a jump
 .over:
         moveq   #-1,d0
         movea.l DTX_POINTER(a6),a1      ; the last row stands where it stood
-        movem.l DTX_PARK(a6),d6-d7/a6
+        movea.l DTX_PARK(a6),a6
         rts
 .step:
         move.l  d0,DTX_ROW(a6)
         bsr     DTX_step
         move.l  DTX_ROW(a6),d0          ; a step clobbers d0 to d5
         movea.l DTX_POINTER(a6),a1
-        movem.l DTX_PARK(a6),d6-d7/a6
+        movea.l DTX_PARK(a6),a6
         rts
 
 ; -----------------------------------------------------------------------------

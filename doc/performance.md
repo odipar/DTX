@@ -30,21 +30,21 @@ plus one, modulo 251, so the first rows of the three column table are:
 
 | call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
 |---|---|---|---|---|---|
-| init | 370 | 298 | 7044 | 5646 | 5604 |
-| advance | 134 | 122 | 1414-1524 | 1388-1498 | 610-1402 |
-| jump to row 0 | 292 | 166 | 8120 | 6696 | 6668 |
-| jump to row 63 | 292 | 166 | 82440 | 80972 | 64812 |
-| code, bytes | 232 | 176 | 944 | 948 | 956 |
+| init | 366 | 298 | 6656 | 5204 | 5162 |
+| advance | 126 | 122 | 1276-1386 | 1232-1342 | 566-1246 |
+| jump to row 0 | 292 | 166 | 7550 | 6054 | 6026 |
+| jump to row 63 | 292 | 166 | 76568 | 73984 | 59840 |
+| code, bytes | 228 | 176 | 924 | 924 | 932 |
 
 ### Twenty columns
 
 | call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
 |---|---|---|---|---|---|
-| init | 370 | 298 | 52314 | 38634 | 37194 |
-| advance | 134 | 122 | 1850 | 1606 | 1562 |
-| jump to row 0 | 292 | 166 | 53826 | 39902 | 38418 |
-| jump to row 63 | 292 | 166 | 96030 | 86234 | 84078 |
-| code, bytes | 232 | 176 | 944 | 948 | 956 |
+| init | 366 | 298 | 49478 | 35438 | 33998 |
+| advance | 126 | 122 | 1712 | 1450 | 1406 |
+| jump to row 0 | 292 | 166 | 50808 | 36506 | 35022 |
+| jump to row 63 | 292 | 166 | 90440 | 79582 | 77426 |
+| code, bytes | 228 | 176 | 924 | 924 | 932 |
 
 There are four calls (abi.md 2), and none of them moves a value: an advance
 gives the pointer at the row's first value and the caller reads from there.
@@ -91,9 +91,9 @@ three column table at each unit.
 
 | k | without | with | more |
 |---|---|---|---|
-| 1 | 98862 | 99066 | 204 |
-| 2 | 95970 | 96126 | 156 |
-| 4 | 79782 | 79938 | 156 |
+| 1 | 89736 | 89940 | 204 |
+| 2 | 85656 | 85812 | 156 |
+| 4 | 71484 | 71640 | 156 |
 
 The two decoders differ at init, where the one with the copy code writes
 the ring's size into two of its own instructions, and not in a row.

@@ -88,8 +88,10 @@ DTX_init:
         DTX_INSTALL_L d3,advance_end
         DTX_INSTALL_L d5,advance_repeat
 
-; The row's bytes, into the step and into the two mulu a jump takes.
-        DTX_INSTALL_L d2,advance_step
+; The row's bytes, into the step and into the two mulu a jump takes. A row
+; is C values of the width, so 1024 bytes at the widest table R6 takes,
+; which a word gives.
+        DTX_INSTALL_W d2,advance_step
         DTX_INSTALL_W d2,jump_high
         DTX_INSTALL_W d2,jump_low
 
@@ -154,11 +156,10 @@ advance_end:
         rts
 advance_next:
         move.l  d0,DTX_ROW(a0)
-        move.l  DTX_POINTER(a0),d1
+        movea.l DTX_POINTER(a0),a1
 advance_step:
-        addi.l  #0,d1                   ; installed: the row's bytes
-        move.l  d1,DTX_POINTER(a0)
-        movea.l d1,a1
+        adda.w  #0,a1                   ; installed: the row's bytes
+        move.l  a1,DTX_POINTER(a0)
         rts
 
 ; -----------------------------------------------------------------------------

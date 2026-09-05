@@ -75,11 +75,11 @@ final class PackagerTest {
         for (int width : new int[] {1, 2, 4}) {
             Table one = Csv.table("1\n2\n", width);
             Table three = Csv.table("1,2,3\n4,5,6\n", width);
-            assertEquals(28, Packager.stateBytes(Dtx.header(Dtx0.write(three))),
+            assertEquals(20, Packager.stateBytes(Dtx.header(Dtx0.write(three))),
                     "DTX0 of three columns at a width of " + width);
-            assertEquals(28, Packager.stateBytes(Dtx.header(Dtx1.write(one))),
+            assertEquals(20, Packager.stateBytes(Dtx.header(Dtx1.write(one))),
                     "DTX1 of one column at a width of " + width);
-            assertEquals(28, Packager.stateBytes(Dtx.header(Dtx1.write(three))),
+            assertEquals(20, Packager.stateBytes(Dtx.header(Dtx1.write(three))),
                     "DTX1 of three columns at a width of " + width);
         }
     }
@@ -226,13 +226,14 @@ final class PackagerTest {
         byte[] file = packed(64, 2, 2, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
-        assertEquals(56, Packager.decoders(header),
-                "the decoder states follow the pointer, the payload, the fill,"
-                        + " C, the rings and the four figures, where"
-                        + " 68k/DTX2.S puts them: DTX_DECODERS equ 56");
-        assertEquals(56 + 32 * 2, Packager.ring(header),
+        assertEquals(52, Packager.decoders(header),
+                "the decoder states follow the pointer, the payload, the"
+                        + " records, the fill, C, the rings and the four"
+                        + " figures, where 68k/DTX2.S puts them:"
+                        + " DTX_DECODERS equ 52");
+        assertEquals(52 + 32 * 2, Packager.ring(header),
                 "the rings follow two decoder states of 32 bytes");
-        assertEquals(56 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
+        assertEquals(52 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
                 "a ring a column");
     }
 
@@ -303,7 +304,7 @@ final class PackagerTest {
         assertEquals("DTX", new String(image, 16, 3),
                 "the format block behind the four slots");
         assertEquals(0, image[19], "the variant the format block defines");
-        assertEquals(28, Dtx.getLong(image, 20), "the state block's bytes");
+        assertEquals(20, Dtx.getLong(image, 20), "the state block's bytes");
         int header = Dtx.getLong(image, 24);
         assertEquals("DTX", new String(image, header, 3),
                 "the header the format block points at");

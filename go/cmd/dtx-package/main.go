@@ -17,9 +17,9 @@ import (
 	"dtx/internal/pack"
 )
 
-// What -help prints: the synopsis, a line a flag with the default in
-// parentheses, examples, and the section of doc/tools.md that describes the
-// tool. The Java and C# trees print the same text.
+// What -help prints: the synopsis, the one flag, an example, and the section
+// of doc/tools.md that describes the tool. The Java and C# trees also take
+// -aRMAC and -s, which this tool does not read.
 const help = `dtx-package in.dtx out.bin
 
 Packages a DTX file as a 68000 image: the code for its variant, the column
@@ -31,9 +31,6 @@ Examples
 
   dtx-package t.dtx t.bin
       the image of a table, from the code the build made
-  dtx-package t.dtx t.i -s
-      the table's figures as assembler equates, for a build of your
-      own
 
 doc/tools.md, Package.
 `

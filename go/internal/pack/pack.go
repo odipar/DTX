@@ -20,7 +20,7 @@ import (
 
 // The state block's fields, from doc/abi.md 3.
 const (
-	Pointer = 24
+	Pointer = 16
 )
 
 // The format block: what it runs to, where it stands behind the four slots,
@@ -44,7 +44,7 @@ const Stream = 16
 
 // PackedHead is what a packed reader's state block contains before its
 // decoder states.
-const PackedHead = 56
+const PackedHead = 52
 
 // Plain is the state block DTX0 and DTX1 take: the head, and one pointer.
 const Plain = Pointer + 4

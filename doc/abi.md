@@ -269,8 +269,8 @@ image. The block stands on a long.
 | +4 | 2 | the turn, 0 to `P` minus one. Zero under DTX0 and DTX1 |
 | +6 | 2 | zero |
 | +8 | 4 | the rows decoded. Zero under DTX0 and DTX1 |
-| +12 | 12 | the caller's `a6`, `d6` and `d7`, parked for a DTX2 refill |
-| +24 | 4 | the pointer, under every variant |
+| +12 | 4 | the caller's `a6`, parked for a DTX2 refill |
+| +16 | 4 | the pointer, under every variant |
 
 One pointer, because every column is one width: under DTX1 and DTX2 the
 columns lie at one stride and a read walks them from it. Under DTX2 the
@@ -282,21 +282,22 @@ that `a6` reaches:
 
 | at | bytes | contains |
 |---|---|---|
-| +28 | 4 | the payload's first byte |
-| +32 | 2 | the column a fill or a refill stands at |
-| +34 | 2 | `C` |
-| +36 | 4 | where the rings begin, from the block's first byte |
-| +40 | 4 | `R` |
-| +44 | 4 | `RR` |
-| +48 | 4 | `P` |
-| +52 | 4 | `N` |
+| +20 | 4 | the payload's first byte |
+| +24 | 4 | where the stream records stand |
+| +28 | 2 | the column a fill or a refill stands at |
+| +30 | 2 | `C` |
+| +32 | 4 | where the rings begin, from the block's first byte |
+| +36 | 4 | `R` |
+| +40 | 4 | `RR` |
+| +44 | 4 | `P` |
+| +48 | 4 | `N` |
 
 The rows decoded is init's `P` and grows by each refill's rows. It
 shortens the last refill of a column and stops the one after it, and it is
 the only counter in the block: the write pointer's wrap is a compare,
 not a count.
 
-Then, under DTX2 only, at +56, one **decoder state** a column: the eight
+Then, under DTX2 only, at +52, one **decoder state** a column: the eight
 longs a column's decoder is saved in between refills, 32 bytes at a stride
 of 32, in `movem`'s own order, so that `movem.l (a3)+,d0-d2/a0-a2/a4-a5`
 loads one whole:
@@ -321,8 +322,11 @@ one size and one stride. Column `i`'s ring is the ring area plus `i` times
 `N`, and its value for the row the cursor stands on is the pointer plus the
 same, so one pointer reaches every column.
 
-Sizes: DTX0 and DTX1 28 bytes, at every width and every `C`. DTX2 56 plus
+Sizes: DTX0 and DTX1 20 bytes, at every width and every `C`. DTX2 52 plus
 32`C` plus `NC`: a decoder state and a ring a column.
+
+Only `a6` is parked, not `d6` and `d7` beside it: ST4 leaves all three
+alone, and no call here touches the other two.
 
 ---
 

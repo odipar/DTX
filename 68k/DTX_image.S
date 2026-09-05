@@ -14,6 +14,18 @@
 ; image begins, and DTX_TABLE_FOLLOWS where its code ends.
 ; -----------------------------------------------------------------------------
 
+; A value times the width, in one instruction: add.l dn,dn is the cheapest
+; double a 68000 has, so a width of 2 takes that and a width of 4 a shift.
+; At a width of 1 the value stands as it is and this macro is empty.
+        .macro  DTX_SCALE value
+        .if     DTX_WIDTH=2
+        add.l   \value,\value
+        .endif
+        .if     DTX_WIDTH=4
+        lsl.l   #2,\value
+        .endif
+        .endm
+
 ; The four slots, the format block and DTX_metadata. The four figures a
 ; variant defines for itself reach it as arguments: P, N and k stand at 1, 0
 ; and 0 where nothing is packed, and the width at 0 where the code does not
