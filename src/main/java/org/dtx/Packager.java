@@ -13,7 +13,7 @@ import java.util.List;
  * reached PC relative.
  *
  * <p>The code is {@code 68k/DTX.S}, which rmac assembles. This writes no
- * instruction: it states what one table settles, as equates and as lists of
+ * instruction: it states what one table gives, as equates and as lists of
  * macro invocations in {@code DTX_table.i}, and the template turns those
  * into the bodies. The table's bytes follow the code, appended to what rmac
  * writes, so {@code _table} is the last label of the template and the code
@@ -59,13 +59,13 @@ public final class Packager {
     /** What one stream record runs to, one a column under DTX2. */
     static final int STREAM = 32;
 
-    /** What a packed reader's state block holds before its decoder states. */
+    /** What a packed reader's state block contains before its decoder states. */
     static final int PACKED_HEAD = 80;
 
     private Packager() {
     }
 
-    /** The widths a table of these holds, in the order 1, 2, 4. */
+    /** The widths among these, in the order 1, 2, 4. */
     private static int[] classes(int[] width) {
         List<Integer> out = new ArrayList<>();
         for (int w : new int[] {1, 2, 4}) {
@@ -85,7 +85,7 @@ public final class Packager {
 
     /**
      * What a DTX2 payload states: the ring, the unit, whether its columns
-     * hold copies from the literal stream, and where each data set begins.
+     * contain copies from the literal stream, and where each data set begins.
      */
     record Packed(int ring, int unit, boolean copies, int[] at) {}
 
@@ -94,7 +94,7 @@ public final class Packager {
      *
      * <p>It checks the data sets against it. Every set opens with
      * {@code $53 $34 $07 k}, so one compare against the payload's own
-     * {@code k} holds ST4's signature, its format version and R5.2 at once.
+     * {@code k} checks ST4's signature, its format version and R5.2 at once.
      *
      * @throws IllegalArgumentException where a data set states another
      *     version or another unit than the payload does
@@ -171,7 +171,7 @@ public final class Packager {
         if (header.variant() == Dtx.DTX0) {
             return CURSOR + 4;
         }
-        // DTX1 holds three cursors and the three places their classes
+        // DTX1 has three cursors and the three places their classes
         // begin, at any widths the table states, so its block does not
         // move with C either.
         return header.variant() == Dtx.DTX1
@@ -205,11 +205,11 @@ public final class Packager {
     }
 
     /**
-     * What one table settles, as 68k/DTX.S reads it: the equates, and one
+     * What one table gives, as 68k/DTX.S reads it: the equates, and one
      * macro invocation a class or a column.
      *
-     * @throws IllegalArgumentException where R6's bounds do not hold, or
-     *     where no period holds every rule of doc/abi.md 4
+     * @throws IllegalArgumentException where R6's bounds are not met, or
+     *     where no period meets every rule of doc/abi.md 4
      */
     public static String table(byte[] file) {
         Dtx.Header header = Dtx.header(file);
@@ -228,8 +228,8 @@ public final class Packager {
         Packed packed = variant == Dtx.DTX2
                 ? packed(file, header) : new Packed(0, 0, false, new int[0]);
         int period = variant == Dtx.DTX2 ? period(header, packed) : 1;
-        // The payload states whether its columns hold copies (R5.10), so
-        // the decoder built for them is settled by the file and not by a
+        // The payload states whether its columns contain copies (R5.10), so
+        // the decoder built for them is fixed by the file and not by a
         // word carried beside it. That build writes the reach into two of
         // its own instructions, and a 68030 caller flushes the instruction
         // cache after every call that seeds a decoder.
@@ -268,13 +268,13 @@ public final class Packager {
     }
 
     /**
-     * The column table the image holds behind its code: one entry a column,
+     * The column table behind the image's code: one entry a column,
      * grouped by width so each of a read's three loops walks a run of them.
      *
      * <p>Under DTX1 an entry is four bytes: the column's displacement from
      * the base of its width class, and where its value stands in the row.
      * The reader takes both as words off an index register, so one loop a
-     * width serves any number of columns and no code stands a column.
+     * width reads any number of columns and no code stands a column.
      */
     static byte[] columnTable(byte[] file) {
         Dtx.Header header = Dtx.header(file);
@@ -362,7 +362,7 @@ public final class Packager {
         return ring(header);
     }
 
-    /** How many columns of each width a table holds, in the order 1, 2, 4. */
+    /** How many columns of each width a table has, in the order 1, 2, 4. */
     static int[] counts(int[] width) {
         int[] out = new int[3];
         for (int w : width) {
@@ -396,7 +396,7 @@ public final class Packager {
     }
 
     /** The template a variant is read by: one a variant, no call in it
-     * testing which it holds. */
+     * testing which it contains. */
     static String template(int variant) {
         return "DTX" + variant + ".S";
     }
@@ -414,7 +414,7 @@ public final class Packager {
     }
 
     /**
-     * The code for one build, as the repository holds it.
+     * The code for one build, as the repository has it.
      *
      * @throws IllegalStateException where no file of that name is carried
      */
@@ -455,7 +455,7 @@ public final class Packager {
      *
      * @param rmac the assembler to run
      * @throws IllegalStateException where rmac fails, or where the code it
-     *     writes and the format block in it disagree on where the column
+     *     writes and the format block in it differ on where the column
      *     table lands
      */
     static byte[] code(byte[] file, Path rmac) {
@@ -511,12 +511,12 @@ public final class Packager {
      * format block written to state the three.
      *
      * <p>The code is the same bytes any table that follows it, so what a
-     * combine writes is the five fields the table settles. It checks the
+     * combine writes is the five fields the table gives. It checks the
      * two it cannot write: the variant, and under DTX2 the unit the decoder
      * built into the code decodes at.
      *
      * @throws IllegalStateException where the code is for another variant or
-     *     another unit, or where it and its format block disagree on where
+     *     another unit, or where it and its format block differ on where
      *     the column table lands
      */
     static byte[] combine(byte[] code, byte[] file) {
@@ -532,7 +532,7 @@ public final class Packager {
                     + code[FORMAT_AT + 3] + " and the table is DTX" + variant);
         }
         // The code ends where the format block states the column table
-        // begins: the two agree, or the image reads its own last
+        // begins: the two match, or the image reads its own last
         // instruction as a column.
         int columns = Dtx.getLong(code, FORMAT_AT + COLUMNS_AT);
         if (columns != code.length) {
@@ -559,7 +559,7 @@ public final class Packager {
                 file.length);
         Dtx.putLong(image, FORMAT_AT + STATE_BYTES, variant == Dtx.DTX2
                 ? stateBytes(header, given) : stateBytes(header));
-        // The table stands behind both, and only the packager holds the
+        // The table stands behind both, and only the packager has the
         // figure: the column table's size moves with C, so the assembler
         // could not have worked it out.
         Dtx.putLong(image, FORMAT_AT + TABLE_AT, code.length + entries.length);
@@ -571,12 +571,12 @@ public final class Packager {
     }
 
     /**
-     * The image, combined from the code this repository holds.
+     * The image, combined from the code in this repository.
      *
      * <p>Which of the eight it takes is the file's to state: the variant,
      * and under DTX2 the unit its data sets are packed at and whether they
-     * hold copies from the literal stream (R5.10). No word from a caller
-     * enters it, so no word can disagree with the bytes.
+     * contain copies from the literal stream (R5.10). No word from a caller
+     * enters it, so no word can differ from the bytes.
      */
     public static byte[] image(byte[] file) {
         Dtx.Header header = Dtx.header(file);

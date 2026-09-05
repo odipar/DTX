@@ -58,7 +58,7 @@ public final class Rewrite {
     }
 
     /**
-     * What packs a column: the copy this repository holds, or a packer
+     * What packs a column: the copy in this repository, or a packer
      * beside it where {@code -p} names one.
      */
     private static Packer packer(String named, String copies) {

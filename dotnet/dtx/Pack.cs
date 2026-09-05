@@ -7,8 +7,8 @@ using System.Text;
 /// Combines a DTX table with the 68000 image that reads it.
 ///
 /// <para>One variant is one code, so nothing here assembles: it takes the
-/// image for the build the table asks for, writes the five fields the table
-/// settles into the format block, and appends the column table and the
+/// image for the build the table needs, writes the five fields the table
+/// gives into the format block, and appends the column table and the
 /// table's bytes. doc/abi.md states the image, the format block and the
 /// column table.</para>
 /// </summary>
@@ -40,7 +40,7 @@ public static class Pack
 
     /// <summary>
     /// What a DTX2 payload states: the ring, the unit, whether its columns
-    /// hold copies from the literal stream, and where each data set begins.
+    /// contain copies from the literal stream, and where each data set begins.
     /// </summary>
     public readonly record struct Packed(int Ring, int Unit, bool Copies, int[] At);
 
@@ -49,7 +49,7 @@ public static class Pack
     ///
     /// <para>It checks the data sets against it. Every set opens with
     /// <c>$53 $34 $07 k</c>, so one compare against the payload's own k
-    /// holds ST4's signature, its format version and R5.2 at once.</para>
+    /// checks ST4's signature, its format version and R5.2 at once.</para>
     /// </summary>
     /// <exception cref="ArgumentException">where a data set states another
     /// version or another unit than the payload does</exception>
@@ -76,7 +76,7 @@ public static class Pack
                 (file[payload + 3] & Format.CopiesFlag) != 0, at);
     }
 
-    /// <summary>The widths a table of these holds, in the order 1, 2, 4.</summary>
+    /// <summary>The widths among these, in the order 1, 2, 4.</summary>
     public static int[] Classes(int[] width)
     {
         List<int> out_ = new();
@@ -94,7 +94,7 @@ public static class Pack
         return out_.ToArray();
     }
 
-    /// <summary>How many columns each width class holds.</summary>
+    /// <summary>How many columns are in each width class.</summary>
     public static int[] Counts(int[] width)
     {
         int[] out_ = new int[3];
@@ -151,7 +151,7 @@ public static class Pack
         {
             return Cursor + 4;
         }
-        // DTX1 holds three cursors and the three places their classes begin,
+        // DTX1 has three cursors and the three places their classes begin,
         // at any widths the table states, so its block does not move with C.
         return header.Variant == Format.Dtx1
                 ? 48 : Cursor + 4 * Classes(header.Width).Length;
@@ -228,7 +228,7 @@ public static class Pack
     }
 
     /// <summary>
-    /// The table the image holds behind its code: a header, one read entry a
+    /// The table behind the image's code: a header, one read entry a
     /// column grouped by width so each of a read's three loops walks a run of
     /// them, and under DTX2 one stream record a column.
     ///
@@ -313,7 +313,7 @@ public static class Pack
     /// format block written to state the three.
     ///
     /// <para>The code is the same bytes any table that follows it, so what a
-    /// combine writes is the five fields the table settles. It checks the two
+    /// combine writes is the five fields the table gives. It checks the two
     /// it cannot write: the variant, and under DTX2 the unit the decoder
     /// built into the code decodes at.</para>
     /// </summary>
@@ -333,7 +333,7 @@ public static class Pack
                     + $" DTX{header.Variant}");
         }
         // The code ends where the format block states the column table begins:
-        // the two agree, or the image reads its own last instruction as a
+        // the two match, or the image reads its own last instruction as a
         // column.
         int columns = Format.GetLong(code, FormatAt + ColumnsAt);
         if (columns != code.Length)
@@ -358,7 +358,7 @@ public static class Pack
         file.CopyTo(out_, code.Length + entries.Length);
         Format.PutLong(out_, FormatAt + StateAt, header.Variant == Format.Dtx2
                 ? PackedStateBytes(header, given) : StateBytes(header));
-        // The table stands behind both, and only the packager holds the
+        // The table stands behind both, and only the packager has the
         // figure: the column table's size moves with C, so the assembler
         // could not have worked it out.
         Format.PutLong(out_, FormatAt + TableAt, code.Length + entries.Length);
@@ -370,12 +370,12 @@ public static class Pack
     }
 
     /// <summary>
-    /// The image for this table, from the code this build holds.
+    /// The image for this table, from the code this build contains.
     ///
     /// <para>Which of the eight it takes is the file's to state: the variant,
     /// and under DTX2 the unit its data sets are packed at and whether they
-    /// hold copies from the literal stream (R5.10). No word from a caller
-    /// enters it, so no word can disagree with the bytes.</para>
+    /// contain copies from the literal stream (R5.10). No word from a caller
+    /// enters it, so no word can differ from the bytes.</para>
     /// </summary>
     public static byte[] Image(byte[] file)
     {
@@ -394,7 +394,7 @@ public static class Pack
             name + (name.Length < 8 ? "\t" : "") + "\tequ\t" + value + "\n";
 
     /// <summary>
-    /// What one table settles, as a template reads it: the equates, and no
+    /// What one table gives, as a template reads it: the equates, and no
     /// instruction. Every figure a loop counts with reaches the code
     /// at run time instead, out of the table's own header and the column
     /// table (doc/tools.md).
@@ -439,8 +439,8 @@ public static class Pack
             out_.Append(Equ("DTX_PERIOD", period))
                     .Append(Equ("DTX_N", given.Ring))
                     .Append(Equ("ST4_UNIT", given.Unit));
-            // The payload states whether its columns hold copies (R5.10), so
-            // the decoder built for them is settled by the file. That build
+            // The payload states whether its columns contain copies (R5.10), so
+            // the decoder built for them is fixed by the file. That build
             // writes the reach into two of its own instructions, and a 68030
             // caller flushes the instruction cache after every call that
             // seeds a decoder.

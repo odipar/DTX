@@ -139,7 +139,7 @@ public sealed record Header(int Variant, int Rows, int Repeat, int[] Width,
     /// <summary>C, the column count.</summary>
     public int Columns => Width.Length;
 
-    /// <summary>What one row holds, the sum of the widths.</summary>
+    /// <summary>A row's bytes, the sum of the widths.</summary>
     public int RowBytes
     {
         get

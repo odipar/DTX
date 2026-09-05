@@ -16,12 +16,12 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
- * The conformance kit under doc/conformance, held to the writer.
+ * The conformance kit under doc/conformance, checked against the writer.
  *
- * <p>Every table the kit holds is written here, from the text and options
- * SOURCES.md states, and held byte for byte to the file in the tree; beside
- * each table stands the rows it holds, as DTX0 lays them out, and a reader of
- * it gives those back. A table the tree does not hold yet is written,
+ * <p>Every table in the kit is written here, from the text and options
+ * SOURCES.md states, and compared byte for byte with the file in the tree; beside
+ * each table stands the rows in it, as DTX0 lays them out, and a reader of
+ * it gives those back. A table the tree does not have yet is written,
  * and SOURCES.generated.md beside the kit lists what SOURCES.md then has to
  * say.
  */
@@ -32,7 +32,7 @@ class ConformanceTest {
             @Nullable Integer repeat, int unit, int ring, boolean copies,
             String exercises) {}
 
-    /** The rig's numbers table: row r, column i holds r(i+1) modulo 251. */
+    /** The rig's numbers table: row r, column i is r(i+1) modulo 251. */
     private static String numbers(int rows, int columns) {
         StringBuilder out = new StringBuilder();
         for (int r = 0; r < rows; r++) {
@@ -98,7 +98,7 @@ class ConformanceTest {
         };
     }
 
-    /** The rows a table holds, as DTX0 lays them out: what a reader gives. */
+    /** The rows in a table, as DTX0 lays them out: what a reader gives. */
     private static byte[] rows(Source source) {
         Table table = source.repeat() == null
                 ? Csv.table(source.text(), source.width())

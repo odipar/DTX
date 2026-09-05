@@ -1,5 +1,5 @@
 // Command dtx-rewrite turns a DTX0 or DTX1 file into a DTX2 one. The table
-// is the same under every variant (R1.3), so what comes back holds the same
+// is the same under every variant (R1.3), so what comes back has the same
 // rows, widths, R and RR as what went in. doc/tools.md states the tool.
 //
 //	dtx-rewrite in.dtx out.dtx [-kK] [-mN] [-pPACKER] [-copies[S]]
@@ -75,7 +75,7 @@ func run(args []string) error {
 	return nil
 }
 
-// packerFor gives what packs a column: the port this executable holds, or
+// packerFor gives what packs a column: the port in this executable, or
 // an ST4 executable beside it where -p names one.
 func packerFor(named, copies string) dtx.Packer {
 	if named != "" {

@@ -15,12 +15,12 @@ import org.junit.jupiter.api.Test;
  * doc/experiments.md, read back: every byte figure it states is one the
  * writer and the packager give, or the test names the cell.
  *
- * <p>The images come out of the code the build holds, so this runs wherever
+ * <p>The images come out of the code the build made, so this runs wherever
  * the build does and needs no assembler.
  */
 class ExperimentsTest {
 
-    /** The rig's numbers table: row r, column i holds r(i+1) modulo 251. */
+    /** The rig's numbers table: row r, column i is r(i+1) modulo 251. */
     private static String numbers(int rows, int columns) {
         StringBuilder out = new StringBuilder();
         for (int r = 0; r < rows; r++) {

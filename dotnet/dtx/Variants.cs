@@ -4,7 +4,7 @@ namespace Dtx;
 public static class Variants
 {
     /// <summary>
-    /// table as a DTX0 file: R rows, each holding column 0 through column C
+    /// table as a DTX0 file: R rows, each column 0 through column C
     /// minus one in order, with nothing between them.
     ///
     /// <para>A value falls where the widths put it, so a two or four byte
@@ -29,7 +29,7 @@ public static class Variants
         return out_;
     }
 
-    /// <summary>The table a DTX0 file holds.</summary>
+    /// <summary>The table in a DTX0 file.</summary>
     public static Table ReadDtx0(byte[] file)
     {
         Header header = Format.ReadHeader(file);
@@ -88,7 +88,7 @@ public static class Variants
         return out_;
     }
 
-    /// <summary>The table a DTX1 file holds.</summary>
+    /// <summary>The table in a DTX1 file.</summary>
     public static Table ReadDtx1(byte[] file)
     {
         Header header = Format.ReadHeader(file);
@@ -112,7 +112,7 @@ public static class Variants
         return Table.Of(header.Rows, header.Repeat, header.Width, column);
     }
 
-    /// <summary>The table a file holds, under either plain variant.</summary>
+    /// <summary>The table in a file, under either plain variant.</summary>
     public static Table Read(byte[] file)
     {
         Header header = Format.ReadHeader(file);
@@ -175,8 +175,8 @@ public static class Variants
     }
 
     /// <summary>
-    /// The DTX2 file of the table a DTX0 or DTX1 file holds. The table is
-    /// the same under every variant (R1.3), so what comes back holds the
+    /// The DTX2 file of the table in a DTX0 or DTX1 file. The table is
+    /// the same under every variant (R1.3), so what comes back has the
     /// same rows, widths, R and RR as what went in.
     /// </summary>
     public static byte[] Dtx2From(byte[] plain, IPacker packer, int unit, int ring)

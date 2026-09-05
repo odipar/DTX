@@ -7,7 +7,7 @@
 //
 // The table each is assembled from is made here rather than read: the code
 // does not move with a table, and pack.Blank zeroes the five fields the one
-// used did settle, so what comes out is a function of the template alone.
+// used did give, so what comes out is a function of the template alone.
 //
 //	dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 package main
@@ -30,18 +30,18 @@ func main() {
 	}
 }
 
-// held packs nothing: it hands the column back inside an ST4 data set and
+// plain packs nothing: it hands the column back inside an ST4 data set and
 // states the build's own copies flag.
 //
 // The assembler reads a data set's four stream offsets and nothing in the
-// streams, so a data set whose streams are the column itself settles every
+// streams, so a data set whose streams are the column itself fixes every
 // figure the build takes. Nothing decodes it, and nothing here runs it: the
 // packer that writes a table a caller reads is ST4's own.
-type held struct{ copies bool }
+type plain struct{ copies bool }
 
-func (h held) Copies() bool { return h.copies }
+func (h plain) Copies() bool { return h.copies }
 
-func (h held) Pack(column []byte, unit, ring int) ([]byte, error) {
+func (h plain) Pack(column []byte, unit, ring int) ([]byte, error) {
 	set := make([]byte, 28+len(column))
 	set[0], set[1], set[2], set[3] = 'S', '4', 7, byte(unit)
 	dtx.PutLong(set, 4, len(column)/unit)
@@ -53,8 +53,8 @@ func (h held) Pack(column []byte, unit, ring int) ([]byte, error) {
 	return set, nil
 }
 
-// seed gives a table that settles the figures one build's assembly reads.
-// Any table of the kind serves, since the code does not move with it: this
+// seed gives a table that fixes the figures one build's assembly reads.
+// Any table of the kind does, since the code does not move with it: this
 // one is 64 rows of two columns, at a ring of 960 where the build is packed.
 func seed(build image.Build) ([]byte, error) {
 	width := []int{1, 2, 4}
@@ -76,7 +76,7 @@ func seed(build image.Build) ([]byte, error) {
 	case dtx.DTX1:
 		return dtx.WriteDtx1(table), nil
 	default:
-		return dtx.WriteDtx2(table, held{build.Copies}, build.Unit, 960)
+		return dtx.WriteDtx2(table, plain{build.Copies}, build.Unit, 960)
 	}
 }
 

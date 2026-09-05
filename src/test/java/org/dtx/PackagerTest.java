@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 /**
  * The assembly a table is packaged as, and the image rmac makes of it.
  *
- * <p>What the image does is held by {@code 68k/test/emu/test_dtx.py}, which
- * runs it on a 68000. This holds what the packager states of it: the
+ * <p>What the image does is checked by {@code 68k/test/emu/test_dtx.py}, which
+ * runs it on a 68000. This checks what the packager states of it: the
  * figures the format block gives, the state block's size, and what it will
  * not package.
  */
@@ -30,7 +30,7 @@ final class PackagerTest {
         // R, C, RR and the widths reach the code at run time, out of the
         // table's own header and the column table, so no equate states one.
         // What is left is the row's bytes and the state block, which the
-        // format block holds and a caller reads before there is a block to
+        // format block contains and a caller reads before there is a block to
         // read them from.
         for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
             String out = Packager.table(table(variant));
@@ -49,7 +49,7 @@ final class PackagerTest {
     void theFiguresHoldNoInstruction() {
         // 68k/DTX.S is where every instruction stands. What the packager
         // writes is equates and macro invocations, and a move or a bra in
-        // it would be an instruction the template does not hold.
+        // it would be an instruction the template does not contain.
         for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
             for (String line : Packager.table(table(variant)).split("\n")) {
                 String read = line.trim();
@@ -66,7 +66,7 @@ final class PackagerTest {
         Table three = Csv.table("1,2,3\n4,5,6\n", new int[] {1, 2, 4});
         assertEquals(28, Packager.stateBytes(Dtx.header(Dtx0.write(three))),
                 "DTX0 holds one cursor whatever the widths");
-        // DTX1 holds three cursors and three class bases at any width, so
+        // DTX1 has three cursors and three class bases at any width, so
         // its block does not move with C either.
         assertEquals(48, Packager.stateBytes(Dtx.header(Dtx1.write(one))),
                 "DTX1 with one width class");
@@ -202,7 +202,7 @@ final class PackagerTest {
     @Test
     void theCopyCodeIsAskedForOnlyWhereTheColumnsHoldCopies() {
         // The payload states it (R5.10), so no word from a caller enters
-        // this: the file settles which decoder reads it.
+        // this: the file fixes which decoder reads it.
         byte[] plain = packed(64, new int[] {1, 2}, 1, 960);
         byte[] copies = packed(64, new int[] {1, 2}, 1, 960, true);
         assertTrue(!Packager.table(plain).contains("ST4_WINDOW"),
@@ -219,7 +219,7 @@ final class PackagerTest {
     void aDataSetThatDoesNotStateThePayloadsUnitIsRefused() {
         // R5.2: the k a payload states and the k in every data set's own
         // signature are the same, and the packager checks one against the
-        // other. One compare holds ST4's signature, its version and the
+        // other. One compare checks ST4's signature, its version and the
         // unit at once.
         byte[] file = packed(64, new int[] {1, 2}, 1, 960);
         Dtx.Header header = Dtx.header(file);

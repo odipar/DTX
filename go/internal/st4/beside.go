@@ -11,8 +11,8 @@ import (
 // Beside is a Packer that runs the ST4 executable at Path.
 //
 // CopiesFlag reaches it as -c, or -cS for a search of S seconds, or is
-// empty for none. A column packed that way lets a match beyond the ring
-// copy from its own literal stream, which packs a small ring far smaller;
+// empty for none. A column packed that way so that a match beyond the ring
+// copies from its own literal stream, which packs a small ring far smaller;
 // the payload then states it (R5.10) and the reader of it takes a decoder
 // built with the copy code.
 type Beside struct {

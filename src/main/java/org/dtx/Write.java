@@ -13,7 +13,7 @@ import java.nio.file.Path;
  * {@code PACKER} what DTX2 takes to pack.
  *
  * <p>Without {@code -w} each column takes the narrowest width of 1, 2 and 4
- * bytes that holds every value of it. Without {@code -r} the table does not
+ * bytes that takes every value of it. Without {@code -r} the table does not
  * repeat, so {@code RR} is {@code R}.
  */
 public final class Write {
@@ -86,7 +86,7 @@ public final class Write {
     }
 
     /**
-     * What packs a column: the copy this repository holds, or a packer
+     * What packs a column: the copy in this repository, or a packer
      * beside it where {@code -p} names one.
      */
     private static Packer packer(String named, String copies) {

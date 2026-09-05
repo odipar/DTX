@@ -7,16 +7,16 @@
 ;
 ; doc/abi.md states the calls, the format block and the state block. One
 ; template a variant: this file reads DTX1 and nothing else, so no call in it
-; tests which variant it holds.
+; tests which variant it contains.
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR and the widths reach it at
-; run time rather than at assembly time, so every DTX1 image holds the same
+; run time rather than at assembly time, so every DTX1 image contains the same
 ; instructions and the column table and the table behind them are what differ.
 ; What that costs is a read-only image: the code writes to itself at init, so
 ; it stands in RAM and a 68030 caller flushes the instruction cache after
 ; DTX_init.
 ;
-; DTX1 holds a column's values together, so one cursor a width class walks
+; DTX1 lays a column's values together, so one cursor a width class walks
 ; them and every column of that width stands at a displacement from it. There
 ; is one loop a width and none a column: a read runs the byte columns, then
 ; the word columns, then the long ones, taking each column's displacement and
@@ -34,7 +34,7 @@
 ;   +16  4  where the width-4 class begins
 ;   +20  2  C
 ;   +22  2  P, which is 1 here
-;   +24  4  where the stream records begin. DTX2 holds those
+;   +24  4  where the stream records begin. DTX2 has those
 ;   +28  4  N, which is zero here
 ;   +32  .. one entry a column, four bytes: the column's displacement from
 ;           its class, and where its value stands in the row
@@ -42,7 +42,7 @@
 ; The header runs to 32 bytes under both variants that read one, so a read
 ; reaches the entries at one displacement under either variant.
 ;
-; TRUSTED INPUT ONLY. No call checks the table, the state block, the row
+; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to.
 ; -----------------------------------------------------------------------------
 
@@ -210,7 +210,7 @@ advance_next:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_read. One loop a width, over the run of entries that width holds.
+; DTX_read. One loop a width, over the run of entries of that width.
 
 DTX_read:
         tst.l   DTX_ROW(a0)

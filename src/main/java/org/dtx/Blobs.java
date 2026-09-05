@@ -7,21 +7,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The code this repository holds, one file a build.
+ * The code in this repository, one file a build.
  *
  * <p>A variant assembles to one code any table that follows it, so the
  * packager combines rather than assembles: it takes the file for the build
- * the table asks for, writes the five fields the table settles into the
+ * the table needs, writes the five fields the table gives into the
  * format block, and appends the column table and the table's bytes. This
  * writes those files, and it is the one step rmac is needed for.
  *
  * <p>Eight of them: DTX0, DTX1, and one a build of the decoder built into
  * DTX2, which is a unit of 1, 2 or 4 with the copy code and without.
  *
- * <p>The table each is assembled from settles nothing but the figures the
- * assembler reads, so it is made here rather than read: the columns hold no
+ * <p>The table each is assembled from fixes nothing but the figures the
+ * assembler reads, so it is made here rather than read: the columns contain no
  * bytes that decode, and {@link Packager#blank} zeroes the five fields the
- * table did settle. What comes out is a function of the template alone.
+ * table did give. What comes out is a function of the template alone.
  */
 public final class Blobs {
 
@@ -50,8 +50,8 @@ public final class Blobs {
     }
 
     /**
-     * A table that settles the figures one build's assembly reads. Any table
-     * of the kind serves, since the code does not move with it: this one is
+     * A table that fixes the figures one build's assembly reads. Any table
+     * of the kind does, since the code does not move with it: this one is
      * 64 rows of two columns, at a ring of 960 where the build is packed.
      */
     public static byte[] seed(Build build) {
@@ -68,23 +68,23 @@ public final class Blobs {
             case Dtx.DTX0 -> Dtx0.write(table);
             case Dtx.DTX1 -> Dtx1.write(table);
             // The seed states the build's own copies flag, since that is
-            // what settles which decoder the template is assembled with.
-            default -> Dtx2.write(table, new Held(build.copies()),
+            // what fixes which decoder the template is assembled with.
+            default -> Dtx2.write(table, new Plain(build.copies()),
                     build.unit(), 960);
         };
     }
 
     /**
-     * A packer that holds a column rather than packing it, and states the
+     * A packer that packs nothing: the column comes back as it is, and states the
      * build's own copies flag.
      *
      * <p>The assembler reads a data set's four stream offsets and nothing in
      * the streams, so a data set whose streams are the column itself
-     * settles every figure the build takes. Nothing decodes it, and nothing
+     * fixes every figure the build takes. Nothing decodes it, and nothing
      * here runs it: the packer that writes a table a caller reads is ST4's
      * own.
      */
-    private record Held(boolean copies) implements Packer {
+    private record Plain(boolean copies) implements Packer {
 
         @Override
         public byte[] pack(byte[] column, int unit, int ring) {

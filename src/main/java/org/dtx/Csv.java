@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * A table out of comma separated text: one row a line, one value a column.
  *
- * <p>The first row that holds values gives {@code C}. A line that is blank,
+ * <p>The first row with values gives {@code C}. A line that is blank,
  * or whose first character other than a space is {@code #}, is not a row.
  * A value is decimal, or hexadecimal where it opens with {@code $}, and
  * negative where it opens with {@code -}.
@@ -14,9 +14,9 @@ import java.util.List;
  * <p>A value of {@code W} bytes is stored most significant byte first, as
  * every field of the header is, and a negative one in two's complement. A
  * value fits {@code W} bytes where it lies from -2^(8W-1) to 2^(8W)-1, so
- * one width takes what a signed column holds and what an unsigned one holds
+ * one width takes a signed column's values and an unsigned one's
  * alike. DTX states no more of a column than its width, so which of the two
- * a column holds is the caller's to state elsewhere.
+ * a column is, the caller states elsewhere.
  */
 public final class Csv {
 
@@ -43,7 +43,7 @@ public final class Csv {
      *
      * @param repeat {@code RR}, the row the table repeats to, or {@code R}
      *     where it does not
-     * @throws IllegalArgumentException where a line does not hold one value
+     * @throws IllegalArgumentException where a line does not give one value
      *     a column, where a value is not a number, or where a value does not
      *     fit the width of its column
      */

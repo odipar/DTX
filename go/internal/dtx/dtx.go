@@ -27,7 +27,7 @@ func HeaderLength(columns int) int {
 	return Align(14+columns, 4)
 }
 
-// Header holds what a file's header states. Length is the header's end, the
+// Header gives what a file's header states. Length is the header's end, the
 // payload's first byte.
 type Header struct {
 	Variant int
@@ -42,7 +42,7 @@ func (h Header) Columns() int {
 	return len(h.Width)
 }
 
-// RowBytes gives what one row holds, the sum of the widths.
+// RowBytes gives a row's bytes, the sum of the widths.
 func (h Header) RowBytes() int {
 	out := 0
 	for _, w := range h.Width {

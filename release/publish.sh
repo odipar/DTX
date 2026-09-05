@@ -1,5 +1,5 @@
 #!/bin/sh
-# The standalone DTX executables: one set per platform, each holding the
+# The standalone DTX executables: one set per platform, each containing the
 # eight 68000 images, so a machine with neither this repository nor a
 # toolchain can write a table and package it for a 68000.
 #
@@ -11,7 +11,7 @@
 #
 # NO JAVA RUNS HERE. The images come from the Go dtx-blobs, which assembles
 # 68k/ with rmac, so the only tool this needs beside Go is that assembler.
-# The Java tree writes the same bytes and test/test_parity.py holds the two
+# The Java tree writes the same bytes and ParityTest checks the two
 # to it, but a release is built from one tree.
 #
 # The executables take no wrapper. Go builds a real executable, so nothing
@@ -33,13 +33,13 @@ if [ -z "$VERSION" ]; then
 fi
 
 # What go:embed takes: this release's images and nothing else, so an
-# executable cannot hold an older release's image by accident.
+# executable cannot contain an older release's image by accident.
 IMAGES=go/internal/image/data
 rm -f "$IMAGES"/*.bin
 rm -rf "$OUT/release"
 mkdir -p "$OUT/release"
 
-# dtx-blobs first, and from a tree holding no image: it builds them, so it
+# dtx-blobs first, and from a tree with no image: it builds them, so it
 # is the one tool that does not need one.
 (cd go && go build -o "$REPO/$OUT/dtx-blobs" ./cmd/dtx-blobs)
 "$OUT/dtx-blobs" "$IMAGES" "$OUT/release" -a"$RMAC" -t"$REPO/68k"
@@ -69,7 +69,7 @@ for target in $TARGETS; do
     rm -rf "$OUT/$target"
     mkdir -p "$OUT/$target"
     for tool in $TOOLS; do
-        # CGO off makes the binary static and lets the cross-build run; -s
+        # CGO off makes the binary static and the cross-build runs; -s
         # -w drop the symbol and debug tables, which nothing here reads.
         (cd go && CGO_ENABLED=0 GOOS=$os GOARCH=$arch \
             go build -ldflags="-s -w" -o "$REPO/$OUT/$target/$tool$ext" \
@@ -86,10 +86,10 @@ for image in "$OUT"/release/*.bin; do
     mv "$image" "${image%.bin}-v$VERSION.bin"
 done
 
-# What the release holds, by name, size and hash, so a caller can tell one
+# What the release contains, by name, size and hash, so a caller can tell one
 # release's file from another's without opening it. The images carry the
-# three figures that pick one: the variant, the unit its decoder decodes at,
-# and whether that decoder holds the copy code.
+# three figures that identify one: the variant, the unit its decoder decodes at,
+# and whether that decoder has the copy code.
 sha() {
     if command -v sha256sum >/dev/null 2>&1; then
         sha256sum "$1" | cut -d' ' -f1
@@ -108,7 +108,7 @@ MANIFEST="$OUT/release/MANIFEST.txt"
     echo "name  bytes  sha256  variant  k  copies"
     for image in "$OUT"/release/*.bin; do
         name=$(basename "$image")
-        # DTX0 and DTX1 hold no decoder, so neither a unit nor copies.
+        # DTX0 and DTX1 have no decoder, so neither a unit nor copies.
         case "$name" in
             DTX2-k*-copies-*) variant=2; k=$(echo "$name" | sed 's/.*-k\([0-9]*\)-copies.*/\1/'); copies=yes ;;
             DTX2-k*)          variant=2; k=$(echo "$name" | sed 's/.*-k\([0-9]*\)-v.*/\1/'); copies=no ;;
@@ -131,8 +131,8 @@ MANIFEST="$OUT/release/MANIFEST.txt"
 echo "$MANIFEST: $(grep -c . "$MANIFEST") lines"
 
 # The host's executables, tried as a user would: from a directory that is
-# not this repository, with nothing beside them. They hold only the images
-# they embed, so one that holds none fails here rather than in a release.
+# not this repository, with nothing beside them. They contain only the images
+# they embed, so one that contains none fails here rather than in a release.
 case "$(uname -s)-$(uname -m)" in
     Darwin-arm64) host=osx-arm64 ;;
     Darwin-x86_64) host=osx-x64 ;;

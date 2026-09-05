@@ -115,6 +115,37 @@ final class HouseStyleTest {
             "—",
             "–",
             "−",
+            // nothing does what a person does: a file contains and a value
+            // is in a field (not held), a table needs (not asks for), packing
+            // costs (not pays, buys), a figure is given (not settled), one
+            // build reads every column (not serves), a flag marks (not picks),
+            // bytes match or differ (not agree). A rule is met, not held.
+            " hold",
+            "held",
+            "buys",
+            "buy ",
+            "bought",
+            " pays",
+            "pay for",
+            "paid",
+            "asks for",
+            "ask for",
+            "asked for",
+            "chose",
+            "choose",
+            "agree",
+            "spend",
+            "spent",
+            "picks",
+            "pick ",
+            " serve",
+            "settle",
+            "trust",
+            "lets ",
+            " let ",
+            "answer",
+            // the flourish: a format that gives a shape a meaning
+            "meaning",
             // one word for a thing that has one: a data set, and the ring
             // it unpacks through
             "container",

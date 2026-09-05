@@ -3,10 +3,10 @@ package dtx
 import "fmt"
 
 // A Table in memory: R rows, C columns, and a row RR it repeats to. Every
-// variant holds this same table (R1.3), so a variant reads into one and
+// variant is this same table (R1.3), so a variant reads into one and
 // writes out of one.
 //
-// The values are held column by column, R times a column's width bytes each.
+// The values are stored column by column, R times a column's width bytes each.
 // DTX1 and DTX2 lay them out that way, and DTX0 walks them a row at a time.
 type Table struct {
 	rows   int
@@ -76,7 +76,7 @@ func (t *Table) RowBytes() int {
 	return out
 }
 
-// Same states whether two tables hold the same rows, widths, R and RR.
+// Same states whether two tables are the same rows, widths, R and RR.
 func (t *Table) Same(other *Table) bool {
 	if t.rows != other.rows || t.repeat != other.repeat ||
 		len(t.width) != len(other.width) {

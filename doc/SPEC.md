@@ -1,7 +1,7 @@
 # The DTX format
 
 A table of `R` rows and `C` columns, in one of the variants R2 defines.
-Every variant holds the same table and lays it out differently, so the
+Every variant is the same table laid out differently, so the
 header below is the same under all of them and only the payload differs.
 
 Every field of more than one byte is most significant byte first. A word
@@ -64,7 +64,7 @@ within a packed column is found by unpacking (2.3).
 
 ### 2.1 DTX0, row by row
 
-`R` rows, each holding column 0 through column `C` minus one in order.
+`R` rows, each column 0 through column `C` minus one in order.
 
 A row is the sum of the widths, with nothing between its columns. Column
 `i` within a row begins at the sum of the widths before `i`, row `n`
@@ -85,12 +85,12 @@ fall on an odd offset and a reader takes it as bytes (R3.4).
   +---+---------+-----+
     1      4       2
 
-   21 bytes, what the table holds
+   21 bytes, the table's values
 ```
 
 ### 2.2 DTX1, column by column
 
-`C` columns, each holding its `R` values in row order. Column `i` is `R`
+`C` columns, each its `R` values in row order. Column `i` is `R`
 times `W[i]` bytes and begins on a word: where the column before it ends
 odd, a zero byte stands between them. Its row `n` is `n` times `W[i]`
 further on.
@@ -117,8 +117,8 @@ DTX1.
 
 ### 2.3 DTX2, column by column and packed
 
-`C` ST4 data sets, one a column. A column's data set packs the bytes
-DTX1's column `i` holds and is complete: its own ST4 header, and the
+`C` ST4 data sets, one a column. A column's data set packs the bytes of
+DTX1's column `i` and is complete: its own ST4 header, and the
 length of what it unpacks to.
 
 Every data set in a payload is packed at one unit and unpacks through a
@@ -129,16 +129,16 @@ sets are:
 |---|---|---|
 | 0 | 2 | `N`, the bytes of the ring a column unpacks through |
 | 2 | 1 | `k`, the unit every data set is packed at: 1, 2 or 4 |
-| 3 | 1 | the flags: bit 0 marks a payload whose columns hold copies from their own literal streams. The other bits are zero |
+| 3 | 1 | the flags: bit 0 marks a payload whose columns contain copies from their own literal streams. The other bits are zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
-R5.8 asks for `N`. A reader takes it once and holds a ring of that many
-bytes, and the ring does not grow as `R` does.
+R5.8 needs `N`. A reader takes it once and has a ring of that many bytes,
+and the ring does not grow as `R` does.
 
-One `N` for the payload buys what one `k` buys in code: no data set
-reaches back further than `N`, so one ring size serves them all, the rings
-stand at a fixed stride from one another, and one cursor arithmetic runs
-every column (R5.4, R5.5).
+One `N` for the payload does for the rings what one `k` does for the code:
+no data set reaches back further than `N`, so one ring size is enough for
+them all, the rings stand at a fixed stride from one another, and one
+cursor arithmetic runs every column (R5.4, R5.5).
 
 `k` need not be `W[i]`: a two byte column packs at a unit of 1 or of 2.
 
@@ -146,20 +146,20 @@ every column (R5.4, R5.5).
 that a match beyond the ring copies from that column's own literal stream,
 which ST4 packs with `-c`. A decoder built without the copy code reads such
 a column wrongly, and nothing in an ST4 data set states which kind it is, so
-the payload states it (R5.10). A payload that states it holds columns that
-all hold copies, and one that does not holds columns that none do.
+the payload states it (R5.10). In a payload that states it every column
+contains copies, and in one that does not, none does.
 
-A file written before this byte held anything reads zero here, no copies,
-and a decoder without the copy code is the one such a file always asked
-for.
+A file written before this byte was used reads zero here, no copies,
+and a decoder without the copy code is the one such a file always
+needed.
 
-One `k` for the payload buys a reader one decoder. ST4 code is built for a
-unit, and a reader of DTX2 takes every column of a payload through the one
-build that unit asks for (R5.3).
+One `k` for the payload means one decoder in a reader. ST4 code is built
+for a unit, and a reader of DTX2 takes every column of a payload through
+the one build for that unit (R5.3).
 
-`R` divides by `k` (R5.6). A column holds `R` times `W[i]` bytes and ST4
+`R` divides by `k` (R5.6). A column is `R` times `W[i]` bytes and ST4
 packs whole units, so a column that is not a whole number of them unpacks
-to more bytes than the column holds. Where `R` divides by `k` it cannot:
+to more bytes than the column has. Where `R` divides by `k` it cannot:
 `R` times `W[i]` then divides by `k` at every width.
 
 Four bytes and `4C` divide by 4, so the first data set begins on a long
@@ -181,8 +181,8 @@ stated in full in [ST4](https://github.com/odipar/ST4).
 - A reader built for one unit rejects a data set whose fourth byte gives
   another. The payload's `k` is that same unit (R5.2), and a reader checks
   the two against each other: one compare of a data set's first long
-  against `$53 $34 $07 k` holds the signature, the format version and the
-  unit at once.
+  against `$53 $34 $07 k` checks the signature, the format version and
+  the unit at once.
 - A run of bytes shorter than twenty-eight is smaller stored than packed.
   ST4 states that, and no requirement here follows from it.
 
@@ -211,5 +211,5 @@ those it reads, an `R` below 1, a `C` outside 1 to 256, a width other than
 1, 2 or 4, an `RR` over `R`, or a DTX2 whose `R` does not divide by its
 `k`.
 
-Whether a variant may hold columns of more than one kind, packing some and
+Whether a variant may contain columns of more than one kind, packing some and
 leaving others plain.

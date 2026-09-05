@@ -1,13 +1,13 @@
-// Package image holds the 68000 images a DTX table is packaged behind.
+// Package image contains the 68000 images a DTX table is packaged behind.
 //
 // One variant is one code, and under DTX2 one a build of the decoder built
 // into it, so the eight are built once and a program that packages a table
-// holds them rather than assembling one. doc/tools.md states how they are
-// built and doc/abi.md what each of them answers.
+// contains them rather than assembling one. doc/tools.md states how they are
+// built and doc/abi.md what each of them does.
 //
 // The files are build output. The Maven build writes them into data/, which
 // go:embed reads only inside its own module. A tree built without them
-// holds none: Read gives nothing back and the caller resolves an image as
+// contains none: Read gives nothing back and the caller resolves an image as
 // it otherwise would.
 package image
 
@@ -20,13 +20,13 @@ import (
 )
 
 // The directory rather than the files in it: a tree whose build has not run
-// holds no .bin here, and a pattern that matched none would not compile.
+// has no .bin here, and a pattern that matched none would not compile.
 //
 //go:embed data
 var data embed.FS
 
 // Name gives the file one build stands in: a variant, and under DTX2 the
-// unit its decoder decodes at and whether that decoder holds the copy code.
+// unit its decoder decodes at and whether that decoder has the copy code.
 func Name(variant, unit int, copies bool) string {
 	if variant != 2 {
 		return fmt.Sprintf("DTX%d.bin", variant)
@@ -37,7 +37,7 @@ func Name(variant, unit int, copies bool) string {
 	return fmt.Sprintf("DTX2-k%d.bin", unit)
 }
 
-// Read gives one image's bytes, or nil where this build holds none.
+// Read gives one image's bytes, or nil where this build contains none.
 func Read(variant, unit int, copies bool) []byte {
 	bytes, err := fs.ReadFile(data, "data/"+Name(variant, unit, copies))
 	if err != nil {
@@ -46,8 +46,8 @@ func Read(variant, unit int, copies bool) []byte {
 	return bytes
 }
 
-// Code gives one image's bytes, from what this build holds or, where it
-// holds none, from the directory DTX_68K names.
+// Code gives one image's bytes, from what this build contains or, where it
+// contains none, from the directory DTX_68K names.
 func Code(variant, unit int, copies bool) ([]byte, error) {
 	name := Name(variant, unit, copies)
 	if bytes := Read(variant, unit, copies); bytes != nil {
@@ -77,8 +77,8 @@ func Builds() []Build {
 	return out
 }
 
-// Held gives how many of the builds this one holds: eight, or none.
-func Held() int {
+// Embedded gives how many of the builds this one contains: eight, or none.
+func Embedded() int {
 	held := 0
 	for _, build := range Builds() {
 		if Read(build.Variant, build.Unit, build.Copies) != nil {

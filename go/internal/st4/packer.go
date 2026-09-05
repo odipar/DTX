@@ -9,7 +9,7 @@ const maxOp = 65535
 // Packer packs a column with the port in this package, so a tool writes
 // DTX2 with no packer beside it.
 //
-// CopiesFlag lets a match beyond the ring copy from the column's own literal
+// CopiesFlag so that a match beyond the ring copies from the column's own literal
 // stream, which packs a small ring far smaller. Seconds searches that long
 // beyond the opening passes for a better parse, or zero for those passes
 // alone: a search of no seconds is the same parse every run, one of some

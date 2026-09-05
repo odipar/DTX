@@ -6,7 +6,7 @@ using System.Text;
 /// <summary>The four tools doc/tools.md states, one method each.</summary>
 public static class Tools
 {
-    /// <summary>What packs a column: the copy this assembly holds, or a
+    /// <summary>What packs a column: the copy in this assembly, or a
     /// packer beside it where -p names one.</summary>
     private static IPacker Packer(string named, string copies)
     {
@@ -183,7 +183,7 @@ public static class Tools
     ///
     /// <para>The table each is assembled from is made here rather than read:
     /// the code does not move with a table, and Pack.Blank zeroes the five
-    /// fields the one used did settle, so what comes out is a function of the
+    /// fields the one used did give, so what comes out is a function of the
     /// template alone.</para>
     /// </summary>
     public static int Blobs(string[] args)
@@ -225,8 +225,8 @@ public static class Tools
     }
 
     /// <summary>
-    /// A table that settles the figures one build's assembly reads. Any
-    /// table of the kind serves, since the code does not move with it: this
+    /// A table that fixes the figures one build's assembly reads. Any
+    /// table of the kind does, since the code does not move with it: this
     /// one is 64 rows of two columns, at a ring of 960 where it is packed.
     /// </summary>
     private static byte[] Seed(Images.Build build)
@@ -244,26 +244,26 @@ public static class Tools
         {
             Format.Dtx0 => Variants.WriteDtx0(table),
             Format.Dtx1 => Variants.WriteDtx1(table),
-            // The seed states the build's own copies flag, since that settles
+            // The seed states the build's own copies flag, since that fixes
             // which decoder the template is assembled with.
-            _ => Variants.WriteDtx2(table, new Held(build.Copies),
+            _ => Variants.WriteDtx2(table, new Plain(build.Copies),
                     build.Unit, 960),
         };
     }
 
     /// <summary>
-    /// A packer that holds a column rather than packing it, and states the
+    /// A packer that packs nothing: the column comes back as it is, and states the
     /// build's own copies flag.
     ///
     /// <para>The assembler reads a data set's four stream offsets and
     /// nothing in the streams, so a data set whose streams are the column
-    /// itself settles every figure the build takes.</para>
+    /// itself fixes every figure the build takes.</para>
     /// </summary>
-    private sealed class Held : IPacker
+    private sealed class Plain : IPacker
     {
         private readonly bool copies;
 
-        internal Held(bool copies) => this.copies = copies;
+        internal Plain(bool copies) => this.copies = copies;
 
         public bool Copies => copies;
 

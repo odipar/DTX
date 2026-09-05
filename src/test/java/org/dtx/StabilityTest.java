@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Test;
 /**
  * The code a variant assembles to, against the table that follows it.
  *
- * <p>R, C and RR are the table's, not the reader's: an image holds the same
+ * <p>R, C and RR are the table's, not the reader's: an image contains the same
  * instructions at any of them, and its format block and its table are what
- * differ. This assembles a corpus a variant at a time and holds every
+ * differ. This assembles a corpus a variant at a time and compares every
  * image's code to the first one's, byte for byte.
  *
  * <p>Under DTX2 the decoder is built for one unit and for copies or not, so
@@ -113,7 +113,7 @@ class StabilityTest {
     void aPackedImageHoldsOneCodeADecoderAndNoTwoDecodersAreOneCode() {
         needsRmac();
         // k and copies build the decoder, not the table, so a DTX2 image may
-        // hold different code for each of them and must not for R, C or RR.
+        // have different code for each of them and must not for R, C or RR.
         Set<String> apart = new HashSet<>();
         List<Integer> sizes = new ArrayList<>();
         for (int unit : new int[] {1, 2, 4}) {
@@ -140,7 +140,7 @@ class StabilityTest {
     void theDecoderMeasuresWhatExperimentsStates() throws Exception {
         needsRmac();
         // doc/experiments.md states ST4_wrap.S's bytes at each unit, with the
-        // copy code and without: assembled alone, here, and held to it.
+        // copy code and without: assembled alone, here, and compared with it.
         String doc = java.nio.file.Files.readString(
                 Rig.root().resolve("doc/experiments.md"));
         java.util.regex.Matcher row = java.util.regex.Pattern.compile(
@@ -180,7 +180,7 @@ class StabilityTest {
     @Test
     void theCopyCodeMeasuresWhatTheDocumentStates() throws Exception {
         needsRmac();
-        // doc/abi.md 5 states the figure a build pays for the copy code, and
+        // doc/abi.md 5 states the figure the copy code costs a build, and
         // it is not one figure: 32 bytes at k of 1 and 2, 36 at k of 4.
         int[] cost = new int[5];
         for (int unit : new int[] {1, 2, 4}) {

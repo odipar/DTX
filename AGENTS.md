@@ -28,7 +28,7 @@ plain verb is there: a source *needs*, a header *declares*, a stage
 Roles and abstractions follow the rule. A writer does not *promise*, a
 document section does not *keep* bits, a verb does not *consume* its
 operand, bits do not *stand as they were*. The writer emits, the section
-lists, the verb reads, the bits hold their value.
+lists, the verb reads, the bits are as written.
 
 Established technical vocabulary is not this. A resource has an *owner*, a
 caller *claims* it, a register *survives* a call.

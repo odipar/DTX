@@ -5,7 +5,7 @@ package org.dtx;
  * behind an offset each.
  *
  * <p>The payload states {@code N} and {@code k} once, so one ring size and
- * one decoder build serve every column (R5.3, R5.5), then an offset a
+ * one decoder build reads every column (R5.3, R5.5), then an offset a
  * column, then the data sets, each beginning on a long (R5.9).
  */
 public final class Dtx2 {
@@ -74,8 +74,8 @@ public final class Dtx2 {
     }
 
     /**
-     * The DTX2 file of the table a DTX0 or DTX1 file holds. The table is the
-     * same under every variant (R1.3), so what comes back holds the same
+     * The DTX2 file of the table in a DTX0 or DTX1 file. The table is the
+     * same under every variant (R1.3), so what comes back has the same
      * rows, widths, {@code R} and {@code RR} as what went in.
      */
     public static byte[] from(byte[] plain, Packer packer, int unit, int ring) {
