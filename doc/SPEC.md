@@ -128,7 +128,7 @@ data sets are:
 |---|---|---|
 | 0 | 2 | `N`, the bytes of the ring a column unpacks through |
 | 2 | 1 | `k`, the unit every data set is packed at: 1, 2 or 4 |
-| 3 | 1 | zero |
+| 3 | 1 | the flags: bit 0 says every column holds copies from its own literal stream. The other bits are zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
 R5.8 asks for `N`. A reader takes it once and holds a ring of that many
@@ -140,6 +140,17 @@ stand at a fixed stride from one another, and one cursor arithmetic runs
 every column (R5.4, R5.5).
 
 `k` need not be `W[i]`: a two byte column packs at a unit of 1 or of 2.
+
+**The flags byte.** Bit 0 says every column was packed so that a match
+beyond the ring copies from that column's own literal stream, which ST4
+packs with `-c`. A decoder built without the copy code reads such a column
+wrongly, and nothing in an ST4 data set states which kind it is, so the
+payload states it (R5.10). A payload that states it holds columns that all
+hold copies, and one that does not holds columns that none do.
+
+A file written before this byte held anything reads zero here, which says
+no copies, and a decoder without the copy code is what such a file always
+asked for.
 
 One `k` for the payload buys a reader one decoder. ST4 code is built for a
 unit, and a reader of DTX2 takes every column of a payload through the one
@@ -167,16 +178,18 @@ stated in full in [ST4](https://github.com/odipar/ST4).
   so a reader takes that header a long at a time. That is why DTX2 aligns
   its data sets (R5.9).
 - A reader built for one unit rejects a data set whose fourth byte gives
-  another. The payload's `k` is that same unit (R5.2), so a reader may
-  check the two against each other.
+  another. The payload's `k` is that same unit (R5.2), and a reader checks
+  the two against each other: one compare of a data set's first long
+  against `$53 $34 $07 k` holds the signature, the format version and the
+  unit at once.
 - A run of bytes shorter than twenty-eight is smaller stored than packed.
   ST4 states that, and no requirement here follows from it.
 
 ```
-   N and k once, an offset a column, then a data set a column
+   N, k and the flags once, an offset a column, then a data set a column
 
   +----+--+--+------+------+------+========+=========+=======+
-  | N  |k |. | ->b0 | ->b1 | ->b2 | ST4 of | ST4 of  | ST4   |
+  | N  |k |f | ->b0 | ->b1 | ->b2 | ST4 of | ST4 of  | ST4   |
   +----+--+--+------+------+------+========+=========+=======+
      2  1  1     4      4      4    col 0    col 1     col 2
    \    4     /\  the offsets, 4C /\ each on a long, each with

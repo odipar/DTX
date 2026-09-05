@@ -114,22 +114,37 @@ final class PackagerTest {
 
     /** A DTX2 file of {@code rows} rows and these widths, at this ring. */
     private static byte[] packed(int rows, int[] width, int unit, int ring) {
+        return packed(rows, width, unit, ring, false);
+    }
+
+    /** The same, whose payload states what the packer packed. */
+    private static byte[] packed(int rows, int[] width, int unit, int ring,
+            boolean copies) {
         byte[][] column = new byte[width.length][];
         for (int i = 0; i < width.length; i++) {
             column[i] = new byte[rows * width[i]];
         }
         Table table = Table.of(rows, rows, width, column);
-        return Dtx2.write(table, (bytes, k, n) -> {
-            byte[] set = new byte[28 + bytes.length];
-            set[0] = 'S';
-            set[1] = '4';
-            set[2] = 7;
-            set[3] = (byte) k;
-            Dtx.putLong(set, 8, 28);
-            Dtx.putLong(set, 12, 28 + bytes.length);
-            Dtx.putLong(set, 16, 28 + bytes.length);
-            System.arraycopy(bytes, 0, set, 28, bytes.length);
-            return set;
+        return Dtx2.write(table, new Packer() {
+
+            @Override
+            public boolean copies() {
+                return copies;
+            }
+
+            @Override
+            public byte[] pack(byte[] bytes, int k, int n) {
+                byte[] set = new byte[28 + bytes.length];
+                set[0] = 'S';
+                set[1] = '4';
+                set[2] = 7;
+                set[3] = (byte) k;
+                Dtx.putLong(set, 8, 28);
+                Dtx.putLong(set, 12, 28 + bytes.length);
+                Dtx.putLong(set, 16, 28 + bytes.length);
+                System.arraycopy(bytes, 0, set, 28, bytes.length);
+                return set;
+            }
         }, unit, ring);
     }
 
@@ -185,11 +200,48 @@ final class PackagerTest {
 
     @Test
     void theCopyCodeIsAskedForOnlyWhereTheColumnsHoldCopies() {
-        byte[] file = packed(64, new int[] {1, 2}, 1, 960);
-        assertTrue(!Packager.table(file).contains("ST4_WINDOW"),
+        // The payload states it (R5.10), so no word from a caller enters
+        // this: the file settles which decoder reads it.
+        byte[] plain = packed(64, new int[] {1, 2}, 1, 960);
+        byte[] copies = packed(64, new int[] {1, 2}, 1, 960, true);
+        assertTrue(!Packager.table(plain).contains("ST4_WINDOW"),
                 "a table packed without copies asks for no copy code");
-        assertTrue(Packager.table(file, true).contains("ST4_WINDOW\tequ\t1"),
+        assertTrue(Packager.table(copies).contains("ST4_WINDOW\tequ\t1"),
                 "a table packed with copies asks for it");
+        assertTrue(!Packager.packed(plain, Dtx.header(plain)).copies(),
+                "the plain payload states no copies");
+        assertTrue(Packager.packed(copies, Dtx.header(copies)).copies(),
+                "the other states them");
+    }
+
+    @Test
+    void aDataSetThatDoesNotStateThePayloadsUnitIsRefused() {
+        // R5.2: the k a payload states and the k in every data set's own
+        // signature are the same, and the packager checks one against the
+        // other. One compare holds ST4's signature, its version and the
+        // unit at once.
+        byte[] file = packed(64, new int[] {1, 2}, 1, 960);
+        Dtx.Header header = Dtx.header(file);
+        int at = header.length() + Dtx.getLong(file, header.length() + 4 + 4);
+        file[at + 3] = 2;                       // column 1 now says k of 2
+        assertEquals("column 1's data set opens 53340702 and the payload"
+                + " states 53340701: an ST4 data set opens with S4, the"
+                + " format version 7 and the payload's own k",
+                assertThrows(IllegalArgumentException.class,
+                        () -> Packager.packed(file, header)).getMessage());
+    }
+
+    @Test
+    void aDataSetOfAnotherFormatVersionIsRefused() {
+        byte[] file = packed(64, new int[] {1, 2}, 1, 960);
+        Dtx.Header header = Dtx.header(file);
+        int at = header.length() + Dtx.getLong(file, header.length() + 4);
+        file[at + 2] = 6;                       // the version before this one
+        assertEquals("column 0's data set opens 53340601 and the payload"
+                + " states 53340701: an ST4 data set opens with S4, the"
+                + " format version 7 and the payload's own k",
+                assertThrows(IllegalArgumentException.class,
+                        () -> Packager.packed(file, header)).getMessage());
     }
 
     @Test

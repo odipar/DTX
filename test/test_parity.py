@@ -65,11 +65,12 @@ def main():
         src = os.path.join(work, "t.dtx")
         with open(src, "wb") as f:
             f.write(blob)
-        extra = ["-copies"] if copies else []
+        # Neither tool takes a word for it: the payload states whether
+        # its columns hold copies (R5.10) and both read it out of the file.
         java = os.path.join(work, "java.bin")
         go = os.path.join(work, "go.bin")
-        run(["java", "-cp", classes, "org.dtx.Packager", src, java] + extra)
-        run([tool, src, go] + extra)
+        run(["java", "-cp", classes, "org.dtx.Packager", src, java])
+        run([tool, src, go])
         with open(java, "rb") as f:
             one = f.read()
         with open(go, "rb") as f:

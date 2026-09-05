@@ -83,19 +83,41 @@ public final class Packager {
         return taken;
     }
 
-    /** What a DTX2 payload states: the ring, the unit and the offsets. */
-    record Packed(int ring, int unit, int[] at) {}
+    /**
+     * What a DTX2 payload states: the ring, the unit, whether its columns
+     * hold copies from the literal stream, and where each data set begins.
+     */
+    record Packed(int ring, int unit, boolean copies, int[] at) {}
 
-    /** The {@code N}, {@code k} and data set offsets a DTX2 payload gives. */
+    /**
+     * What a DTX2 payload gives, SPEC.md 2.3.
+     *
+     * <p>It checks the data sets against it. Every set opens with
+     * {@code $53 $34 $07 k}, so one compare against the payload's own
+     * {@code k} holds ST4's signature, its format version and R5.2 at once.
+     *
+     * @throws IllegalArgumentException where a data set states another
+     *     version or another unit than the payload does
+     */
     static Packed packed(byte[] file, Dtx.Header header) {
         int payload = header.length();
         int ring = Dtx.getWord(file, payload);
         int unit = file[payload + 2] & 0xFF;
+        boolean copies = (file[payload + 3] & Dtx2.COPIES) != 0;
         int[] at = new int[header.columns()];
+        int signature = 0x53340700 + unit;
         for (int i = 0; i < at.length; i++) {
             at[i] = Dtx.getLong(file, payload + 4 + 4 * i);
+            int said = Dtx.getLong(file, payload + at[i]);
+            if (said != signature) {
+                throw new IllegalArgumentException(String.format(
+                        "column %d's data set opens %08X and the payload"
+                        + " states %08X: an ST4 data set opens with S4, the"
+                        + " format version 7 and the payload's own k",
+                        i, said, signature));
+            }
         }
-        return new Packed(ring, unit, at);
+        return new Packed(ring, unit, copies, at);
     }
 
     /**
@@ -190,19 +212,6 @@ public final class Packager {
      *     where no period holds every rule of doc/abi.md 4
      */
     public static String table(byte[] file) {
-        return table(file, false);
-    }
-
-    /**
-     * The same, for a table whose columns were packed with copies from the
-     * literal stream. The decoder then takes {@code ST4_WINDOW equ 1}, and
-     * the image is code in RAM: {@code ST4_init} writes the reach into two
-     * of its own instructions, so a 68030 caller flushes the instruction
-     * cache after every call that seeds a decoder.
-     *
-     * @param copies whether the columns were packed with {@code st4 -c}
-     */
-    public static String table(byte[] file, boolean copies) {
         Dtx.Header header = Dtx.header(file);
         int variant = header.variant();
         if (variant != Dtx.DTX0 && variant != Dtx.DTX1
@@ -217,8 +226,14 @@ public final class Packager {
             rowBytes += w;
         }
         Packed packed = variant == Dtx.DTX2
-                ? packed(file, header) : new Packed(0, 0, new int[0]);
+                ? packed(file, header) : new Packed(0, 0, false, new int[0]);
         int period = variant == Dtx.DTX2 ? period(header, packed) : 1;
+        // The payload states whether its columns hold copies (R5.10), so
+        // the decoder built for them is settled by the file and not by a
+        // word carried beside it. That build writes the reach into two of
+        // its own instructions, and a 68030 caller flushes the instruction
+        // cache after every call that seeds a decoder.
+        boolean copies = packed.copies();
 
         StringBuilder out = new StringBuilder();
         out.append("; What org.dtx.Packager states of one table, for"
@@ -278,7 +293,7 @@ public final class Packager {
         }
         boolean packed = header.variant() == Dtx.DTX2;
         Packed given = packed
-                ? packed(file, header) : new Packed(0, 0, new int[0]);
+                ? packed(file, header) : new Packed(0, 0, false, new int[0]);
         int n = given.ring();
         int records = ENTRIES + ENTRY * width.length;
         byte[] out = new byte[records + (packed ? STREAM * width.length : 0)];
@@ -439,18 +454,17 @@ public final class Packager {
      * alone.
      *
      * @param rmac the assembler to run
-     * @param copies whether the columns were packed with {@code st4 -c}
      * @throws IllegalStateException where rmac fails, or where the code it
      *     writes and the format block in it disagree on where the column
      *     table lands
      */
-    static byte[] code(byte[] file, Path rmac, boolean copies) {
+    static byte[] code(byte[] file, Path rmac) {
         try {
             Path work = Files.createTempDirectory("dtx68");
             try {
                 Path states = work.resolve("DTX_table.i");
                 Path out = work.resolve("image.bin");
-                Files.writeString(states, table(file, copies));
+                Files.writeString(states, table(file));
                 Process run = new ProcessBuilder(rmac.toString(), "-m68000",
                         "-fr", "+o3", "-i" + work, "-i" + carried(),
                         "-o", out.toString(),
@@ -518,7 +532,7 @@ public final class Packager {
                     + columns + ": it would not land there");
         }
         Packed given = variant == Dtx.DTX2
-                ? packed(file, header) : new Packed(0, 0, new int[0]);
+                ? packed(file, header) : new Packed(0, 0, false, new int[0]);
         int unit = code[FORMAT_AT + UNIT_AT] & 0xFF;
         if (unit != given.unit()) {
             throw new IllegalStateException("the code decodes at a unit of "
@@ -547,17 +561,22 @@ public final class Packager {
         return image;
     }
 
-    /** The image, combined from the code this repository carries. */
+    /**
+     * The image, combined from the code this repository holds.
+     *
+     * <p>Which of the eight it takes is the file's to state: the variant,
+     * and under DTX2 the unit its data sets are packed at and whether they
+     * hold copies from the literal stream (R5.10). No word from a caller
+     * enters it, so no word can disagree with the bytes.
+     */
     public static byte[] image(byte[] file) {
-        return image(file, false);
-    }
-
-    /** The same, for a table packed with copies from the literal stream. */
-    public static byte[] image(byte[] file, boolean copies) {
         Dtx.Header header = Dtx.header(file);
-        int unit = header.variant() == Dtx.DTX2
-                ? packed(file, header).unit() : 0;
-        return combine(carriedCode(header.variant(), unit, copies), file);
+        if (header.variant() != Dtx.DTX2) {
+            return combine(carriedCode(header.variant(), 0, false), file);
+        }
+        Packed given = packed(file, header);
+        return combine(
+                carriedCode(Dtx.DTX2, given.unit(), given.copies()), file);
     }
 
     /**
@@ -568,32 +587,23 @@ public final class Packager {
      * @param rmac the assembler to run
      */
     public static byte[] image(byte[] file, Path rmac) {
-        return image(file, rmac, false);
-    }
-
-    /** The same, for a table packed with copies from the literal stream. */
-    public static byte[] image(byte[] file, Path rmac, boolean copies) {
-        return combine(code(file, rmac, copies), file);
+        return combine(code(file, rmac), file);
     }
 
     /** Reads the DTX file named first and writes the image named second. */
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
-            System.err.println(
-                    "Packager in.dtx out.bin [-aRMAC] [-s] [-copies]");
+            System.err.println("Packager in.dtx out.bin [-aRMAC] [-s]");
             System.exit(2);
             return;
         }
         String rmac = null;
         boolean states = false;
-        boolean copies = false;
         for (int i = 2; i < args.length; i++) {
             if (args[i].startsWith("-a")) {
                 rmac = args[i].substring(2);
             } else if (args[i].equals("-s")) {
                 states = true;
-            } else if (args[i].equals("-copies")) {
-                copies = true;
             } else {
                 System.err.println("Packager does not read " + args[i]);
                 System.exit(2);
@@ -603,11 +613,11 @@ public final class Packager {
         byte[] file = Files.readAllBytes(Path.of(args[0]));
         Dtx.Header header = Dtx.header(file);
         if (states) {
-            Files.writeString(Path.of(args[1]), table(file, copies));
+            Files.writeString(Path.of(args[1]), table(file));
         } else if (rmac == null) {
-            Files.write(Path.of(args[1]), image(file, copies));
+            Files.write(Path.of(args[1]), image(file));
         } else {
-            Files.write(Path.of(args[1]), image(file, Path.of(rmac), copies));
+            Files.write(Path.of(args[1]), image(file, Path.of(rmac)));
         }
         long bytes = Files.size(Path.of(args[1]));
         int state = header.variant() == Dtx.DTX2

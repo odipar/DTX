@@ -13,6 +13,12 @@ public final class Dtx2 {
     /** The largest ring a payload can state, in bytes: `N` is two bytes. */
     public static final int MAX_RING = 65535;
 
+    /**
+     * The flags bit that says every column was packed with copies from its
+     * own literal stream (R5.10), at payload byte 3.
+     */
+    public static final int COPIES = 1;
+
     private Dtx2() {
     }
 
@@ -43,7 +49,7 @@ public final class Dtx2 {
             set[i] = packer.pack(table.column(i), unit, ring);
         }
 
-        // 2.3: `N`, `k`, a zero byte, then an offset a column
+        // 2.3: `N`, `k`, the flags, then an offset a column
         int prefix = 4 + 4 * table.columns();
         int[] at = new int[table.columns()];
         int next = prefix;
@@ -58,6 +64,7 @@ public final class Dtx2 {
         System.arraycopy(head, 0, out, 0, head.length);
         Dtx.putWord(out, head.length, ring);
         out[head.length + 2] = (byte) unit;
+        out[head.length + 3] = (byte) (packer.copies() ? COPIES : 0);
         for (int i = 0; i < set.length; i++) {
             Dtx.putLong(out, head.length + 4 + 4 * i, at[i]);
             System.arraycopy(set[i], 0, out, head.length + at[i],

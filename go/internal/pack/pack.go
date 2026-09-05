@@ -40,22 +40,46 @@ const (
 	PackedHead = 80
 )
 
-// Packed is what a DTX2 payload states: the ring, the unit, and where each
-// column's data set begins in the payload.
+// Copies is the flags bit at payload byte 3 that says every column was
+// packed with copies from its own literal stream, R5.10.
+const Copies = 1
+
+// Packed is what a DTX2 payload states: the ring, the unit, whether its
+// columns hold copies from the literal stream, and where each column's data
+// set begins in the payload.
 type Packed struct {
-	Ring int // N
-	Unit int // k
-	At   []int
+	Ring   int // N
+	Unit   int // k
+	Copies bool
+	At     []int
 }
 
-// ReadPacked reads those out of a DTX2 payload.
-func ReadPacked(file []byte, header dtx.Header) Packed {
+// ReadPacked reads those out of a DTX2 payload, SPEC.md 2.3.
+//
+// It checks the data sets against it. Every set opens with $53 $34 $07 k, so
+// one compare against the payload's own k holds ST4's signature, its format
+// version and R5.2 at once.
+func ReadPacked(file []byte, header dtx.Header) (Packed, error) {
 	payload := header.Length
-	at := make([]int, header.Columns())
-	for i := range at {
-		at[i] = dtx.GetLong(file, payload+4+4*i)
+	unit := int(file[payload+2])
+	out := Packed{
+		Ring:   dtx.GetWord(file, payload),
+		Unit:   unit,
+		Copies: file[payload+3]&Copies != 0,
+		At:     make([]int, header.Columns()),
 	}
-	return Packed{dtx.GetWord(file, payload), int(file[payload+2]), at}
+	signature := 0x53340700 + unit
+	for i := range out.At {
+		out.At[i] = dtx.GetLong(file, payload+4+4*i)
+		said := dtx.GetLong(file, payload+out.At[i])
+		if said != signature {
+			return Packed{}, fmt.Errorf("column %d's data set opens %08X and"+
+				" the payload states %08X: an ST4 data set opens with S4, the"+
+				" format version 7 and the payload's own k",
+				i, said, signature)
+		}
+	}
+	return out, nil
 }
 
 // Classes gives the widths a table of these holds, in the order 1, 2, 4.
@@ -216,8 +240,10 @@ func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
 	var given Packed
 	period := 1
 	if packed {
-		given = ReadPacked(file, header)
 		var err error
+		if given, err = ReadPacked(file, header); err != nil {
+			return nil, err
+		}
 		if period, err = Period(header, given); err != nil {
 			return nil, err
 		}
@@ -321,7 +347,10 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 	}
 	var given Packed
 	if header.Variant == dtx.DTX2 {
-		given = ReadPacked(file, header)
+		var err error
+		if given, err = ReadPacked(file, header); err != nil {
+			return nil, err
+		}
 	}
 	if unit := int(code[FormatAt+UnitAt]); unit != given.Unit {
 		return nil, fmt.Errorf("the code decodes at a unit of %d and the"+
@@ -356,17 +385,22 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 
 // Image gives the image for this table, from the code this build holds.
 //
-// copies says the columns were packed with st4 -c, so the decoder is the one
-// built with its copy code. No field of the file states it, and a table
-// packed with copies and packaged without them reads wrong bytes.
-func Image(file []byte, copies bool) ([]byte, error) {
+// Which of the eight it takes is the file's to state: the variant, and under
+// DTX2 the unit its data sets are packed at and whether they hold copies
+// from the literal stream (R5.10). No word from a caller enters it, so no
+// word can disagree with the bytes.
+func Image(file []byte) ([]byte, error) {
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
 		return nil, err
 	}
-	unit := 0
+	unit, copies := 0, false
 	if header.Variant == dtx.DTX2 {
-		unit = ReadPacked(file, header).Unit
+		given, err := ReadPacked(file, header)
+		if err != nil {
+			return nil, err
+		}
+		unit, copies = given.Unit, given.Copies
 	}
 	code, err := image.Code(header.Variant, unit, copies)
 	if err != nil {

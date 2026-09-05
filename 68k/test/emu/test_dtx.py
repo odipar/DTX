@@ -189,7 +189,7 @@ def write_table(csv, variant, widths=None, repeat=None, unit=1, ring=960,
         return f.read()
 
 
-def package(blob, copies=False, assemble=False):
+def package(blob, assemble=False):
     """The raw image the packager makes, and where every label of it stands.
 
     The image comes from the packager. By default it combines the code the
@@ -207,11 +207,12 @@ def package(blob, copies=False, assemble=False):
     lst = os.path.join(work, "t.lst")
     with open(src, "wb") as f:
         f.write(blob)
-    extra = ["-copies"] if copies else []
+    # No -copies: the payload states it (R5.10), so the packager reads
+    # which decoder the table asks for out of the file.
     run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img]
-        + (["-a" + RMAC] if assemble else []) + extra)
+        + (["-a" + RMAC] if assemble else []))
     run(["java", "-cp", CLASSES, "org.dtx.Packager", src,
-         os.path.join(work, "DTX_table.i"), "-s"] + extra)
+         os.path.join(work, "DTX_table.i"), "-s"])
     run([RMAC, "-m68000", "-fr", "+o3", "-i" + work,
          "-i" + os.path.join(ROOT, "68k"), "-l*" + lst,
          "-o", os.path.join(work, "code.bin"),
@@ -451,7 +452,7 @@ def numbers(rows, columns, span=251):
 def rows_through_68k(csv, variant, widths, repeat, unit, ring, copies=False):
     """Every row a packaged reader of this variant gives, and its image."""
     blob = write_table(csv, variant, widths, repeat, unit, ring, copies)
-    image, at = package(blob, copies)
+    image, at = package(blob)
     fmt = image[24:24 + 20]
     assert fmt[:3] == b"DTX" and fmt[3] == variant, "the format block"
     state_bytes = struct.unpack(">I", fmt[4:8])[0]

@@ -36,10 +36,18 @@ func plain(variant, rows int, width []int) []byte {
 // than packed streams: the packager reads a set's four stream offsets and
 // never a byte of a stream.
 func packed(rows int, width []int, unit, ring int) []byte {
+	return packedCopies(rows, width, unit, ring, false)
+}
+
+// The same, whose payload states that its columns hold copies, R5.10.
+func packedCopies(rows int, width []int, unit, ring int, copies bool) []byte {
 	head := header(dtx.DTX2, rows, rows, width)
 	payload := make([]byte, 4+4*len(width))
 	dtx.PutWord(payload, 0, ring)
 	payload[2] = byte(unit)
+	if copies {
+		payload[3] = Copies
+	}
 	for i, w := range width {
 		set := len(payload)
 		dtx.PutLong(payload, 4+4*i, set)
@@ -80,7 +88,7 @@ func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
 		{"DTX2", packed(64, []int{1, 2}, 1, 960), 2, 64, 3},
 		{"DTX2 k=4", packed(64, []int{4, 4}, 4, 960), 2, 64, 8},
 	} {
-		out, err := Image(one.file, false)
+		out, err := Image(one.file)
 		if err != nil {
 			t.Fatalf("%s: %v", one.name, err)
 		}
@@ -121,7 +129,7 @@ func TestTheFormatBlockStatesWhatTheTableSettles(t *testing.T) {
 func TestAPackedImageHoldsEveryRuleOfThePeriod(t *testing.T) {
 	held(t)
 	file := packed(64, []int{1, 2, 4}, 1, 960)
-	out, err := Image(file, false)
+	out, err := Image(file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +154,7 @@ func TestATableTooWideIsRefused(t *testing.T) {
 	for i := range width {
 		width[i] = 1
 	}
-	_, err := Image(packed(64, width, 1, 960), false)
+	_, err := Image(packed(64, width, 1, 960))
 	if err == nil {
 		t.Fatal("40 columns at a ring of 960 reaches past 32767, and packaged")
 	}
@@ -167,5 +175,43 @@ func TestAUnitTheDecoderDoesNotDecodeIsRefused(t *testing.T) {
 	}
 	if _, err := Combine(code, file, head); err == nil {
 		t.Fatal("a k of 2 decoder took a table packed at 1")
+	}
+}
+
+// The payload states whether its columns hold copies, so the image a table
+// takes is the file's to settle and no word from a caller enters it.
+func TestThePayloadStatesWhetherItsColumnsHoldCopies(t *testing.T) {
+	held(t)
+	plain, err := Image(packed(64, []int{1, 2}, 1, 960))
+	if err != nil {
+		t.Fatal(err)
+	}
+	copies, err := Image(packedCopies(64, []int{1, 2}, 1, 960, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plain) == len(copies) {
+		t.Fatalf("both images are %d bytes: the copy code is in neither or"+
+			" in both", len(plain))
+	}
+}
+
+// R5.2: the k a payload states and the k in every data set's own signature
+// are the same, and the packager checks one against the other.
+func TestADataSetThatDoesNotStateThePayloadsUnitIsRefused(t *testing.T) {
+	file := packed(64, []int{1, 2}, 1, 960)
+	head, err := dtx.ReadHeader(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := head.Length + dtx.GetLong(file, head.Length+4+4)
+	file[at+3] = 2 // column 1 now says a unit of 2
+	if _, err := ReadPacked(file, head); err == nil {
+		t.Fatal("a payload took a data set stating another unit")
+	}
+	file[at+3] = 1
+	file[at+2] = 6 // and the format version before this one
+	if _, err := ReadPacked(file, head); err == nil {
+		t.Fatal("a payload took a data set of another format version")
 	}
 }

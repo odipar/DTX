@@ -86,8 +86,7 @@ class BlobTest {
         Path rmac = rmac();
         for (Blobs.Build build : Blobs.all()) {
             byte[] file = Blobs.seed(build);
-            assertArrayEquals(Packager.image(file, rmac, build.copies()),
-                    Packager.image(file, build.copies()),
+            assertArrayEquals(Packager.image(file, rmac), Packager.image(file),
                     build.name() + ": the combined image and the assembled one"
                             + " are different bytes");
         }

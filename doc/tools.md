@@ -75,7 +75,7 @@ inside it, so it needs neither this repository nor a runtime beside it:
 
 ```
 go build -o dtx-package ./cmd/dtx-package    # under go/
-./dtx-package in.dtx out.bin [-copies]
+./dtx-package in.dtx out.bin
 ```
 
 `test/test_parity.py` packages a corpus both ways and holds the two to the
@@ -85,7 +85,6 @@ same bytes.
 |---|---|
 | `-aRMAC` | assemble the template with this rmac rather than take the carried code. The two give the same bytes, and a template edit is tried through this one |
 | `-s` | write the figures rather than the image, for reading or for a build of your own |
-| `-copies` | the columns were packed with `-copies`, so the decoder is built with its copy code |
 
 The image holds one table and the code for that table's variant. What the
 table settles reaches the code at run time, out of the table's own header
@@ -179,13 +178,17 @@ stream, and it pays at the small rings DTX2 reads through. Measured
 on a table of 512 rows repeating a pattern 37 rows long, at `N` of 64: the
 file goes from 1164 bytes to 272, and its image from 2196 to 1336.
 
-**A column packed that way is packaged with `bin/dtx-package -copies`**, or
-it reads wrong bytes: the decoder needs its copy code, the image is then
-code in RAM rather than ROM, and no field of the file says which a column
-is. Measured on the same table, packaging it without the flag reads row 37
-wrong, where the pattern first repeats past the ring. The other way round
-is safe: a decoder with the copy code reads a column without copies
-correctly, at 2.0 to 4.0% more cycles and 32 bytes more code.
+**The payload states it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
+Write is the one tool that reads `-copies` and the packager takes the
+decoder the file asks for. Neither packager has a flag for it.
+
+The flag is there because a decoder built without the copy code reads such
+a column wrongly and no ST4 data set says which kind it is. Measured on the
+same table, a column packed with copies and read by a decoder without the
+copy code gives row 37 wrong, where the pattern first repeats past the
+ring. The other way round is safe: a decoder with the copy code reads a
+column without copies correctly, at 2.0 to 4.0% more cycles and 32 bytes
+more code.
 
 ## The rigs
 

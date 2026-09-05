@@ -5,7 +5,7 @@
 // table asks for. No assembler runs. doc/tools.md states the tool and
 // doc/abi.md the six calls the image answers.
 //
-//	dtx-package in.dtx out.bin [-copies]
+//	dtx-package in.dtx out.bin
 package main
 
 import (
@@ -25,19 +25,14 @@ func main() {
 
 func run(args []string) error {
 	var named []string
-	copies := false
 	for _, arg := range args {
-		switch {
-		case arg == "-copies":
-			copies = true
-		case len(arg) > 0 && arg[0] == '-':
+		if len(arg) > 0 && arg[0] == '-' {
 			return fmt.Errorf("dtx-package does not read %s", arg)
-		default:
-			named = append(named, arg)
 		}
+		named = append(named, arg)
 	}
 	if len(named) != 2 {
-		return fmt.Errorf("dtx-package in.dtx out.bin [-copies]")
+		return fmt.Errorf("dtx-package in.dtx out.bin")
 	}
 	file, err := os.ReadFile(named[0])
 	if err != nil {
@@ -47,7 +42,7 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	out, err := pack.Image(file, copies)
+	out, err := pack.Image(file)
 	if err != nil {
 		return err
 	}
@@ -56,7 +51,11 @@ func run(args []string) error {
 	}
 	state := pack.StateBytes(header)
 	if header.Variant == dtx.DTX2 {
-		state = pack.PackedStateBytes(header, pack.ReadPacked(file, header))
+		given, err := pack.ReadPacked(file, header)
+		if err != nil {
+			return err
+		}
+		state = pack.PackedStateBytes(header, given)
 	}
 	fmt.Printf("%s -> DTX%d image %d bytes, table %d bytes, %d rows,"+
 		" %d columns, state block %d bytes\n",
