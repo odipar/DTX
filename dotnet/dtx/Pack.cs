@@ -232,8 +232,8 @@ public static class Pack
     /// column grouped by width so each of a read's three loops walks a run of
     /// them, and under DTX2 one stream record a column.
     ///
-    /// <para>DTX0 has none: a DTX0 row is one run of bytes, so no loop walks
-    /// a column.</para>
+    /// <para>DTX0 does not have one: a DTX0 row is one run of bytes, so no
+    /// loop walks a column.</para>
     /// </summary>
     public static byte[] ColumnTable(byte[] file, Header header)
     {

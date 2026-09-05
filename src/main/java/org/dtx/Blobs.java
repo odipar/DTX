@@ -18,10 +18,10 @@ import java.util.List;
  * <p>Eight of them: DTX0, DTX1, and one a build of the decoder built into
  * DTX2, which is a unit of 1, 2 or 4 with the copy code and without.
  *
- * <p>The table each is assembled from fixes nothing but the figures the
- * assembler reads, so it is made here rather than read: the columns do not
- * contain bytes that decode, and {@link Packager#blank} zeroes the five fields
- * the table did give. What comes out is a function of the template alone.
+ * <p>The table each is assembled from fixes only the figures the assembler
+ * reads, so it is made here rather than read: the columns do not contain
+ * bytes that decode, and {@link Packager#blank} zeroes the five fields the
+ * table did give. What comes out is a function of the template alone.
  */
 public final class Blobs {
 
@@ -75,14 +75,13 @@ public final class Blobs {
     }
 
     /**
-     * A packer that packs nothing: the column comes back as it is, and defines
+     * A packer that does not pack: the column comes back as it is, and defines
      * the build's own copies flag.
      *
-     * <p>The assembler reads a data set's four stream offsets and nothing in
-     * the streams, so a data set whose streams are the column itself
-     * fixes every figure the build takes. Nothing decodes it, and nothing
-     * here runs it: the packer that writes a table a caller reads is ST4's
-     * own.
+     * <p>The assembler reads only a data set's four stream offsets, not the
+     * streams, so a data set whose streams are the column itself fixes every
+     * figure the build takes. Nothing decodes it, and nothing here runs it:
+     * the packer that writes a table a caller reads is ST4's own.
      */
     private record Plain(boolean copies) implements Packer {
 

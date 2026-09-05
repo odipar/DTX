@@ -76,7 +76,7 @@ final class St4Test {
         // A column that repeats a pattern further back than the ring
         // reaches: what copies from the literal stream are for.
         // The pattern runs 101 rows, further back than a ring of 64
-        // bytes reaches, so a match for it is a copy or it is nothing.
+        // bytes reaches, so the only match for it is a copy.
         byte[] column = new byte[512];
         for (int r = 0; r < column.length; r++) {
             column[r] = (byte) (r % 101);

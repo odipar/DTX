@@ -23,10 +23,9 @@ width 4, since a column is a whole number of units.
 | jump to row 0 | 27 | 15 | 848 | 631 | 647 |
 | jump to row 63 | 27 | 15 | 12061 | 8010 | 8258 |
 | code, bytes | 408 | 716 | 1476 | 1480 | 1484 |
-
-An advance under DTX2 is a range because a row refills one column of `P`
-rows, and the columns differ: a four byte column's refill decodes more than
-a one byte column's, and a turn past the last column refills nothing.
+An advance under DTX2 is a range because a row refills one column of `P` rows,
+and the columns differ: a four byte column's refill decodes more than a one
+byte column's, and a turn past the last column does not refill.
 
 **What is flat and what is not.** Under DTX0 and DTX1 every call is flat
 in `R` and a read is linear in `C`. Under DTX2 a read is flat and linear in

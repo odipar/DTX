@@ -6,9 +6,9 @@
 ; documentation says you used DTX (see LICENSE).
 ;
 ; doc/abi.md defines the calls, the format block and the state block. One
-; template a variant: this file reads DTX2 and nothing else, so no call in it
-; tests which variant it contains. org.dtx.Packager takes the template the
-; table's variant needs.
+; template a variant: this file reads only DTX2, so no call in it tests which
+; variant it contains. org.dtx.Packager takes the template the table's
+; variant needs.
 ;
 ; DTX2 packs a column with ST4, and this reader follows YMX. Every column
 ; decodes through its own ring; init fills every ring with P rows; and after
@@ -42,7 +42,7 @@
 ; a6 IS THE STATE BLOCK through init, jump and advance, and the caller's
 ; a6, d6 and d7 stand parked in the block for the length of the call: ST4
 ; leaves those three alone, and they are the only registers that stand across
-; an ST4_resume. Read takes the block in a0 and parks nothing.
+; an ST4_resume. Read takes the block in a0 and does not park.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call
@@ -434,7 +434,7 @@ DTX_advance:
 ; stands at a displacement off its class cursor, and the ring the class walks
 ; puts every column of it a whole ring apart.
 ;
-; A read does not move a cursor, refills nothing and decodes nothing.
+; A read does not move a cursor, refill or decode.
 
 DTX_read:
         tst.l   DTX_ROW(a0)
@@ -499,7 +499,7 @@ read_none:
 
 DTX_take:
         tst.l   DTX_ROW(a0)
-        bmi.w   DTX_advance             ; no row: step to row 0 and write none
+        bmi.w   DTX_advance             ; no row: step to row 0 without a write
         bsr     DTX_columns
         lea     DTX_COL_ENTRIES(a3),a3
         movea.l DTX_CURSOR+0(a0),a2

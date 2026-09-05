@@ -32,8 +32,8 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-# What go:embed takes: this release's images and nothing else, so an
-# executable cannot contain an older release's image by accident.
+# What go:embed takes: only this release's images, so an executable cannot
+# contain an older release's image by accident.
 IMAGES=go/internal/image/data
 rm -f "$IMAGES"/*.bin
 rm -rf "$OUT/release"
@@ -132,7 +132,8 @@ echo "$MANIFEST: $(grep -c . "$MANIFEST") lines"
 
 # The host's executables, tried as a user would: from a directory that is
 # not this repository, with nothing beside them. They contain only the images
-# they embed, so one that contains none fails here rather than in a release.
+# they embed, so one that does not contain an image fails here rather than in
+# a release.
 case "$(uname -s)-$(uname -m)" in
     Darwin-arm64) host=osx-arm64 ;;
     Darwin-x86_64) host=osx-x64 ;;

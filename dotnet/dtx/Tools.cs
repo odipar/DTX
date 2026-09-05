@@ -252,7 +252,7 @@ public static class Tools
     }
 
     /// <summary>
-    /// A packer that packs nothing: the column comes back as it is, and
+    /// A packer that does not pack: the column comes back as it is, and
     /// defines the build's own copies flag.
     ///
     /// <para>The assembler reads a data set's four stream offsets and

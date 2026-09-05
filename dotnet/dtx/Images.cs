@@ -11,8 +11,8 @@ using System.Reflection;
 /// they are built and doc/abi.md what each of them does.</para>
 ///
 /// <para>They are build output, embedded from build/68k. An assembly built
-/// without them contains none: Read gives nothing back and the caller resolves
-/// an image as it otherwise would, through DTX_68K.</para>
+/// without them does not contain one: Read gives null back and the caller
+/// resolves an image as it otherwise would, through DTX_68K.</para>
 /// </summary>
 public static class Images
 {
@@ -45,7 +45,8 @@ public static class Images
         return copies ? $"DTX2-k{unit}-copies.bin" : $"DTX2-k{unit}.bin";
     }
 
-    /// <summary>One image's bytes, or null where this build contains none.</summary>
+    /// <summary>One image's bytes, or null where the build does not contain
+    /// one.</summary>
     public static byte[]? Read(int variant, int unit, bool copies)
     {
         string name = Name(variant, unit, copies);
@@ -70,7 +71,7 @@ public static class Images
 
     /// <summary>
     /// One image's bytes, from what this build contains or, where it
-    /// contains none, from the directory DTX_68K names.
+    /// does not contain one, from the directory DTX_68K names.
     /// </summary>
     public static byte[] Code(int variant, int unit, bool copies)
     {

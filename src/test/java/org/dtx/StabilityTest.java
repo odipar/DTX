@@ -62,8 +62,7 @@ class StabilityTest {
      * code taken off.
      *
      * <p>The packager's other path combines code the build already made, and
-     * defines nothing of what a template assembles to, so this one
-     * assembles.
+     * does not define what a template assembles to, so this one assembles.
      */
     private static byte[] code(int variant, Shape shape, int unit, int ring,
             boolean copies) {

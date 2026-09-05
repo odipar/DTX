@@ -3,8 +3,8 @@ package org.dtx;
 /**
  * What packs one column of a DTX2 payload.
  *
- * <p>DTX2 defines a column as an ST4 data set (R5.1) and nothing more
- * about how ST4 packs. {@link St4} packs with the copy of ST4 in this
+ * <p>DTX2 defines a column as an ST4 data set (R5.1) and does not define
+ * how ST4 packs. {@link St4} packs with the copy of ST4 in this
  * repository, {@link St4Beside} runs a packer beside it, and a
  * caller that writes DTX2 may supply one of its own. ST4's own repository
  * defines the format,
