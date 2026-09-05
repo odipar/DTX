@@ -112,7 +112,12 @@ public static class Variants
         return Table.Of(header.Rows, header.Repeat, header.Width, column);
     }
 
-    /// <summary>The table in a file, under either plain variant.</summary>
+    /// <summary>
+    /// The table in a file, under any variant. A DTX2 file is unpacked with
+    /// the copy of ST4 in this repository.
+    /// </summary>
+    /// <exception cref="ArgumentException">where the variant is not 0, 1
+    /// or 2</exception>
     public static Table Read(byte[] file)
     {
         Header header = Format.ReadHeader(file);
@@ -120,8 +125,9 @@ public static class Variants
         {
             Format.Dtx0 => ReadDtx0(file),
             Format.Dtx1 => ReadDtx1(file),
+            Format.Dtx2 => ReadDtx2(file),
             _ => throw new ArgumentException(
-                    $"variant {header.Variant} is not read here"),
+                    $"variant {header.Variant} is not 0, 1 or 2"),
         };
     }
 
@@ -175,10 +181,56 @@ public static class Variants
     }
 
     /// <summary>
-    /// The DTX2 file of the table in a DTX0 or DTX1 file. The table is
-    /// the same under every variant (R1.3), so what comes back has the
-    /// same rows, widths, R and RR as what went in.
+    /// The DTX2 file of the table in a DTX file of any variant. The table
+    /// is the same under every variant (R1.3), so what comes back has the
+    /// same rows, widths, R and RR as what went in, and a DTX2 file comes
+    /// back packed at the unit and ring given here.
     /// </summary>
-    public static byte[] Dtx2From(byte[] plain, IPacker packer, int unit, int ring)
-            => WriteDtx2(Read(plain), packer, unit, ring);
+    public static byte[] Dtx2From(byte[] file, IPacker packer, int unit, int ring)
+            => WriteDtx2(Read(file), packer, unit, ring);
+
+    /// <summary>
+    /// The table in a DTX2 file, each column unpacked with the copy of ST4
+    /// in this repository. A data set runs from its offset to the next
+    /// offset above it, or to the end of the file.
+    /// </summary>
+    /// <exception cref="ArgumentException">where the file is not DTX2, a
+    /// data set does not open with the payload's own unit (R5.2), or a
+    /// column unpacks to other than R times its width</exception>
+    public static Table ReadDtx2(byte[] file)
+    {
+        Header header = Format.ReadHeader(file);
+        if (header.Variant != Format.Dtx2)
+        {
+            throw new ArgumentException($"variant {header.Variant} is not DTX2");
+        }
+        int[] at = Pack.ReadPacked(file, header).At;
+        byte[][] column = new byte[header.Columns][];
+        for (int i = 0; i < column.Length; i++)
+        {
+            int from = header.Length + at[i];
+            int to = file.Length;
+            foreach (int other in at)
+            {
+                int begins = header.Length + other;
+                if (begins > from && begins < to)
+                {
+                    to = begins;
+                }
+            }
+            Nt4.Format.Container set = Nt4.Format.Read(file[from..to]);
+            byte[] out_ = Nt4.Decompressor.Decode(set.Control, set.Literal,
+                    set.ByteOffsets, set.WordOffsets, set.Unit, set.Size,
+                    set.Window, set.Rewind).Output;
+            int bytes = header.Rows * header.Width[i];
+            if (out_.Length != bytes)
+            {
+                throw new ArgumentException($"column {i} unpacks to"
+                        + $" {out_.Length} bytes, not the {bytes} of R rows"
+                        + " at its width");
+            }
+            column[i] = out_;
+        }
+        return Table.Of(header.Rows, header.Repeat, header.Width, column);
+    }
 }

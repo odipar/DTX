@@ -380,7 +380,7 @@ the row the read on that row is about to take.
   re-base with
 
 The last rule bounds a packed table harder than the format does: at the `N` of
-960 that Write and Rewrite default to, `C` is at most 35.  **Why ST4_wrap and
+960 that Write defaults to, `C` is at most 35.  **Why ST4_wrap and
 not ST4_ring.** ST4_wrap decodes a fixed budget a call and leaves the wrap to
 the caller, which fits exactly: every refill of a column is the same budget,
 `N` divides by what a refill writes, so the reader resets that column's write

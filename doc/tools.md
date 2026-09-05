@@ -15,7 +15,7 @@ under `go/`. None of them takes a wrapper: Go builds an executable, so
 nothing has to find a runtime or a classpath before one runs, and no
 `dtx-run` is needed.
 
-In C# the four are one assembly. `dotnet dtx.dll <tool>` names the tool in
+In C# the three are one assembly. `dotnet dtx.dll <tool>` names the tool in
 the first argument, and an executable published under a tool's own name is
 that tool, with every argument its own.
 
@@ -26,37 +26,54 @@ to work on. The three trees print one text, which `ParityTest` compares.
 
 | what it does | Java | Go | C# |
 |---|---|---|---|
-| text into a DTX file | `bin/dtx-write` | `dtx-write` | `dtx dtx-write` |
-| a plain file into a DTX2 one | `bin/dtx-rewrite` | `dtx-rewrite` | `dtx dtx-rewrite` |
+| a table, from text or a DTX file, into a DTX file or text | `bin/dtx-write` | `dtx-write` | `dtx dtx-write` |
 | a DTX file into a 68000 image | `bin/dtx-package` | `dtx-package` | `dtx dtx-package` |
 | the eight images the packager combines from | `bin/dtx-blobs` | `dtx-blobs` | `dtx dtx-blobs` |
 | find the classpath and run one of the above | `bin/dtx-run` | none needed | none needed |
 
 ## Write
 
-A DTX file of any variant out of comma separated text.
+A table, out of a DTX file of any variant or comma separated text, into a
+DTX file of any variant or text: one tool writes text as DTX, rewrites a
+DTX file at another variant, unit or ring, and reads a DTX file out as
+text.
 
 ```
-bin/dtx-write in.csv out.dtx -v2 -k1 -m960 -pst4
+bin/dtx-write in.csv out.dtx -v2 -k1 -m960
+bin/dtx-write in.dtx out.dtx -k2 -copies
+bin/dtx-write in.dtx out.csv
 ```
+
+The first file is read as a DTX file where it opens with `DTX`, and as text
+otherwise. The second is written as text where its name ends in `.csv`, and
+as a DTX file otherwise. The table is the same under every variant (R1.3),
+so what comes out of a DTX file has the rows, widths, `R` and `RR` of what
+went in, and a DTX2 file written from a DTX2 file is that table packed at
+the unit and ring the flags give. A DTX2 file is unpacked with the copy of
+ST4 in this repository.
 
 | flag | gives |
 |---|---|
-| `-vV` | the variant: 0, 1 or 2. The default is 0 |
-| `-wW,W,..` | one width a column: 1, 2 or 4 each. The default is the narrowest width that takes every value of the column |
-| `-rRR` | the row the table repeats to, 0 to `R`. The default is `R`, where the table does not repeat |
+| `-vV` | the variant to write: 0, 1 or 2. The default is the variant read, or 0 for text |
+| `-wW,W,..` | one width a column: 1, 2 or 4 each, for text. The default is what the text's first comment gives, or else the narrowest width that takes every value of the column. A DTX file gives its own widths |
+| `-rRR` | the row the table repeats to, 0 to `R`. The default is what the DTX file or the text's first comment gives, or else `R`, where the table does not repeat |
 | `-kK` | the unit a DTX2 column is packed at, and `R` divides by it (R5.6). The default is 1 |
 | `-mN` | the ring a DTX2 column unpacks through, in bytes, 1 to 65535 (R5.4). The default is 960 |
 | `-pPACKER` | an ST4 executable to pack with, instead of the copy in this repository. Nothing needs one: name it to pack with a build newer than the copy |
 | `-copies[S]` | a match beyond the ring copies from the column's own literal stream, and `-copiesS` searches `S` seconds for a better parse. It reaches the packer as `-c`. YMX spells it the same way |
 
-`-k`, `-m` and `-p` reach a DTX2 file alone: no other variant packs.
+`-k`, `-m`, `-p` and `-copies` reach a DTX2 file alone: no other variant
+packs. Every column is packed with `-l65535` as well, which meets
+ST4_wrap's assumption 4: no operation longer than the 65535 units a 68000
+decoder counts in a word.
 
 ### The text
 
-One row a line, one value a column. The first row with values gives `C`,
+One row a line, one value a column. The first row of numbers gives `C`,
 and every row after it has that many. A line that is blank, or whose
-first character other than a space is `#`, is not a row.
+first character other than a space is `#`, is not a row, and neither is a
+line before the first row of numbers in which no cell is a number: a line
+of column names, or a line describing the table.
 
 A value is decimal, or hexadecimal where it opens with `$`, and negative
 where it opens with `-`. A value of `W` bytes is stored most significant
@@ -76,8 +93,46 @@ which of the two a column is is defined elsewhere or not defined.
 Those three columns take widths 1, 2 and 1: column 1 has 256 upward, and
 column 2 a negative value.
 
-`org.dtx.Csv` is the same reader as a library, and `Table`, `Dtx0`,
-`Dtx1` and `Dtx2` write a table a caller builds itself.
+Written out, a table is a comment giving its shape, a line of column
+names, `c0` onward, and then one row a line, each value the unsigned number
+its bytes give. The three columns above come out as:
+
+```
+# 3 rows, 3 columns, widths 1,2,1, RR 3
+c0,c1,c2
+0,256,254
+1,257,255
+2,258,0
+```
+
+Read back, the comment gives the widths and the repeat where `-w` and `-r`
+do not, and the names are passed over, so the text a table was written as
+reads back to that table. A negative value comes out as the unsigned
+number of the same bytes, 254 for -2 in one byte, and reads back to the
+same bytes.
+
+`org.dtx.Csv` is the same reader and writer as a library, and `Table`,
+`Dtx0`, `Dtx1` and `Dtx2` write a table a caller builds itself and read one
+out of a file.
+
+### Copies from the literal stream
+
+With `-copies` a match beyond the ring copies from the column's own literal
+stream, and that saves most at the small rings DTX2 reads through. Measured
+on a table of 512 rows repeating a pattern 37 rows long, at `N` of 64: the
+file goes from 1164 bytes to 272, and its image from 2792 to 1932.
+
+**The payload defines it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
+Write is the one tool that reads `-copies` and the packager takes the
+decoder the file needs. No packager has a flag for it.
+
+The flag is there because a decoder built without the copy code reads such
+a column wrongly and no ST4 data set defines which kind it is. Measured on the
+same table, a column packed with copies and read by a decoder without the
+copy code gives row 37 wrong, where the pattern first repeats past the
+ring. The other way round is safe: a decoder with the copy code reads a
+column without copies as the plain one does, at 14 instructions more over
+64 rows and 30 to 36 bytes more code (experiments.md).
 
 ## Package
 
@@ -168,53 +223,10 @@ contains a decoder state and a ring a column, so it runs to `NC` bytes
 and more; the
 tool prints the figure and the format block defines it.
 
-## Rewrite
-
-A DTX0 or DTX1 file into a DTX2 one. The table is the same under every
-variant (R1.3), so what comes out has the same rows, widths, `R` and `RR`
-as what went in.
-
-```
-bin/dtx-rewrite in.dtx out.dtx -k1 -m960 -pst4
-```
-
-| flag | gives |
-|---|---|
-| `-kK` | the unit every column is packed at: 1, 2 or 4, and `R` divides by it (R5.6). The default is 1 |
-| `-mN` | the ring in bytes, 1 to 65535 (R5.4). The default is 960 |
-| `-pPACKER` | as Write reads it |
-| `-copies[S]` | as Write reads it |
-
-Rewrite does not keep a packer of its own. `-p` names the one ST4's own
-repository builds, and a column reaches it as a file.
-
-Every column is packed with `-l65535` as well, which meets ST4_wrap's
-assumption 4: no operation longer than the 65535 units a 68000 decoder
-counts in a word.
-
-### Copies from the literal stream
-
-With `-copies` a match beyond the ring copies from the column's own literal
-stream, and that saves most at the small rings DTX2 reads through. Measured
-on a table of 512 rows repeating a pattern 37 rows long, at `N` of 64: the
-file goes from 1164 bytes to 272, and its image from 2792 to 1932.
-
-**The payload defines it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
-Write is the one tool that reads `-copies` and the packager takes the
-decoder the file needs. No packager has a flag for it.
-
-The flag is there because a decoder built without the copy code reads such
-a column wrongly and no ST4 data set defines which kind it is. Measured on the
-same table, a column packed with copies and read by a decoder without the
-copy code gives row 37 wrong, where the pattern first repeats past the
-ring. The other way round is safe: a decoder with the copy code reads a
-column without copies as the plain one does, at 14 instructions more over
-64 rows and 30 to 36 bytes more code (experiments.md).
-
 ## Release
 
-The four Go commands for six platforms, each containing the eight images, and
-the images themselves:
+The three Go commands for six platforms, each containing the eight images,
+and the images themselves:
 
 ```
 release/publish.sh [version]
@@ -317,5 +329,5 @@ string and builds every time:
 
 ```
 mvn -q compile exec:exec@write -Dargs="in.csv out.dtx -v2"
-mvn -q compile exec:exec@rewrite -Dargs="in.dtx out.dtx -k1"
+mvn -q compile exec:exec@write -Dargs="in.dtx out.dtx -k2 -copies"
 ```

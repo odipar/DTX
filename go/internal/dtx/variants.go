@@ -1,6 +1,10 @@
 package dtx
 
-import "fmt"
+import (
+	"fmt"
+
+	"dtx/internal/st4"
+)
 
 // WriteDtx0 gives table as a DTX0 file: R rows, each column 0
 // through column C minus one in order, with nothing between them.
@@ -95,7 +99,8 @@ func ReadDtx1(file []byte) (*Table, error) {
 	return NewTable(header.Rows, header.Repeat, header.Width, column)
 }
 
-// Read gives the table in a file, under either plain variant.
+// Read gives the table in a file, under any variant. A DTX2 file is unpacked
+// with the copy of ST4 carried in internal/st4.
 func Read(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
 	if err != nil {
@@ -106,8 +111,10 @@ func Read(file []byte) (*Table, error) {
 		return ReadDtx0(file)
 	case DTX1:
 		return ReadDtx1(file)
+	case DTX2:
+		return ReadDtx2(file)
 	default:
-		return nil, fmt.Errorf("variant %d is not read here", header.Variant)
+		return nil, fmt.Errorf("variant %d is not 0, 1 or 2", header.Variant)
 	}
 }
 
@@ -178,13 +185,109 @@ func WriteDtx2(t *Table, packer Packer, unit, ring int) ([]byte, error) {
 	return out, nil
 }
 
-// Dtx2From gives the DTX2 file of the table in a DTX0 or DTX1 file. The
-// table is the same under every variant (R1.3), so what comes back has the
-// same rows, widths, R and RR as what went in.
-func Dtx2From(plain []byte, packer Packer, unit, ring int) ([]byte, error) {
-	t, err := Read(plain)
+// Dtx2From gives the DTX2 file of the table in a DTX file of any variant.
+// The table is the same under every variant (R1.3), so what comes back has
+// the same rows, widths, R and RR as what went in, and a DTX2 file comes
+// back packed at the unit and ring given here.
+func Dtx2From(file []byte, packer Packer, unit, ring int) ([]byte, error) {
+	t, err := Read(file)
 	if err != nil {
 		return nil, err
 	}
 	return WriteDtx2(t, packer, unit, ring)
+}
+
+// Packed gives what a DTX2 payload defines: the ring, the unit, whether its
+// columns contain copies from the literal stream, and where each column's
+// data set begins in the payload.
+type Packed struct {
+	Ring   int // N
+	Unit   int // k
+	Copies bool
+	At     []int
+}
+
+// ReadPacked reads those out of a DTX2 payload, SPEC.md 2.3.
+//
+// It checks the data sets against it. Every set opens with $53 $34 $07 k, so
+// one compare against the payload's own k checks ST4's signature, its format
+// version and R5.2 at once.
+func ReadPacked(file []byte, header Header) (Packed, error) {
+	payload := header.Length
+	prefix := 4 + 4*header.Columns()
+	if len(file) < payload+prefix {
+		return Packed{}, fmt.Errorf("a payload of %d bytes is short of the %d"+
+			" of N, k, the flags and an offset a column",
+			len(file)-payload, prefix)
+	}
+	unit := int(file[payload+2])
+	out := Packed{
+		Ring:   GetWord(file, payload),
+		Unit:   unit,
+		Copies: file[payload+3]&CopiesFlag != 0,
+		At:     make([]int, header.Columns()),
+	}
+	signature := 0x53340700 + unit
+	for i := range out.At {
+		out.At[i] = GetLong(file, payload+4+4*i)
+		if out.At[i] < prefix || len(file) < payload+out.At[i]+4 {
+			return Packed{}, fmt.Errorf("column %d's data set begins at %d,"+
+				" outside the payload", i, out.At[i])
+		}
+		opens := GetLong(file, payload+out.At[i])
+		if opens != signature {
+			return Packed{}, fmt.Errorf("column %d's data set opens %08X and"+
+				" the payload defines %08X: an ST4 data set opens with S4,"+
+				" the format version 7 and the payload's own k",
+				i, opens, signature)
+		}
+	}
+	return out, nil
+}
+
+// ReadDtx2 gives the table in a DTX2 file, each column unpacked with the
+// copy of ST4 carried in internal/st4. A data set runs from its offset to
+// the next offset above it, or to the end of the file.
+//
+// It is an error where the file is not DTX2, a data set does not open with
+// the payload's own unit (R5.2), or a column unpacks to other than R times
+// its width.
+func ReadDtx2(file []byte) (*Table, error) {
+	header, err := ReadHeader(file)
+	if err != nil {
+		return nil, err
+	}
+	if header.Variant != DTX2 {
+		return nil, fmt.Errorf("variant %d is not DTX2", header.Variant)
+	}
+	packed, err := ReadPacked(file, header)
+	if err != nil {
+		return nil, err
+	}
+	column := make([][]byte, header.Columns())
+	for i := range column {
+		from := header.Length + packed.At[i]
+		to := len(file)
+		for _, other := range packed.At {
+			if begins := header.Length + other; begins > from && begins < to {
+				to = begins
+			}
+		}
+		set, err := st4.Read(file[from:to])
+		if err != nil {
+			return nil, fmt.Errorf("column %d: %v", i, err)
+		}
+		decoded, err := st4.Decode(set.Control, set.Literal, set.ByteOffsets,
+			set.WordOffsets, set.Unit, set.Size, set.Window, set.Rewind)
+		if err != nil {
+			return nil, fmt.Errorf("column %d: %v", i, err)
+		}
+		bytes := header.Rows * header.Width[i]
+		if len(decoded.Output) != bytes {
+			return nil, fmt.Errorf("column %d unpacks to %d bytes, not the %d"+
+				" of R rows at its width", i, len(decoded.Output), bytes)
+		}
+		column[i] = decoded.Output
+	}
+	return NewTable(header.Rows, header.Repeat, header.Width, column)
 }

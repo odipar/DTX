@@ -114,17 +114,19 @@ public final class Dtx {
     }
 
     /**
-     * The table in {@code file}, under either plain variant.
+     * The table in {@code file}, under any variant. A DTX2 file is unpacked
+     * with the copy of ST4 in this repository.
      *
-     * @throws IllegalArgumentException where the variant is not DTX0 or DTX1
+     * @throws IllegalArgumentException where the variant is not 0, 1 or 2
      */
     public static Table read(byte[] file) {
         Header header = header(file);
         return switch (header.variant()) {
             case DTX0 -> Dtx0.read(file);
             case DTX1 -> Dtx1.read(file);
+            case DTX2 -> Dtx2.read(file);
             default -> throw new IllegalArgumentException(
-                    "variant " + header.variant() + " is not read here");
+                    "variant " + header.variant() + " is not 0, 1 or 2");
         };
     }
 

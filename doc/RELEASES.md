@@ -9,7 +9,7 @@ it.
 `release/manifest.sh` the manifest in it:
 
 - one zip a platform, over six: Windows, macOS and Linux, each on x64 and
-  arm64. A zip contains the four tools as executables, and each executable
+  arm64. A zip contains the three tools as executables, and each executable
   contains the eight 68000 images, so a caller who takes one has the whole
   of what packaging needs
 - one zip of the eight images, one file a build inside it, for a caller

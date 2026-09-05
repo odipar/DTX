@@ -2,12 +2,15 @@ namespace Dtx;
 
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 
 /// <summary>
 /// A table out of comma separated text: one row a line, one value a column.
 ///
-/// <para>The first row with values gives C. A line that is blank, or
-/// whose first character other than a space is #, is not a row. A value is
+/// <para>The first row of numbers gives C. A line that is blank, or whose
+/// first character other than a space is #, is not a row, and neither is a
+/// line before the first row of numbers in which no cell is a number: a
+/// line of column names, or a line describing the table. A value is
 /// decimal, or hexadecimal where it opens with $, and negative where it
 /// opens with -.</para>
 ///
@@ -17,14 +20,37 @@ using System.Globalization;
 /// a signed column's values and an unsigned one's alike. DTX does not
 /// define more of a column than its width, so which of the two a column
 /// is, the caller defines elsewhere.</para>
+///
+/// <para>A table is written out the other way as well: a comment that gives
+/// the shape, a line of column names, then one row a line, each value the
+/// unsigned number its bytes give. Read back, the comment gives the widths
+/// and the repeat where the caller does not give them, and the names are
+/// passed over, so the text a table was written as reads back to that
+/// table.</para>
 /// </summary>
 public static class Csv
 {
-    /// <summary>The rows of text at the given widths, repeating at R.</summary>
+    /// <summary>
+    /// The rows of text, each column at the width the first comment gives
+    /// or else the narrowest that takes every value of it, repeating at the
+    /// row the first comment gives or else at R.
+    /// </summary>
+    public static Table TableAt(string text)
+    {
+        List<long[]> row = Rows(text);
+        int repeat = Repeat(text);
+        return Build(row, Widths(text), repeat < 0 ? row.Count : repeat);
+    }
+
+    /// <summary>
+    /// The rows of text at the given widths, repeating at the row the first
+    /// comment gives or else at R.
+    /// </summary>
     public static Table TableAt(string text, int[] width)
     {
         List<long[]> row = Rows(text);
-        return Build(row, width, row.Count);
+        int repeat = Repeat(text);
+        return Build(row, width, repeat < 0 ? row.Count : repeat);
     }
 
     /// <summary>The rows of text at the given widths, repeating at repeat.</summary>
@@ -32,10 +58,111 @@ public static class Csv
             Build(Rows(text), width, repeat);
 
     /// <summary>
-    /// The narrowest width of 1, 2 and 4 that takes every value of each
-    /// column of text.
+    /// The widths the first comment of text gives, or else the narrowest
+    /// width of 1, 2 and 4 that takes every value of each column.
     /// </summary>
-    public static int[] Narrowest(string text) => Narrowest(Rows(text));
+    public static int[] Widths(string text)
+    {
+        string given = Comment(text, "widths ");
+        if (given.Length == 0)
+        {
+            return Narrowest(Rows(text));
+        }
+        string[] cell = given.Split(',');
+        int[] width = new int[cell.Length];
+        for (int i = 0; i < cell.Length; i++)
+        {
+            width[i] = int.Parse(cell[i].Trim(), CultureInfo.InvariantCulture);
+        }
+        return width;
+    }
+
+    /// <summary>
+    /// The repeat the first comment of text gives, or -1 where it does not
+    /// give one.
+    /// </summary>
+    public static int Repeat(string text)
+    {
+        string given = Comment(text, "RR ");
+        return given.Length == 0
+                ? -1 : int.Parse(given, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// table as text: a comment giving R, C, the widths and RR; a line of
+    /// column names, c0 onward; then one row a line, one value a column,
+    /// each the unsigned number its bytes give. TableAt(text) reads it back
+    /// to the same table.
+    /// </summary>
+    public static string Text(Table table)
+    {
+        StringBuilder out_ = new();
+        out_.Append("# ").Append(table.Rows).Append(" rows, ")
+                .Append(table.Columns).Append(" columns, widths ");
+        for (int i = 0; i < table.Columns; i++)
+        {
+            out_.Append(i == 0 ? "" : ",").Append(table.Width(i));
+        }
+        out_.Append(", RR ").Append(table.Repeat).Append('\n');
+        for (int i = 0; i < table.Columns; i++)
+        {
+            out_.Append(i == 0 ? "c" : ",c").Append(i);
+        }
+        out_.Append('\n');
+        for (int r = 0; r < table.Rows; r++)
+        {
+            for (int i = 0; i < table.Columns; i++)
+            {
+                int width = table.Width(i);
+                out_.Append(i == 0 ? "" : ",")
+                        .Append(Get(table.Column(i), r * width, width));
+            }
+            out_.Append('\n');
+        }
+        return out_.ToString();
+    }
+
+    /// <summary>
+    /// What follows key in the first comment of text, up to a comma followed
+    /// by a space or the end of the line, or empty where the text does not
+    /// open with a comment giving it. The comment is the one Text(table)
+    /// writes: <c># 3 rows, 3 columns, widths 1,2,1, RR 3</c>.
+    /// </summary>
+    private static string Comment(string text, string key)
+    {
+        foreach (string line in text.Split('\n'))
+        {
+            string read = line.Trim();
+            if (read.Length == 0)
+            {
+                continue;
+            }
+            if (!read.StartsWith('#'))
+            {
+                return "";
+            }
+            int at = read.IndexOf(key, StringComparison.Ordinal);
+            if (at < 0)
+            {
+                return "";
+            }
+            string rest = read[(at + key.Length)..];
+            int end = rest.IndexOf(", ", StringComparison.Ordinal);
+            return (end < 0 ? rest : rest[..end]).Trim();
+        }
+        return "";
+    }
+
+    /// <summary>The unsigned number of width bytes at at.</summary>
+    private static long Get(byte[] in_, int at, int width)
+    {
+        long value = 0;
+        for (int i = 0; i < width; i++)
+        {
+            value = value << 8 | in_[at + i];
+        }
+        return value;
+    }
 
     private static Table Build(List<long[]> row, int[] width, int repeat)
     {
@@ -84,6 +211,11 @@ public static class Csv
                 continue;
             }
             string[] cell = read.Split(',');
+            if (columns < 0 && !ANumberAmong(cell))
+            {
+                // a line of column names, or one describing the table
+                continue;
+            }
             if (columns < 0)
             {
                 columns = cell.Length;
@@ -109,6 +241,38 @@ public static class Csv
             throw new ArgumentException("the text does not contain a row");
         }
         return out_;
+    }
+
+    /// <summary>
+    /// Whether a cell of the line is a number, as Value reads one.
+    /// </summary>
+    private static bool ANumberAmong(string[] cell)
+    {
+        foreach (string one in cell)
+        {
+            string read = one.Trim();
+            bool hex = read.StartsWith('$')
+                    || read.StartsWith("-$", StringComparison.Ordinal);
+            string digits = read.StartsWith("-$", StringComparison.Ordinal)
+                    ? read[2..] : hex || read.StartsWith('-') ? read[1..] : read;
+            if (digits.Length == 0)
+            {
+                continue;
+            }
+            bool number = true;
+            foreach (char c in digits)
+            {
+                if (hex ? !Uri.IsHexDigit(c) : c < '0' || c > '9')
+                {
+                    number = false;
+                }
+            }
+            if (number)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>The narrowest width each column of row takes.</summary>

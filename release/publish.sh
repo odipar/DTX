@@ -23,7 +23,7 @@ REPO=$(pwd)
 OUT=${OUT:-dist}
 RMAC=${RMAC:-rmac}
 TARGETS=${TARGETS:-"win-x64 win-arm64 osx-x64 osx-arm64 linux-x64 linux-arm64"}
-TOOLS="dtx-write dtx-rewrite dtx-package dtx-blobs"
+TOOLS="dtx-write dtx-package dtx-blobs"
 
 # The version names the images and the zips. The pom is where it is written
 # down, and this reads the text rather than running anything.
