@@ -126,8 +126,8 @@ func TestTheFormatBlockDefinesWhatTheTableFixes(t *testing.T) {
 	}
 }
 
-// The state block is the head and one cursor at every width and every C,
-// under DTX0 and DTX1 alike: one width covers the whole table, so one cursor
+// The state block is the head and one pointer at every width and every C,
+// under DTX0 and DTX1 alike: one width covers the whole table, so one pointer
 // walks every column of it.
 func TestTheStateBlockIsTheSameAtEveryWidth(t *testing.T) {
 	for _, width := range []int{1, 2, 4} {
@@ -229,7 +229,7 @@ func TestAPackedColumnTableContainsAStreamRecordAColumn(t *testing.T) {
 	}
 }
 
-// A plain column table is empty: every column is one width, so a cursor and
+// A plain column table is empty: every column is one width, so a pointer and
 // a stride reach them all.
 func TestAPlainColumnTableIsEmpty(t *testing.T) {
 	for _, variant := range []int{dtx.DTX0, dtx.DTX1} {

@@ -21,8 +21,8 @@
 ; the build the table's header names.
 ;
 ; DTX1 lays a column's values together and every column is the same length,
-; so the columns stand at one stride and a read walks them with one cursor:
-; the value of column i for the row the clock stands on is the cursor plus i
+; so the columns stand at one stride and a read walks them with one pointer:
+; the value of column i for the row the cursor stands on is the pointer plus i
 ; strides. The image does not have a column table or an entry a column: the
 ; stride, the row's bytes and C are arithmetic on R, C and the width.
 ;
@@ -71,7 +71,7 @@ DTX_payload:
 
 ; -----------------------------------------------------------------------------
 ; DTX_init. It installs R, RR, the count a read walks and the stride between
-; two columns, and leaves the cursor a row below row 0.
+; two columns, and leaves the pointer a row below row 0.
 
 DTX_init:
         move.l  #-1,DTX_ROW(a0)
@@ -110,14 +110,14 @@ DTX_init:
         DTX_INSTALL_L d2,read_stride
         DTX_INSTALL_L d2,take_stride
 
-; The cursor a row below row 0, so the advance into row 0 steps like any
+; The pointer a row below row 0, so the advance into row 0 steps like any
 ; other advance.
         suba.w  #DTX_WIDTH,a1
-        move.l  a1,DTX_CURSOR(a0)
+        move.l  a1,DTX_POINTER(a0)
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_jump. The cursor is the payload plus the row times the width, which is
+; DTX_jump. The pointer is the payload plus the row times the width, which is
 ; a shift a width.
 
 DTX_jump:
@@ -131,7 +131,7 @@ DTX_jump:
         .endif
         bsr     DTX_payload
         adda.l  d1,a1
-        move.l  a1,DTX_CURSOR(a0)
+        move.l  a1,DTX_POINTER(a0)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -152,7 +152,7 @@ advance_end:
         rts
 advance_next:
         move.l  d0,DTX_ROW(a0)
-        addq.l  #DTX_WIDTH,DTX_CURSOR(a0)
+        addq.l  #DTX_WIDTH,DTX_POINTER(a0)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -163,7 +163,7 @@ advance_next:
 DTX_read:
         tst.l   DTX_ROW(a0)
         bmi.s   read_none
-        movea.l DTX_CURSOR(a0),a2
+        movea.l DTX_POINTER(a0),a2
 read_count:
         move.w  #0,d0                   ; installed: C, less one
 read_loop:
@@ -180,7 +180,7 @@ read_none:
 DTX_take:
         tst.l   DTX_ROW(a0)
         bmi.w   DTX_advance             ; no row: step to row 0 without a write
-        movea.l DTX_CURSOR(a0),a2
+        movea.l DTX_POINTER(a0),a2
 take_count:
         move.w  #0,d0                   ; installed: C, less one
 take_loop:
@@ -208,7 +208,7 @@ take_over_end:
         rts
 take_next:
         move.l  d0,DTX_ROW(a0)
-        addq.l  #DTX_WIDTH,DTX_CURSOR(a0)
+        addq.l  #DTX_WIDTH,DTX_POINTER(a0)
         rts
 
 ; -----------------------------------------------------------------------------

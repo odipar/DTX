@@ -197,8 +197,9 @@ DTX_store:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_seed. Every decoder seeded, every ring filled with P rows, the cursor a
-; row below row 0. Init takes it, and so does a jump that runs from row 0.
+; DTX_seed. Every decoder seeded, every ring filled with P rows, the read
+; pointer a row below row 0. Init takes it, and so does a jump that runs
+; from row 0.
 ;
 ; One loop over the columns. ST4 clobbers a3, so where the column stands is
 ; worked out again after every call into it.
@@ -232,13 +233,13 @@ seed_column:
         cmp.w   DTX_CFIG(a6),d4
         bcs.s   seed_column
 
-; The cursor a row below column 0's first row, so the advance into row 0
+; The read pointer a row below column 0's first row, so the advance into row 0
 ; steps like any other advance.
         movea.l a6,a1
         adda.l  DTX_RINGS(a6),a1
         move.l  a1,d0
         subq.l  #DTX_WIDTH,d0
-        move.l  d0,DTX_CURSOR(a6)
+        move.l  d0,DTX_POINTER(a6)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -288,21 +289,21 @@ DTX_init:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_step. One row: the cursor moves, the column whose turn it is is
+; DTX_step. One row: the read pointer moves, the column whose turn it is is
 ; refilled, and the turn steps.
 
 DTX_step:
-        move.l  DTX_CURSOR(a6),d0
+        move.l  DTX_POINTER(a6),d0
         addq.l  #DTX_WIDTH,d0
         move.l  a6,d1
-        add.l   DTX_RINGS(a6),d1        ; column 0's ring, where the cursor is
+        add.l   DTX_RINGS(a6),d1        ; column 0's ring, the pointer's own
         move.l  d1,d2
         add.l   DTX_NFIG(a6),d2         ; one past its last byte
         cmp.l   d2,d0
         bne.s   .kept
         move.l  d1,d0
 .kept:
-        move.l  d0,DTX_CURSOR(a6)
+        move.l  d0,DTX_POINTER(a6)
 
 ; The refill of the row's turn, which a jump and an advance reach through
 ; the step above. At the turn's wrap a period's rows join the rows decoded,
@@ -402,12 +403,12 @@ DTX_advance:
 ; loop over the columns: every ring is N bytes, so column i's value for this
 ; row stands i rings past column 0's.
 ;
-; A read does not move a cursor, refill or decode.
+; A read does not move a pointer, refill or decode.
 
 DTX_read:
         tst.l   DTX_ROW(a0)
         bmi.s   read_none
-        movea.l DTX_CURSOR(a0),a2
+        movea.l DTX_POINTER(a0),a2
 read_count:
         move.w  #0,d0                   ; installed: C, less one
 read_loop:
@@ -426,7 +427,7 @@ read_none:
 DTX_take:
         tst.l   DTX_ROW(a0)
         bmi.w   DTX_advance             ; no row: step to row 0 without a write
-        movea.l DTX_CURSOR(a0),a2
+        movea.l DTX_POINTER(a0),a2
 take_count:
         move.w  #0,d0                   ; installed: C, less one
 take_loop:

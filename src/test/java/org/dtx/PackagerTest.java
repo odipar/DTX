@@ -69,8 +69,8 @@ final class PackagerTest {
 
     @Test
     void theStateBlockIsTheSameAtEveryWidth() {
-        // One width covers the whole table, so one cursor walks every column
-        // of it: the block is the head and that cursor at each of the three
+        // One width covers the whole table, so one pointer walks every column
+        // of it: the block is the head and that pointer at each of the three
         // widths, at any C, and under DTX0 and DTX1 alike.
         for (int width : new int[] {1, 2, 4}) {
             Table one = Csv.table("1\n2\n", width);
@@ -88,7 +88,7 @@ final class PackagerTest {
     void theFiguresDoNotDefineAMacro() {
         // A template no longer takes a list of macro invocations, one a
         // column: under DTX2 the column table defines what each of them
-        // defined and one loop reads it, and under DTX0 and DTX1 a cursor
+        // defined and one loop reads it, and under DTX0 and DTX1 a pointer
         // and a stride walk every column. So the figures are equates, and
         // the code they reach does not move with C.
         for (String out : new String[] {Packager.table(table(Dtx.DTX1, 2)),
@@ -124,7 +124,7 @@ final class PackagerTest {
 
     @Test
     void aPlainColumnTableIsEmpty() {
-        // Every column is one width, so a cursor and a stride reach them
+        // Every column is one width, so a pointer and a stride reach them
         // all: a plain read is arithmetic on R, C and the width, and the
         // image is the code and then the table's bytes.
         for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
@@ -227,7 +227,7 @@ final class PackagerTest {
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
         assertEquals(56, Packager.decoders(header),
-                "the decoder states follow the cursor, the payload, the fill,"
+                "the decoder states follow the pointer, the payload, the fill,"
                         + " C, the rings and the four figures, where"
                         + " 68k/DTX2.S puts them: DTX_DECODERS equ 56");
         assertEquals(56 + 32 * 2, Packager.ring(header),

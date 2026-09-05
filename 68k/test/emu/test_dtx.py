@@ -430,7 +430,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
         one.append((m.row(got["a1"], row_bytes), got["a1"]))
         want_row = r + 1 if r + 1 < rows else (rr if rr < rows else 0xFFFFFFFF)
         assert got["d0"] == want_row, \
-            "take at row %d left the clock on %d, not %d" \
+            "take at row %d left the cursor on %d, not %d" \
             % (r, got["d0"], want_row)
     assert one == two, "a take gives what a read and an advance give"
 

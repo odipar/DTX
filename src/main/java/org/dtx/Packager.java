@@ -29,7 +29,7 @@ public final class Packager {
     static final int TURN = 4;
     static final int DECODED = 8;
     static final int PARK = 12;
-    static final int CURSOR = 24;
+    static final int POINTER = 24;
 
     /** Where it stands: behind the six slots. */
     static final int FORMAT_AT = 24;
@@ -53,8 +53,8 @@ public final class Packager {
     /** What a packed reader's state block contains before its decoder states. */
     static final int PACKED_HEAD = 56;
 
-    /** The state block DTX0 and DTX1 take: the head, and one cursor. */
-    static final int PLAIN = CURSOR + 4;
+    /** The state block DTX0 and DTX1 take: the head, and one pointer. */
+    static final int PLAIN = POINTER + 4;
 
     private Packager() {
     }
@@ -133,7 +133,7 @@ public final class Packager {
      * The state block a plain reader of this table takes, in bytes.
      *
      * <p>The same under DTX0 and DTX1, and the same at every {@code C}:
-     * every column is one width, so one cursor walks them all.
+     * every column is one width, so one pointer walks them all.
      */
     public static int stateBytes(Dtx.Header header) {
         return PLAIN;
@@ -207,7 +207,7 @@ public final class Packager {
                 .append(equ("DTX_TURN", TURN))
                 .append(equ("DTX_DECODED", DECODED))
                 .append(equ("DTX_PARK", PARK))
-                .append(equ("DTX_CURSOR", CURSOR))
+                .append(equ("DTX_POINTER", POINTER))
                 .append('\n')
                 .append(equ("DTX_WIDTH", width))
                 .append(equ("DTX_ROWBYTES", rowBytes))
@@ -240,7 +240,7 @@ public final class Packager {
     static byte[] columnTable(byte[] file) {
         Dtx.Header header = Dtx.header(file);
         if (header.variant() != Dtx.DTX2) {
-            // Every column is one width, so a cursor and a stride walk them
+            // Every column is one width, so a pointer and a stride walk them
             // all: what a plain read takes is arithmetic on R, C and the
             // width, and no column table is written.
             return new byte[0];

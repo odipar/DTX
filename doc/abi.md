@@ -32,8 +32,8 @@ ring and no read ever decodes.
 
 Terms are the glossary's. This document adds four, and the glossary takes
 them in the change that adds this file (R0.8): **state block**, what a
-caller supplies and passes back; **cursor**, the address in a ring of the
-row the clock stands on; **turn**, the column a row refills; **period**,
+caller supplies and passes back; **pointer**, the address in a ring of the
+row the cursor stands on; **turn**, the column a row refills; **period**,
 `P`, the rows between one column's refills.
 
 ---
@@ -117,14 +117,14 @@ frame.
 | `DTX_jump` | `a0`, `d0.l` the row | `d0.l` that row | d0-d5, a0-a5 |
 | `DTX_advance` | `a0` | `d0.l` the row, or $FFFFFFFF | d0-d5, a0-a5 |
 | `DTX_read` | `a0`, `a1` where the row goes | `a1` one past the last byte | d0-d1, a1-a4 |
-| `DTX_take` | `a0`, `a1` where the row goes | `a1` one past the last byte, `d0.l` the row the clock now stands on, or $FFFFFFFF | d0-d5, a1-a5 |
+| `DTX_take` | `a0`, `a1` where the row goes | `a1` one past the last byte, `d0.l` the row the cursor now stands on, or $FFFFFFFF | d0-d5, a1-a5 |
 
 ### 0. `DTX_init`, image+0
-Seeds the block. The clock does not stand on a row, so the first advance gives
-row 0 (terminology.md).
+Seeds the block. The cursor does not stand on a row, so the first advance
+gives row 0 (terminology.md).
 
-Under DTX0 it writes one cursor, the payload minus the row's bytes. Under
-DTX1 it writes one cursor, the payload minus the width. With the cursor a
+Under DTX0 it writes one pointer, the payload minus the row's bytes. Under
+DTX1 it writes one pointer, the payload minus the width. With the pointer a
 row below row 0, the advance from before row 0 to row 0 steps like any
 other advance.
 
@@ -132,7 +132,7 @@ other advance.
 forms the five pointers ST4_init takes, calls it, and then makes one
 `ST4_resume` of `P` rows into that column's ring, so every ring contains
 `P` rows before any row is read. It stores the decoder's eight longs in
-the column's decoder state, sets the turn to 0, and leaves the cursor a
+the column's decoder state, sets the turn to 0, and leaves the pointer a
 row below row 0 of column 0's ring.
 
 After that preload a read alternates between the streams and does not touch a
@@ -161,31 +161,31 @@ prints them as it writes the image, the state block's bytes among them.
 
 ### 2. `DTX_jump`, image+8
 
-The clock stands on the row given, so a read gives it and the next
+The cursor stands on the row given, so a read gives it and the next
 advance gives the row after it.
 
-Under DTX0 the cursor is the payload plus the row times the row's bytes.
+Under DTX0 the pointer is the payload plus the row times the row's bytes.
 Under DTX1 it is the payload plus the row times the width, a shift and an
 add. Under DTX2 a jump forward runs the whole of the advance's body
-once a row up to the target: the cursor step and its wrap, the refill of the
+once a row up to the target: the pointer step and its wrap, the refill of the
 row's turn, the turn step and the rows decoded. It leaves every ring, every
 write pointer and the turn where advancing there would leave them. Where the
-target is at or below the row standing, or the clock does not stand on a row,
+target is at or below the row standing, or the cursor does not stand on a row,
 it seeds and fills every ring afresh, as init does, and runs forward from row
 0. No checkpoints, so a backward jump costs the target row and not the
 distance.
 
-Under DTX2 the cursor stands in column 0's ring, at the row modulo the
+Under DTX2 the pointer stands in column 0's ring, at the row modulo the
 rows a ring contains, times the width. Under DTX1 it stands in the
 payload, and a ring is absent.
 
 ### 3. `DTX_advance`, image+12
 
-Steps the clock. The move that leaves `d0` sets N and Z, so `bmi` after
+Steps the cursor. The move that leaves `d0` sets N and Z, so `bmi` after
 the call.
 
-It adds the row's bytes to the cursor under DTX0, and the width to it
-under DTX1 and DTX2. A cursor that reaches the ring end goes back to the
+It adds the row's bytes to the pointer under DTX0, and the width to it
+under DTX1 and DTX2. A pointer that reaches the ring end goes back to the
 ring start; under DTX0 and DTX1 a ring is absent and nothing wraps.
 **Under DTX2 it then refills the column whose turn it is**, one column
 a row: column `j` on the row where the row number modulo `P` is `j`. A turn
@@ -208,22 +208,22 @@ contain a counter; YMX wraps the same way.
 
 The advance from row `R` minus one where `RR` is below `R` is a jump to
 `RR`, since it is one. Where `RR` equals `R` it gives $FFFFFFFF, leaves
-the clock on row `R` minus one and does not move a cursor, and a further
+the cursor on row `R` minus one and does not move a pointer, and a further
 advance gives $FFFFFFFF again: the end is sticky, and a read after it still
 gives row `R` minus one.
 
 ### 4. `DTX_read`, image+16
-Writes the row the clock stands on, column 0 first, each value at the
+Writes the row the cursor stands on, column 0 first, each value at the
 table's width and nothing between them: the row as DTX0 lays it out
 (SPEC.md 2.1).
-Where the clock does not stand on a row it does not write and gives back `a1`
-as it came.  Read does not move a cursor, refill or decode, so a second read
+Where the cursor does not stand on a row it does not write and gives back `a1`
+as it came.  Read does not move a pointer, refill or decode, so a second read
 of one row writes the same bytes. It leaves `a0` where it came, so a caller
 that reads and then steps has the block in `a0` through both.
 
-Under DTX0 it is one run of bytes from the cursor, at the widest move the
+Under DTX0 it is one run of bytes from the pointer, at the widest move the
 row's bytes take. Under DTX1 and DTX2 it is one loop of `C` turns: a value
-from the cursor, then a stride to the next column's. The stride is `N`
+from the pointer, then a stride to the next column's. The stride is `N`
 under DTX2, where every ring is that size, and `R` times the width rounded
 up to a word under DTX1, where every column is that long. Neither moves
 with the column, so the loop is three instructions and the image does not
@@ -235,10 +235,10 @@ width of 2 or 4 both sides of the move are on that width's boundary and a
 68000 takes it whole. At a width of 1 no boundary applies.
 
 ### 5. `DTX_take`, image+20
-A read and an advance in one call: it writes the row the clock stands on, then
-steps the clock, and gives back what each of them gives. Where the clock does
-not stand on a row it does not write and steps to row 0, as an advance alone
-does.
+A read and an advance in one call: it writes the row the cursor stands on,
+then steps the cursor, and gives back what each of them gives. Where the
+cursor does not stand on a row it does not write and steps to row 0, as an
+advance alone does.
 
 The two calls share their registers. `a0` is the block through the read,
 so the step reaches it without loading it again, and under DTX0 the
@@ -249,7 +249,7 @@ Taking a row costs one call rather than two, and a caller's loop is
 
         bsr     DTX_advance     ; onto row 0
     .row:
-        bsr     DTX_take        ; the row, and the clock steps
+        bsr     DTX_take        ; the row, and the cursor steps
         bpl.s   .row
 
 
@@ -264,14 +264,14 @@ image. The block stands on a long.
 
 | at | bytes | contains |
 |---|---|---|
-| +0 | 4 | the row the clock stands on, or $FFFFFFFF |
+| +0 | 4 | the row the cursor stands on, or $FFFFFFFF |
 | +4 | 2 | the turn, 0 to `P` minus one. Zero under DTX0 and DTX1 |
 | +6 | 2 | zero |
 | +8 | 4 | the rows decoded. Zero under DTX0 and DTX1 |
 | +12 | 12 | the caller's `a6`, `d6` and `d7`, parked for a DTX2 refill |
-| +24 | 4 | the cursor, under every variant |
+| +24 | 4 | the pointer, under every variant |
 
-One cursor, because every column is one width: under DTX1 and DTX2 the
+One pointer, because every column is one width: under DTX1 and DTX2 the
 columns lie at one stride and a read walks them from it. Under DTX2 the
 block contains more, because the code contains less: `R`, `C`, `RR`, `P`
 and `N` reach a refill out of it rather than as immediates, and so does
@@ -317,8 +317,8 @@ alone would decode into another column's ring.
 
 The rings follow, `N` bytes a column at a stride of `N`, which is R5.5's
 one size and one stride. Column `i`'s ring is the ring area plus `i` times
-`N`, and its value for the row the clock stands on is the cursor plus the
-same, so one cursor reaches every column.
+`N`, and its value for the row the cursor stands on is the pointer plus the
+same, so one pointer reaches every column.
 
 Sizes: DTX0 and DTX1 28 bytes, at every width and every `C`. DTX2 56 plus
 32`C` plus `NC`: a decoder state and a ring a column.
@@ -354,7 +354,7 @@ over the row the read on that row is about to take.
   divides `N` as well, which is ST4_wrap's assumption 1
 
 A read walks the rings by adding a stride rather than by a displacement
-off a cursor, so no rule bounds `C` beyond R6.2's 256: a table of 256
+off a pointer, so no rule bounds `C` beyond R6.2's 256: a table of 256
 columns at any `N` the format takes packages.
 
 **Why ST4_wrap and not ST4_ring.** ST4_wrap decodes a fixed budget a call and
@@ -376,9 +376,9 @@ package where no such `P` stands below `R`.
 jump backward, so it seeds every ring again and runs forward from row 0: a
 table that repeats costs `RR` rows of decoding once a pass. ST4 can pack a
 data set to loop where the table does, with `st4 -r`, and YMX packs its
-streams that way so that a repeat costs one cursor reload; the packager does
+streams that way so that a repeat costs one pointer reload; the packager does
 not yet, and under it a repeat is a jump.  **What advance does that read does
-not.** Advance steps the clock, moves the cursors, refills the column whose
+not.** Advance steps the cursor, moves the pointers, refills the column whose
 turn it is, and takes the repeat at `R` to `RR`. Read writes the caller's row
 bytes, and only those.
 
@@ -515,7 +515,7 @@ decoding, spread flat. A row takes one `ST4_resume` of one column rather
 than `C` of them on one row in `P`. Given up: the rings are 2`P` rows a
 column rather than one group, and `P` is at least `C`.
 
-**The block is the caller's, not the image's.** Two clocks on one table
+**The block is the caller's, not the image's.** Two cursors on one table
 have two places, and what a reader keeps of a row stays out of the code.
 Given up: `a0` is the block on every call.
 
@@ -531,9 +531,9 @@ ring start itself, which is one compare against the ring end after each
 refill and no counter anywhere. The budget is fixed except on the last
 refill of a column, and the rows decoded shortens that one.
 
-**One cursor a width class.** Column `i` of a class stands at the class
-cursor plus `i` times `N`, so a read is `C` moves off at most three
-address registers. Given up: three cursors rather than one, the price of
+**One pointer a width class.** Column `i` of a class stands at the class
+pointer plus `i` times `N`, so a read is `C` moves off at most three
+address registers. Given up: three pointers rather than one, the price of
 widths of 1, 2 and 4 over YMX's single byte a stream.
 
 **`movem` of the whole decoder state.** Reaching it through a

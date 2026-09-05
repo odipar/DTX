@@ -93,8 +93,8 @@ before what it describes, and what things are called comes before both.
   further than `N`, so a ring of `N` bytes is enough for any of them, and
   every data set was packed for the `N` the payload defines.
 - **R5.5** A reader's rings are all that one size, so they stand at a
-  fixed stride from one another and one cursor arithmetic runs every
-  column. Every column is one width (R6.3), so one cursor does: column
+  fixed stride from one another and one pointer arithmetic runs every
+  column. Every column is one width (R6.3), so one pointer does: column
   `i`'s value for a row stands `i` rings past column 0's.
 - **R5.6** `R` times the width divides by `k`. ST4 packs whole units, so a
   column that is not a whole number of them unpacks to more bytes than it

@@ -7,10 +7,9 @@ same change (requirements.md, R0.6 to R0.9).
 | term | what it is | explained in |
 |---|---|---|
 | `C` | The table's column count. | terminology.md, tables, rows and columns |
-| clock | What advances to a next row and has its own place in the table. | terminology.md, tables, rows and columns |
 | column | One field of a row, `W` bytes wide. | terminology.md, tables, rows and columns |
 | column table | What stands behind a packaged reader's code and before its table: under DTX2 one stream record a column, four longs. DTX0 and DTX1 do not have one. | abi.md 1 |
-| cursor | The address, in a ring or in a payload, of the row a packaged reader's clock stands on. | abi.md 3 |
+| cursor | What advances to a next row and has its own place in the table. | terminology.md, tables, rows and columns |
 | data set | One column of a DTX2 payload, packed with ST4: its own ST4 header, and the length of what it unpacks to. | SPEC.md 2.3 |
 | decoder state | The eight longs a column's decoder is saved in between refills, 32 bytes of a packaged DTX2 reader's state block. | abi.md 3 |
 | DTX | This format: a table of `R` rows and `C` columns. The table is data, and a reader of it is code. | README.md |
@@ -23,6 +22,7 @@ same change (requirements.md, R0.6 to R0.9).
 | `N` | The first two bytes of a DTX2 payload: how big a ring is. | SPEC.md 2.3 |
 | payload | What follows the header: a table's rows in bytes, and in DTX2 the `N`, `k` and offsets that reach them. | SPEC.md 2 |
 | period | `P`, the rows between one column's refills in a packaged DTX2 reader. | abi.md 4 |
+| pointer | The address, in a ring or in a payload, of the row a packaged reader's cursor stands on. | abi.md 3 |
 | `R` | The table's row count, of the rows in it. | terminology.md, tables, rows and columns |
 | reader | What takes rows out of a table. | terminology.md, tables, rows and columns |
 | ring | The bytes of a column a reader has at a time, `N` of them, in place of the unpacked column. | SPEC.md 2.3 |
