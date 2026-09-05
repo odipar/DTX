@@ -27,8 +27,8 @@ func HeaderLength(columns int) int {
 	return Align(14+columns, 4)
 }
 
-// Header is what a file's header states. Length is what the header runs to,
-// which is the payload's first byte.
+// Header holds what a file's header states. Length is the header's end, the
+// payload's first byte.
 type Header struct {
 	Variant int
 	Rows    int // R

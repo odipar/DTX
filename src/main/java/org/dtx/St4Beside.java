@@ -10,10 +10,10 @@ import java.util.List;
 /**
  * A {@link Packer} that runs an ST4 packer beside this one.
  *
- * <p>{@link St4} packs with the copy this repository holds, and is what a
- * tool takes where none is named. This runs another: an ST4 build of its
- * own, named by {@code -p}, which is how a packer newer than the copy here
- * is used. The unit and the ring reach it as {@code -kK} and {@code -mN},
+ * <p>{@link St4} packs with the copy this repository holds, and a tool
+ * takes it where none is named. This runs another: an ST4 build of its
+ * own, named by {@code -p}, so a packer newer than the copy here is used
+ * through this. The unit and the ring reach it as {@code -kK} and {@code -mN},
  * where {@code -m} counts units and {@code N} is in bytes.
  *
  * <p>Every column is packed with {@code -l65535}, which holds ST4_wrap's

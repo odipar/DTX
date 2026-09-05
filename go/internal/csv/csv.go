@@ -159,7 +159,7 @@ func value(cell string, line, column int) (int64, error) {
 	}
 }
 
-// fits says whether value lies from -2^(8W-1) to 2^(8W)-1.
+// fits states whether value lies from -2^(8W-1) to 2^(8W)-1.
 func fits(value int64, width int) bool {
 	return value >= -(int64(1)<<(8*width-1)) && value <= int64(1)<<(8*width)-1
 }

@@ -15,9 +15,9 @@ the column table below, and init writes the few of them a loop counts
 with into the instructions that take them. So one variant assembles to
 one image, byte for byte, at any number of rows or columns, and only the
 decoder built into a DTX2 image moves with what packed it: `k` and the
-copy code are ST4's own build parameters. What that costs is a read only
-image: the code writes to itself at init, so it stands in RAM and a 68030
-caller flushes the instruction cache after `DTX_init`.
+copy code are ST4's own build parameters. The cost is where the image
+stands: the code writes to itself at init, so it stands in RAM and not in
+ROM, and a 68030 caller flushes the instruction cache after `DTX_init`.
 
 Under DTX2 the reader follows YMX's shape, which plays twenty-five packed
 streams a frame at a time on the same hardware: every column decodes
@@ -71,8 +71,8 @@ the widths at that plus 14. The variant at +3 of that header is the one
 byte this block repeats, and the packager writes it from there and fails
 the package where the two differ.
 
-The block states no cycle figure. What a call costs is measured on the
-emitted code under emulation and stated in this document, not in the
+The block states no cost figure. What a call costs is measured on the
+emitted code under emulation and stated in performance.md, not in the
 image.
 
 The two offsets are fields rather than displacements the assembler works
@@ -145,7 +145,7 @@ row 0 (terminology.md).
 
 Under DTX0 it writes one cursor holding the payload minus the row's
 bytes. Under DTX1 it writes one cursor a width class, each holding that
-class's base minus its width. The cursor a row below row 0 is why the
+class's base minus its width. With the cursor a row below row 0, the
 advance from no row to row 0 steps like any other advance.
 
 **Under DTX2 it fills every ring before it returns.** For each column it
@@ -216,13 +216,13 @@ ring and no wrap.
 
 **Under DTX2 it then refills the column whose turn it is**, one column a
 row: column `j` on the row where the row number modulo `P` is `j`. A turn
-past `C` minus one has no column and does nothing, which is how a `P`
-above `C` costs those rows nothing.
+past `C` minus one has no column and does nothing, so a `P` above `C`
+costs those rows nothing.
 
 The refill is one `ST4_resume` into that column's ring. Its budget is `P`
 times `W[j]` divided by `k` units, except for the call that would reach
 past the data set: the block holds the rows decoded, and where fewer than
-`P` rows are left the budget is what is left, and where none are left the
+`P` rows are left the budget is the rows left, and where none are left the
 refill does not happen. Without that rule every column takes one call
 past its end marker, which ST4_wrap's assumption 5 forbids.
 
@@ -230,7 +230,7 @@ After the call the write pointer is compared with the column's ring end
 and taken back to the ring start where the two are equal. `N` divides by
 `P` times `W[j]`, so a full refill lands exactly on the end or short of
 it, and the compare is exact. No call is counted and the block holds no
-counter, which is how YMX wraps.
+counter; YMX wraps the same way.
 
 The advance from row `R` minus one where `RR` is below `R` is a jump to
 `RR`, since it is one. Where `RR` equals `R` it gives $FFFFFFFF, leaves
@@ -253,10 +253,14 @@ Under DTX0 it is one run of bytes from the cursor. Under DTX1 and DTX2 it
 takes `C` values, alternating between the columns: column `i` of a width
 class stands at that class's cursor plus the displacement its read entry
 gives, so the whole read is `C` moves off one cursor at a time. The
-displacement
-is `i` times `N` under DTX2, where every column has a ring of `N` bytes,
-and the distance between the two column bases under DTX1, where a column
-is `R` times `W[i]` bytes in the payload.
+displacement is `i` times `N` under DTX2, where every column has a ring of
+`N` bytes, and the distance between the two column bases under DTX1, where
+a column is `R` times `W[i]` bytes in the payload.
+
+A wide value whose place in the row is odd goes down as bytes. A 68000
+takes an address error on a word or long at an odd address, so the read
+tests each wide entry's offset, moves the value whole where it is even, and
+moves two or four bytes where it is not.
 
 A displacement off an address register is a signed word, so the packager
 holds the furthest of them to 32767 and fails the package otherwise.
@@ -271,7 +275,7 @@ alone does.
 The two calls share what they hold. `a0` holds the block through the
 read, so the step reaches it without loading it again, and under DTX0 the
 read's own pointer ends on the next row, so the step stores that and adds
-nothing at all.
+nothing.
 
 Taking a row costs one call rather than two, and a caller's loop is
 
@@ -279,9 +283,7 @@ Taking a row costs one call rather than two, and a caller's loop is
     .row:
         bsr     DTX_take        ; the row, and the clock steps
         bpl.s   .row
-Where a wide value falls on an odd offset of the row, the packager emits
-two byte moves for it, or four for a four byte value, since it holds
-every offset at build time.
+
 
 ---
 
@@ -325,9 +327,9 @@ that `a6` reaches:
 | +78 | 2 | zero |
 
 The rows decoded is init's `P` and grows by what each refill asks for. It
-is what shortens the last refill of a column and stops the one after it,
-and it is the only counter the block holds: the write pointer's wrap is a
-compare, not a count.
+shortens the last refill of a column and stops the one after it, and it is
+the only counter the block holds: the write pointer's wrap is a compare,
+not a count.
 
 Then, under DTX2 only, at +80, one slot a column, 32 bytes at a stride
 of 32, the eight longs in `movem`'s own order, so that
@@ -363,9 +365,8 @@ plus `NC`.
 A DTX2 payload holds `C` data sets. A reader that drove `C` decoders a
 few bytes a row would swap `C` register sets a row. This one refills
 **one column a row**, so the work a row is one `ST4_resume` and the read
-is never in the decoder at all. Over `P` rows every column is refilled
-once, and what the `C` refills produce in that time is what `P` rows
-consume.
+is never in the decoder. Over `P` rows every column is refilled once, and
+the `C` refills produce in that time what `P` rows take.
 
 **The invariant.** Init leaves every ring holding `P` rows. Column `j` is
 refilled on rows `j`, `j+P`, `j+2P` and so on, `P` rows each time. At the
@@ -405,18 +406,16 @@ to `R` minus one and no decoder is driven past its data set.
 
 `P` is the lever. `P` equal to `C` gives the smallest rings and the
 flattest cost; a larger `P` spends more ring and leaves `P` minus `C`
-rows a period with no refill at all. The packager's default is the
+rows a period with no refill. The packager's default is the
 smallest `P` at least `C` that meets every rule above, and it fails the
 package where no such `P` stands below `R`.
 
 **The repeat.** An advance from row `R` minus one to an `RR` below it is
-a jump backward, so it re-seeds and runs forward from row 0: a table that
-repeats pays `RR` rows of decoding once a pass. Where `RR` times `W[i]`
-divided by `k` is a whole number for every column, the packager instead
-packs column `i` with `st4 -r` at that unit, so each data set loops where
-the table does, no decoder is ever done, and the wrap costs one cursor
-reload. That is what YMX does, and it is the only way the repeat is
-flat.
+a jump backward, so it seeds every ring again and runs forward from row 0:
+a table that repeats pays `RR` rows of decoding once a pass. ST4 can pack a
+data set to loop where the table does, with `st4 -r`, and YMX packs its
+streams that way so that a repeat costs one cursor reload; the packager
+does not yet, and under it a repeat is a jump.
 
 **What advance does that read does not.** Advance steps the clock, moves
 the cursors, refills the column whose turn it is, and takes the repeat at
@@ -451,8 +450,8 @@ relative for a source and never for a destination.
 
 Under DTX2 the carried decoder is ST4's wrap decoder built at `ST4_UNIT`
 equal to `k`. The packer's options are `-f -k<k> -m<N/k> -l65535`, and the
-last of them is what holds ST4_wrap's assumption 4: no operation longer
-than the 65535 units a 68000 decoder counts in a word.
+last holds ST4_wrap's assumption 4: no operation longer than the 65535
+units a 68000 decoder counts in a word.
 
 A column may be packed with `-c` as well, which lets a match beyond the
 ring copy from the column's own literal stream. That packs a small ring
@@ -460,52 +459,52 @@ far smaller, and it asks one thing of the package: the decoder is built
 with its copy code, which measures 32 bytes more at `k` of 1
 and 2 and 36 at `k` of 4.
 
-The payload says which kind its columns are, in the flags byte SPEC.md 2.3
-states, so the packager reads the decoder a table asks for out of the table
-itself. Nothing carried beside the file settles it, and nothing can
+The payload states which kind its columns are, in the flags byte SPEC.md
+2.3 gives, so the packager reads the decoder a table asks for out of the
+table itself. Nothing carried beside the file settles it, and nothing can
 disagree with the bytes. The flag is there because no ST4 data set states
 it and a column packed with copies read by a decoder without the copy code
 gives wrong bytes; the other way round is safe, since a decoder with the
-copy code reads a column without copies correctly, at 2.0 to 4.0% more
-cycles.
+copy code reads a column without copies as the plain one does, at 14
+instructions more over 64 rows (experiments.md).
 
 **How many images there are.** DTX0 assembles to one, DTX1 to one, and
 DTX2 to one a build of the decoder built into it: `k` of 1, 2 or 4, each
 with the copy code and without it. Six under DTX2, eight in all, and
-`68k/test/emu/test_stable.py` builds every one of them and holds no two
-to the same bytes. Which of the six a table takes is `k`, which the
-format block gives at +18, and the word the table was packed with, which
-no field gives.
+`StabilityTest` builds every one of them and holds no two to the same
+bytes. Which of the six a table takes is `k` and the copies flag, both in
+the payload (SPEC.md 2.3), and `k` again in the format block at +18.
 
-The packager chooses `N` and `P` together and packs the columns for the
-`N` it chose, so no payload arrives with an `N` no `P` fits.
+The writer packs the columns for the `N` it is given, and the packager
+takes the smallest `P` that holds every rule of section 4 at that `N`, or
+fails the package naming the rule.
 
-At build time the packager checks what no call checks: the variant, `R`,
-`C`, `RR` and the widths against R6, that `R` is at most 2147483647 so
-that no row number reads as the $FFFFFFFF an advance ends on, and the
-format block's variant byte against the table header's own. Under DTX2 it
-checks that `R` divides by `k`, the five rules of section 4, that the
-ring and every stream meet ST4_wrap's alignment assumptions, and that
-every data set's first long is `$53 $34 $07 k`. It fails the package
-rather than emitting an image that reads wrong.
+At package time the packager checks what no call checks: the header
+against R6, so an `R` at or above 2147483648, which reads as a negative,
+fails R6.1 and no row number reads as the $FFFFFFFF an advance ends on;
+under DTX2 that `R` divides by `k`, that every data set opens with
+`$53 $34 $07 k` for the payload's own `k`, and the five rules of section 4;
+and that the image it combines with reads the table's variant and unit and
+puts the column table where its code ends. It fails the package rather
+than emitting an image that reads wrong.
 
 ---
 
 ## 6. What each call costs
 
-**Not yet measured.** Every figure here is read out of the emulation rig
-over the emitted code, and this section is written when that rig runs.
-Nothing in this document states a cycle figure before then.
+performance.md states it, in instructions counted under emulation, and
+the rig that counts them holds that document to what it counts. The
+figures are instructions and not cycles, since the emulator counts the
+first and not the second.
 
-What stands without measuring is the shape. Under DTX0 and DTX1 every
-call is flat in `R` and the read is linear in `C`. Under DTX2 a read is
-flat and linear in `C`, an advance is flat and takes one column's refill
-of at most `P` rows, and a jump costs the rows it runs the turn through.
+The shape, which the figures bear out: under DTX0 and DTX1 every call is
+flat in `R` and a read is linear in `C`. Under DTX2 a read is flat and
+linear in `C`, an advance is flat and takes one column's refill of at most
+`P` rows, and a jump costs the rows it runs the turn through.
 
-Two calls are not flat, and this document does not claim they are. A
-backward jump costs the target row's worth of decoding. So does the
-advance from row `R` minus one of a table that repeats, unless its
-columns were packed to loop themselves, which section 4 states.
+Two calls are not flat. A backward jump costs the target row of decoding,
+and so does the advance from row `R` minus one of a table that repeats,
+since under this reader it is a jump (section 4).
 
 ---
 
@@ -583,8 +582,9 @@ backward jump.
 
 **The row goes down as DTX0 lays it out.** DTX0's read is then one run of
 bytes, R3.5's reason for the variant. Given up: under DTX1 and DTX2 a
-wide value that falls on an odd offset of the row costs two or four byte
-moves, in the emitted code and never in a test.
+wide value whose place in the row is odd costs a test of its offset and
+two or four byte moves, since a 68000 takes an address error on a word at
+an odd address.
 
 **One variant an image.** A caller that reads two variants holds two
-images, and the five calls read the same in both.
+images, and the six calls read the same in both.

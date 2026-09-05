@@ -31,8 +31,8 @@ import subprocess
 import sys
 import tempfile
 
-from unicorn import (Uc, UC_ARCH_M68K, UC_HOOK_CODE, UC_MODE_BIG_ENDIAN,
-                     UcError)
+from unicorn import (Uc, UC_ARCH_M68K, UC_HOOK_CODE, UC_HOOK_MEM_READ,
+                     UC_HOOK_MEM_WRITE, UC_MODE_BIG_ENDIAN, UcError)
 from unicorn.m68k_const import (
     UC_CPU_M68K_M68000,
     UC_M68K_REG_A0, UC_M68K_REG_A1, UC_M68K_REG_A2, UC_M68K_REG_A3,
@@ -202,8 +202,8 @@ def package(blob, assemble=False):
     same bytes, and BlobTest holds them to that.
 
     The labels come from a run of rmac over the same template and the same
-    figures, for the listing's symbol table alone: ST4_resume's address in
-    it is how the rig counts what the decoder is asked for.
+    figures, for the listing's symbol table alone: the rig counts what the decoder is asked for at
+    ST4_resume's address in it.
     """
     work = tempfile.mkdtemp(prefix="dtx68")
     src = os.path.join(work, "t.dtx")
@@ -250,9 +250,19 @@ class Machine:
             self.mu.mem_map(at & ~0xFFF, size)
         self.mu.mem_write(IMAGE, image)
         self.state_bytes = state_bytes
+        # A 68000 takes an address error on a word or long at an odd
+        # address, and Unicorn's model does not: it reads and writes the
+        # bytes. So the rig watches every access itself, and a misaligned one
+        # is a fault here as it is on the hardware.
+        self.misaligned = []
+        self.mu.hook_add(UC_HOOK_MEM_READ | UC_HOOK_MEM_WRITE, self._aligned)
         # rts at DONE would run on: an illegal word stops the emulation
         # instead, and every call is run to the DONE address explicitly.
         self.seed()
+
+    def _aligned(self, mu, access, address, size, value, data):
+        if size > 1 and address & 1:
+            self.misaligned.append((mu.reg_read(UC_M68K_REG_PC), address, size))
 
     def seed(self):
         self.mu.mem_write(STATE, b"\x00" * 0x1000)
@@ -279,6 +289,9 @@ class Machine:
         except UcError as bad:
             raise AssertionError("%s faulted at %08x: %s"
                                  % (name, mu.reg_read(UC_M68K_REG_PC), bad))
+        assert not self.misaligned, "%s took a word or long at an odd" \
+            " address, which a 68000 faults on: pc %08x, address %08x, %d bytes" \
+            % ((name,) + self.misaligned[0])
         assert mu.reg_read(UC_M68K_REG_D6) == 0x6D6D6D6D, name + " moved d6"
         assert mu.reg_read(UC_M68K_REG_D7) == 0x7D7D7D7D, name + " moved d7"
         assert mu.reg_read(UC_M68K_REG_A6) == 0x00046000, name + " moved a6"
@@ -503,7 +516,7 @@ def roundtrip(name, csv, widths=None, repeat=None, unit=1, ring=960,
             _, _, _, _, _, _, _, laid = read_dtx(blob)
             assert laid == want, \
                 "DTX%d: the writer laid down rows the text does not give" % variant
-        # The reader's link: what a 68000 gives is what the text gave.
+        # The reader's link: a 68000 gives the rows the text gave.
         assert len(got) == len(want), \
             "DTX%d gave %d rows, not %d" % (variant, len(got), len(want))
         for r, (a, b) in enumerate(zip(got, want)):
@@ -559,6 +572,69 @@ PACKED = [
 ]
 
 
+# --------------------------------------------------------------------------
+# doc/performance.md, read back: every figure it states is one this rig
+# counts, or the rig fails naming the cell.
+
+def instructions(m):
+    """A counter of every instruction the machine runs from here on."""
+    n = [0]
+    m.mu.hook_add(UC_HOOK_CODE, lambda u, a, s, d: n.__setitem__(0, n[0] + 1))
+    return n
+
+
+def measured(variant, unit, widths):
+    """The row of the performance table one image gives."""
+    blob = write_table(numbers(64, len(widths)), variant, widths, None, unit, 960)
+    image, _ = package(blob)
+    state = struct.unpack(">I", image[28:32])[0]
+    columns = struct.unpack(">I", image[44:48])[0]
+    m = Machine(image, state)
+    n = instructions(m)
+
+    def call(name, **at):
+        before = n[0]
+        m.call(name, **at)
+        return n[0] - before
+
+    init = call("init")
+    advance = [call("advance") for _ in range(8)]
+    read = call("read")
+    take = call("take")
+    jump0 = call("jump", d0=0)
+    jump63 = call("jump", d0=63)
+    return {"init": str(init),
+            # one figure where every advance took the same, a range where not
+            "advance": str(min(advance)) if min(advance) == max(advance)
+            else "%d-%d" % (min(advance), max(advance)),
+            "read": str(read), "take": str(take),
+            "jump to row 0": str(jump0), "jump to row 63": str(jump63),
+            "code, bytes": str(columns - 48)}
+
+
+def performance():
+    """doc/performance.md against the machine, cell by cell."""
+    doc = open(os.path.join(ROOT, "doc", "performance.md")).read()
+    stated = {}
+    for line in doc.splitlines():
+        cell = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cell) == 6 and cell[0] in ("init", "advance", "read", "take",
+                                          "jump to row 0", "jump to row 63",
+                                          "code, bytes"):
+            stated[cell[0]] = cell[1:]
+    columns = [(0, 1, [1, 2, 4]), (1, 1, [1, 2, 4]), (2, 1, [1, 2, 4]),
+               (2, 2, [2, 2, 2]), (2, 4, [4, 4, 4])]
+    got = [measured(variant, unit, widths) for variant, unit, widths in columns]
+    for call, said in stated.items():
+        for at, one in enumerate(got):
+            assert said[at] == one[call], \
+                "doc/performance.md gives %s for %s in column %d, the rig" \
+                " counts %s" % (said[at], call, at + 1, one[call])
+    assert len(stated) == 7, "doc/performance.md states %d rows, not 7" % len(stated)
+    print("  %d cells of doc/performance.md, each the figure the rig counts"
+          % (7 * 5))
+
+
 def main():
     if not os.path.isdir(CLASSES):
         raise SystemExit("run `mvn compile` first: no " + CLASSES)
@@ -594,6 +670,12 @@ def main():
         except AssertionError as wrong:
             bad += 1
             print("  %-32s FAILED: %s" % (name, wrong))
+    print("doc/performance.md, read back")
+    try:
+        performance()
+    except AssertionError as wrong:
+        bad += 1
+        print("  FAILED: %s" % wrong)
     if bad:
         raise SystemExit("%d checks failed" % bad)
     print("every check passed")

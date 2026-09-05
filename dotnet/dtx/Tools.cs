@@ -244,8 +244,8 @@ public static class Tools
         {
             Format.Dtx0 => Variants.WriteDtx0(table),
             Format.Dtx1 => Variants.WriteDtx1(table),
-            // The seed states the build's own copies flag, since that is what
-            // settles which decoder the template is assembled with.
+            // The seed states the build's own copies flag, since that settles
+            // which decoder the template is assembled with.
             _ => Variants.WriteDtx2(table, new Held(build.Copies),
                     build.Unit, 960),
         };

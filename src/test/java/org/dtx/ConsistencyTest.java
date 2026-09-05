@@ -308,8 +308,8 @@ final class ConsistencyTest {
     }
 
     /**
-     * The scripts doc/tools.md gives, against the tree. A usage line is what
-     * a reader copies, so a script renamed away from the document, or one
+     * The scripts doc/tools.md gives, against the tree. A reader copies a
+     * usage line, so a script renamed away from the document, or one
      * that is not executable, fails here rather than at the reader's shell.
      */
     @Test

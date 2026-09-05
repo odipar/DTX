@@ -77,7 +77,7 @@ func Builds() []Build {
 	return out
 }
 
-// Held says how many of the builds this one holds: eight, or none.
+// Held gives how many of the builds this one holds: eight, or none.
 func Held() int {
 	held := 0
 	for _, build := range Builds() {

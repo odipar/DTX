@@ -332,7 +332,7 @@ public static class Pack
                     $"the code reads DTX{code[FormatAt + 3]} and the table is"
                     + $" DTX{header.Variant}");
         }
-        // The code ends where the format block says the column table begins:
+        // The code ends where the format block states the column table begins:
         // the two agree, or the image reads its own last instruction as a
         // column.
         int columns = Format.GetLong(code, FormatAt + ColumnsAt);
@@ -395,7 +395,7 @@ public static class Pack
 
     /// <summary>
     /// What one table settles, as a template reads it: the equates, and no
-    /// instruction at all. Every figure a loop counts with reaches the code
+    /// instruction. Every figure a loop counts with reaches the code
     /// at run time instead, out of the table's own header and the column
     /// table (doc/tools.md).
     /// </summary>

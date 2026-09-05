@@ -11,8 +11,7 @@ using System.Globalization;
 /// edited here. So a tool writes DTX2 with no packer beside it, and
 /// <see cref="St4Beside"/> runs one where a caller names it.</para>
 ///
-/// <para>What reaches the packer is what <c>st4 -f -kK -mN -l65535</c>
-/// reaches it with, and <c>-c</c> beside them where the columns hold copies.
+/// <para>The packer takes what <c>st4 -f -kK -mN -l65535</c> gives it, and <c>-c</c> beside them where the columns hold copies.
 /// The ring is bytes and the packer counts units, so <c>-m</c> is the ring
 /// divided by the unit, held to what a word offset can state.</para>
 ///
@@ -36,7 +35,7 @@ public sealed class St4Packer : IPacker
     /// A packer that lets a match beyond the ring copy from the column's own
     /// literal stream, which packs a small ring far smaller.
     /// </summary>
-    /// <param name="copies">whether to pack copies at all</param>
+    /// <param name="copies">whether to pack copies</param>
     /// <param name="seconds">how long to search beyond the opening passes
     /// for a better parse, or zero for those passes alone. A search of no
     /// seconds is the same parse every run; one of some seconds is not
@@ -75,9 +74,9 @@ public sealed class St4Packer : IPacker
 /// An <see cref="IPacker"/> that runs an ST4 packer beside this one.
 ///
 /// <para><see cref="St4Packer"/> packs with the copy this repository holds,
-/// and is what a tool takes where none is named. This runs another: an ST4
-/// build of its own, named by <c>-p</c>, which is how a packer newer than
-/// the copy here is used.</para>
+/// and a tool takes it where none is named. This runs another: an ST4
+/// build of its own, named by <c>-p</c>, so a packer newer than the copy
+/// here is used through this.</para>
 /// </summary>
 public sealed class St4Beside : IPacker
 {

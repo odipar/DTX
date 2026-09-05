@@ -7,8 +7,9 @@ before what it describes, and what things are called comes before both.
 
 - **R0.1** `AGENTS.md` gives the rules, for every document, code comment
   and commit message.
-- **R0.2** A test reads every document against a list of phrases struck in
-  review, and names the file and line of each hit.
+- **R0.2** A test reads every document, and every code comment this
+  repository writes, against a list of phrases struck in review, and names
+  the file and line of each hit.
 - **R0.3** The test walks the tree for documents. A document is held because
   it is there, not because someone listed it.
 - **R0.4** Striking a phrase adds it to the list, in the same change.
@@ -124,7 +125,7 @@ What a table may hold, and what a reader does where it holds otherwise.
 
 ## R7. Not yet required
 
-What R1 to R6 do not yet say. Each is open, and none of it is settled by
+What R1 to R6 do not yet state. Each is open, and none of it is settled by
 [doc/SPEC.md](SPEC.md), which states the format R1 to R6 require.
 
 - Whether a table states its own length, and whether a reader needs one to
@@ -134,6 +135,8 @@ What R1 to R6 do not yet say. Each is open, and none of it is settled by
   written it.
 - Whether a variant may hold columns of more than one kind, some packed and
   some plain.
-- What holds this repository's readers to one another. Java is the source
-  of truth, and a Go, a C# and a 68000 one are not written. Nothing here
-  requires that they agree or says how that is shown.
+- What holds a reader written elsewhere to this repository's. The Java,
+  Go and C# trees write the same bytes and a test holds them to one
+  another, and the 68000 reader is held to the text a table came from
+  under emulation; a reader written against the kit under doc/conformance
+  is held by nothing here yet.
