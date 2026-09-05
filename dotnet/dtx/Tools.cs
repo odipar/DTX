@@ -256,7 +256,7 @@ public static class Tools
     /// build's own copies flag.
     ///
     /// <para>The assembler reads a data set's four stream offsets and
-    /// nothing in the streams, so a container whose streams are the column
+    /// nothing in the streams, so a data set whose streams are the column
     /// itself settles every figure the build takes.</para>
     /// </summary>
     private sealed class Held : IPacker

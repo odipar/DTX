@@ -60,7 +60,7 @@ public final class St4 implements Packer {
         if (!problem.isEmpty()) {
             throw new IllegalArgumentException(problem);
         }
-        // A word offset is stored scaled to bytes, so the window is a byte
+        // A word offset is stored scaled to bytes, so the limit is a byte
         // figure: 32512 units at k=4 would not fit the word.
         int offsetLimit = Math.min(ring / unit, St4Format.maxOffsetUnits(unit));
         int[] units = Units.split(column, unit);

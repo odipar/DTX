@@ -81,7 +81,7 @@ for target in $TARGETS; do
     echo "$OUT/release/$zip: $(wc -c < "$OUT/release/$zip" | tr -d ' ') bytes"
 done
 
-# The images a caller may want beside the executables, named by release so
+# The images a caller may take beside the executables, named by release so
 # two of them do not sit in one directory unlabelled.
 for image in "$OUT"/release/*.bin; do
     mv "$image" "${image%.bin}-v$VERSION.bin"

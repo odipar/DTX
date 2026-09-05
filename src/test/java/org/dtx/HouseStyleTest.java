@@ -22,6 +22,11 @@ import org.junit.jupiter.api.Test;
  * <p>The documents are found rather than listed. A list is a place a new
  * document is not, and the one that reached review unchecked was the one
  * nobody had added.
+ *
+ * <p>AGENTS.md holds code comments to the same rules, so the comments of
+ * this repository's own source are read as well. What is carried from
+ * another repository is not: a copy is held to its own tree's style, and
+ * editing it here would be editing the copy.
  */
 final class HouseStyleTest {
 
@@ -131,6 +136,211 @@ final class HouseStyleTest {
             // filler: cut unless the word carries the meaning
             "actually");
 
+    /**
+     * What this repository carries rather than writes. A copy states its
+     * own tree's prose, and the two files DTX wrote into the Go copy's
+     * directory are its own.
+     */
+    private static boolean carried(Path path) {
+        String at = path.toString();
+        if (at.contains("/org/st4/") || at.contains("/dotnet/nt4/")
+                || at.endsWith("ST4_wrap.S")) {
+            return true;
+        }
+        return at.contains("/go/internal/st4/")
+                && !at.endsWith("beside.go") && !at.endsWith("packer.go");
+    }
+
+    /** Every source file whose comments this repository writes. */
+    private static List<Path> sources() throws IOException {
+        try (Stream<Path> tree = Files.walk(Path.of("."))) {
+            return tree.filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String at = path.toString();
+                        return at.endsWith(".java") || at.endsWith(".go")
+                                || at.endsWith(".cs") || at.endsWith(".S")
+                                || at.endsWith(".py") || at.endsWith(".sh");
+                    })
+                    .filter(path -> !path.toString().contains("/target/"))
+                    .filter(path -> !path.toString().contains("/obj/"))
+                    .filter(path -> !path.toString().contains("/dotnet/bin/"))
+                    .filter(path -> !carried(path))
+                    // This file quotes every phrase it strikes.
+                    .filter(path -> !path.getFileName().toString()
+                            .equals("HouseStyleTest.java"))
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    /** One line of prose out of a source file, and where it stands. */
+    private record Comment(int line, String text) {}
+
+    /**
+     * The comments of one file, by the marks its language writes them with.
+     *
+     * <p>A mark inside a string is not a comment, so the scan tracks what it
+     * stands in: a URL in a literal opens no comment, and neither does a
+     * struck word in one.
+     */
+    private static List<Comment> comments(Path path, String held) {
+        String name = path.toString();
+        boolean cLike = name.endsWith(".java") || name.endsWith(".go")
+                || name.endsWith(".cs");
+        boolean python = name.endsWith(".py");
+        char mark = cLike ? '/' : name.endsWith(".S") ? ';' : '#';
+        List<Comment> out = new ArrayList<>();
+        StringBuilder run = new StringBuilder();
+        int line = 1;
+        int began = 1;
+        // 0 code, 1 a string, 2 a line comment, 3 a block comment, 4 a
+        // python docstring
+        int in = 0;
+        char quote = 0;
+        for (int at = 0; at < held.length(); at++) {
+            char one = held.charAt(at);
+            char next = at + 1 < held.length() ? held.charAt(at + 1) : 0;
+            if (one == '\n') {
+                line++;
+            }
+            switch (in) {
+                case 0 -> {
+                    if (one == '"' || one == '\'') {
+                        if (python && next == one
+                                && at + 2 < held.length()
+                                && held.charAt(at + 2) == one) {
+                            in = 4;
+                            quote = one;
+                            began = line;
+                            at += 2;
+                        } else {
+                            in = 1;
+                            quote = one;
+                        }
+                    } else if (cLike && one == mark && next == '/') {
+                        in = 2;
+                        began = line;
+                        at++;
+                    } else if (cLike && one == mark && next == '*') {
+                        in = 3;
+                        began = line;
+                        at++;
+                    } else if (!cLike && one == mark) {
+                        in = 2;
+                        began = line;
+                    }
+                }
+                case 1 -> {
+                    if (one == '\\') {
+                        at++;
+                    } else if (one == quote || one == '\n') {
+                        in = 0;
+                    }
+                }
+                case 2 -> {
+                    if (one == '\n') {
+                        out.add(new Comment(began, run.toString()));
+                        run.setLength(0);
+                        in = 0;
+                    } else {
+                        run.append(one);
+                    }
+                }
+                case 3 -> {
+                    if (one == '*' && next == '/') {
+                        out.add(new Comment(began, run.toString()));
+                        run.setLength(0);
+                        in = 0;
+                        at++;
+                    } else {
+                        run.append(one);
+                    }
+                }
+                default -> {
+                    if (one == quote && next == quote
+                            && at + 2 < held.length()
+                            && held.charAt(at + 2) == quote) {
+                        out.add(new Comment(began, run.toString()));
+                        run.setLength(0);
+                        in = 0;
+                        at += 2;
+                    } else {
+                        run.append(one);
+                    }
+                }
+            }
+        }
+        if (run.length() != 0) {
+            out.add(new Comment(began, run.toString()));
+        }
+        return out;
+    }
+
+    @Test
+    void theCommentScannerReadsCommentsAndNotStrings() {
+        // A struck phrase in a comment is a hit and one in a string is not,
+        // or the check would read a URL's // as prose and a literal as a
+        // sentence. Each language is tried in the marks it writes.
+        record Sample(String name, String held, String prose, String hidden) {}
+        for (Sample one : List.of(
+                new Sample("a.java",
+                        "String at = \"http://x/promise\"; // a promise here\n"
+                                + "/* and a guarantee */\n",
+                        "a promise here", "http"),
+                new Sample("a.go",
+                        "s := \"a promise\" // a guarantee here\n",
+                        "a guarantee here", "promise"),
+                new Sample("a.cs",
+                        "var s = \"a promise\";\n/// a guarantee here\n",
+                        "a guarantee here", "promise"),
+                new Sample("a.S",
+                        "\tmove.l  #1,d0          ; a promise here\n",
+                        "a promise here", ""),
+                new Sample("a.py",
+                        "at = \"a promise\"  # a guarantee here\n"
+                                + "\"\"\"and a docstring\"\"\"\n",
+                        "a guarantee here", "promise"),
+                new Sample("a.sh",
+                        "echo \"a promise\"   # a guarantee here\n",
+                        "a guarantee here", "promise"))) {
+            StringBuilder read = new StringBuilder();
+            for (Comment held : comments(Path.of(one.name()), one.held())) {
+                read.append(held.text()).append('\n');
+            }
+            String found = read.toString();
+            assertTrue(found.contains(one.prose()),
+                    one.name() + ": the scanner read \"" + found.strip()
+                            + "\", which does not hold \"" + one.prose() + '"');
+            if (!one.hidden().isEmpty()) {
+                assertTrue(!found.contains(one.hidden()),
+                        one.name() + ": the scanner read \"" + one.hidden()
+                                + "\" out of a string");
+            }
+        }
+    }
+
+    @Test
+    void noCommentHasAStruckPhrase() throws IOException {
+        List<Path> sources = sources();
+        assertTrue(!sources.isEmpty(), "no source was found to hold");
+        List<String> hits = new ArrayList<>();
+        for (Path source : sources) {
+            for (Comment one : comments(source, Files.readString(source))) {
+                String prose = read(one.text());
+                for (String struck : STRUCK) {
+                    if (prose.contains(struck)) {
+                        hits.add(source + ":" + one.line()
+                                + " has \"" + struck + '"');
+                    }
+                }
+            }
+        }
+        assertTrue(hits.isEmpty(), () -> String.join("\n", hits)
+                + "\nAGENTS.md holds a code comment to the rules a document"
+                + " is held to; reword the comment, or take the entry off"
+                + " this list in the same change.");
+    }
+
     /** Every Markdown file in the tree but the two that state the rules. */
     private static List<Path> documents() throws IOException {
         try (Stream<Path> tree = Files.walk(Path.of("."))) {
@@ -147,12 +357,13 @@ final class HouseStyleTest {
     /**
      * The names a struck entry stands inside, which are not that entry.
      *
-     * <p>Windows is an operating system, and the entry struck is
-     * {@code window}, the reach a data set decodes through: a name spelled
-     * like a word is not that word. They are matched before the line is
-     * lowered, so the noun still reads as struck.
+     * <p>Windows is an operating system and ST4_WINDOW an assembler symbol,
+     * and the entry struck is {@code window}, the reach a data set decodes
+     * through: a name spelled like a word is not that word. They are
+     * matched before the line is lowered, so the noun still reads as
+     * struck.
      */
-    private static final List<String> NAMES = List.of("Windows");
+    private static final List<String> NAMES = List.of("Windows", "ST4_WINDOW");
 
     /** {@code line} with the names out and the rest lowered. */
     private static String read(String line) {

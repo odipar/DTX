@@ -164,7 +164,7 @@ func StateBytes(header dtx.Header) int {
 		return Cursor + 4
 	}
 	// DTX1 holds three cursors and the three places their classes begin,
-	// whatever widths the table states, so its block does not move with C.
+	// at any widths the table states, so its block does not move with C.
 	if header.Variant == dtx.DTX1 {
 		return 48
 	}
@@ -326,7 +326,7 @@ func classOf(w int) int {
 // Combine gives one image: this code, the column table, the table's bytes,
 // and the format block written to state the three.
 //
-// The code is the same bytes whatever table follows it, so what a combine
+// The code is the same bytes any table that follows it, so what a combine
 // writes is the five fields the table settles. It checks the two it cannot
 // write: the variant, and under DTX2 the unit the decoder built into the
 // code decodes at.

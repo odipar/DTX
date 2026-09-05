@@ -58,7 +58,7 @@ public sealed class St4Packer : IPacker
         {
             throw new ArgumentException(problem);
         }
-        // A word offset is stored scaled to bytes, so the window is a byte
+        // A word offset is stored scaled to bytes, so the limit is a byte
         // figure: 32512 units at k=4 would not fit the word.
         int offsetLimit = Math.Min(ring / unit, Nt4.Format.MaxOffsetUnits(unit));
         int[] units = Nt4.Units.Split(column, unit);

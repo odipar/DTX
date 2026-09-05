@@ -52,7 +52,7 @@ STATE = 0x30000          # the state block the caller supplies
 ROWBUF = 0x31000         # where a row goes
 STACK = 0x40000          # the caller's stack
 DONE = 0x50000           # the return address a call comes back to
-GUARD = 0xCC             # what stands around a buffer, to catch an overrun
+GUARD = 0xCC             # what stands around the row, to catch an overrun
 
 SLOT = {"init": 0, "metadata": 4, "jump": 8, "advance": 12, "read": 16,
         "take": 20}
@@ -297,7 +297,7 @@ class Machine:
         return hits
 
     def row(self, wrote, row_bytes):
-        """What a read left in the row buffer, and nothing past it."""
+        """What a read left in the row, and nothing past it."""
         out = bytes(self.mu.mem_read(ROWBUF, row_bytes))
         past = bytes(self.mu.mem_read(ROWBUF + row_bytes, 8))
         assert past == bytes([GUARD]) * 8, "a read wrote past the row"

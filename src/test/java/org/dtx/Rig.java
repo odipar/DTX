@@ -21,7 +21,7 @@ final class Rig {
     private Rig() {
     }
 
-    /** The repository's own directory, whatever the working one is. */
+    /** The repository's own directory, found from the working one. */
     static Path root() {
         Path at = Path.of("").toAbsolutePath();
         while (at != null && !Files.isDirectory(at.resolve("68k"))) {
