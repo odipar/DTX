@@ -76,7 +76,7 @@ func (t *Table) RowBytes() int {
 	return out
 }
 
-// Same says whether two tables hold the same rows, widths, R and RR.
+// Same states whether two tables hold the same rows, widths, R and RR.
 func (t *Table) Same(other *Table) bool {
 	if t.rows != other.rows || t.repeat != other.repeat ||
 		len(t.width) != len(other.width) {

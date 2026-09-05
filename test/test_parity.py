@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""The Java tools and the Go ones, against each other, byte for byte.
+"""The three trees against each other, byte for byte.
 
-One input has one output. The two trees write the same DTX files, rewrite
+One input has one output. Java, Go and C# write the same DTX files, rewrite
 them the same way, build the same eight images and combine the same
-packages, so a caller who takes the Go executables and a caller who takes
-the jar hold the same bytes at every step.
+packages, so a caller who takes any one of them holds the same bytes at
+every step.
 
     python3 test/test_parity.py
 
-Needs `mvn package`, Go on the path, and rmac on it or at $RMAC. No ST4
-packer beside this one: both trees hold a copy, and what this holds them to
-is that the two copies pack the same bytes.
+Needs `mvn package`, Go on the path, the .NET SDK, and rmac on it or at
+$RMAC. No ST4 packer beside this one: each tree holds a copy, and what this
+holds them to is that the three copies pack the same bytes.
 """
 import os
 import subprocess
@@ -62,33 +62,36 @@ TOOLS = {"write": "org.dtx.Write", "rewrite": "org.dtx.Rewrite",
          "package": "org.dtx.Packager", "blobs": "org.dtx.Blobs"}
 
 
-def both(work, classes, tool, argv, out):
-    """One tool run each way, at `out`.java and `out`.go. Gives the two."""
-    java = os.path.join(work, out + ".java")
-    go = os.path.join(work, out + ".go")
-    run(["java", "-cp", classes, TOOLS[tool]]
-        + [java if a is None else a for a in argv])
-    run([os.path.join(work, "dtx-" + tool)]
-        + [go if a is None else a for a in argv])
-    with open(java, "rb") as f:
-        one = f.read()
-    with open(go, "rb") as f:
-        other = f.read()
-    return one, other
+def each(work, classes, tool, argv, out):
+    """One tool run in every tree. Gives what each wrote, by tree."""
+    written = {}
+    for tree, command in (
+            ("java", ["java", "-cp", classes, TOOLS[tool]]),
+            ("go", [os.path.join(work, "dtx-" + tool)]),
+            ("cs", ["dotnet", os.path.join(work, "dtx.dll"), "dtx-" + tool])):
+        at = os.path.join(work, out + "." + tree)
+        run(command + [at if a is None else a for a in argv])
+        with open(at, "rb") as f:
+            written[tree] = f.read()
+    return written
 
 
-def report(name, one, other):
-    """Prints how the two compare, and gives 1 where they differ."""
-    if one == other:
-        print("  %-30s %6d bytes   the same" % (name, len(one)))
+def report(name, written):
+    """Prints how the trees compare, and gives 1 where any differs."""
+    one = written["java"]
+    apart = [tree for tree, held in written.items() if held != one]
+    if not apart:
+        print("  %-30s %6d bytes   the same in all three" % (name, len(one)))
         return 0
-    if len(one) != len(other):
-        print("  %-30s DIFFER: java %d bytes, go %d"
-              % (name, len(one), len(other)))
-        return 1
-    at = [i for i in range(len(one)) if one[i] != other[i]]
-    print("  %-30s DIFFER: %d bytes, the first at %d"
-          % (name, len(at), at[0]))
+    for tree in apart:
+        held = written[tree]
+        if len(held) != len(one):
+            print("  %-30s DIFFER: java %d bytes, %s %d"
+                  % (name, len(one), tree, len(held)))
+            continue
+        at = [i for i in range(len(one)) if one[i] != held[i]]
+        print("  %-30s DIFFER: %s, %d bytes, the first at %d"
+              % (name, tree, len(at), at[0]))
     return 1
 
 
@@ -97,6 +100,8 @@ def main():
     for tool in TOOLS:
         run(["go", "build", "-o", os.path.join(work, "dtx-" + tool),
              "./cmd/dtx-" + tool], cwd=os.path.join(ROOT, "go"))
+    run(["dotnet", "build", "-v", "q", "--nologo", "-o", work],
+        cwd=os.path.join(ROOT, "dotnet"))
     classes = os.path.join(ROOT, "target", "classes")
     bad = 0
 
@@ -115,8 +120,8 @@ def main():
             ("DTX2, k of 4", ["-v2", "-w4,4,4", "-k4", "-m960"]),
             ("DTX2, with copies", ["-v2", "-w1,4,2", "-k1", "-m960",
                                    "-copies"])]:
-        one, other = both(work, classes, "write", [text, None] + argv, "w")
-        bad += report(name, one, other)
+        bad += report(name, each(work, classes, "write",
+                                 [text, None] + argv, "w"))
 
     print()
     print("dtx-rewrite: the same plain file into the same DTX2 one")
@@ -126,21 +131,25 @@ def main():
     for name, argv in [("k of 1", ["-k1", "-m960"]),
                        ("k of 2", ["-k2", "-m960"]),
                        ("with copies", ["-k1", "-m960", "-copies"])]:
-        one, other = both(work, classes, "rewrite", [plain, None] + argv, "r")
-        bad += report(name, one, other)
+        bad += report(name, each(work, classes, "rewrite",
+                                 [plain, None] + argv, "r"))
 
     print()
     print("dtx-blobs: the same eight images")
-    java = os.path.join(work, "blobs.java")
-    go = os.path.join(work, "blobs.go")
-    run(["java", "-cp", classes, "org.dtx.Blobs", java, "-a" + RMAC])
-    run([os.path.join(work, "dtx-blobs"), go, "-a" + RMAC])
-    for image in sorted(os.listdir(java)):
-        with open(os.path.join(java, image), "rb") as f:
-            one = f.read()
-        with open(os.path.join(go, image), "rb") as f:
-            other = f.read()
-        bad += report(image, one, other)
+    into = {}
+    templates = os.path.join(ROOT, "68k")
+    for tree, command in (
+            ("java", ["java", "-cp", classes, "org.dtx.Blobs"]),
+            ("go", [os.path.join(work, "dtx-blobs")]),
+            ("cs", ["dotnet", os.path.join(work, "dtx.dll"), "dtx-blobs"])):
+        into[tree] = os.path.join(work, "blobs." + tree)
+        run(command + [into[tree], "-a" + RMAC, "-t" + templates])
+    for image in sorted(os.listdir(into["java"])):
+        written = {}
+        for tree, at in into.items():
+            with open(os.path.join(at, image), "rb") as f:
+                written[tree] = f.read()
+        bad += report(image, written)
 
     print()
     print("dtx-package: the same table into the same image")
@@ -151,11 +160,11 @@ def main():
             f.write(blob)
         # Neither tool takes a word for it: the payload states whether
         # its columns hold copies (R5.10) and both read it out of the file.
-        one, other = both(work, classes, "package", [src, None], "p")
-        bad += report(name, one, other)
+        bad += report(name, each(work, classes, "package",
+                                 [src, None], "p"))
     print()
-    print("%d runs give two files" % bad if bad
-          else "every run gives one file")
+    print("%d runs give more than one file" % bad if bad
+          else "every run gives one file, in all three trees")
     return 1 if bad else 0
 
 

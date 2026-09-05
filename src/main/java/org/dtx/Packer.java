@@ -31,9 +31,9 @@ public interface Packer {
      *
      * <p>A decoder built without the copy code reads such a column wrongly,
      * and nothing in an ST4 data set states which it is. So the payload
-     * states it (R5.10), and it is the packer that says so: what packed a
-     * column is what knows how, and a flag carried beside the file could
-     * disagree with the bytes in it.
+     * states it (R5.10), and the packer states it: a flag carried beside
+     * the file could disagree with the bytes in it, and one the packer
+     * wrote cannot.
      */
     default boolean copies() {
         return false;

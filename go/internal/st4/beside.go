@@ -20,7 +20,7 @@ type Beside struct {
 	CopiesFlag string
 }
 
-// Copies says whether this packer packs copies from the literal stream.
+// Copies states whether this packer packs copies from the literal stream.
 func (p Beside) Copies() bool {
 	return p.CopiesFlag != ""
 }

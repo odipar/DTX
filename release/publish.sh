@@ -87,6 +87,50 @@ for image in "$OUT"/release/*.bin; do
     mv "$image" "${image%.bin}-v$VERSION.bin"
 done
 
+# What the release holds, by name, size and hash, so a caller can tell one
+# release's file from another's without opening it. The images carry the
+# three figures that pick one: the variant, the unit its decoder decodes at,
+# and whether that decoder holds the copy code.
+sha() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | cut -d' ' -f1
+    else
+        shasum -a 256 "$1" | cut -d' ' -f1
+    fi
+}
+
+MANIFEST="$OUT/release/MANIFEST.txt"
+{
+    echo "DTX images and tools - release $VERSION"
+    echo "source commit $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "doc/abi.md is the calling convention; doc/tools.md the tools"
+    echo
+    echo "the images"
+    echo "name  bytes  sha256  variant  k  copies"
+    for image in "$OUT"/release/*.bin; do
+        name=$(basename "$image")
+        # DTX0 and DTX1 hold no decoder, so neither a unit nor copies.
+        case "$name" in
+            DTX2-k*-copies-*) variant=2; k=$(echo "$name" | sed 's/.*-k\([0-9]*\)-copies.*/\1/'); copies=yes ;;
+            DTX2-k*)          variant=2; k=$(echo "$name" | sed 's/.*-k\([0-9]*\)-v.*/\1/'); copies=no ;;
+            DTX0-*)           variant=0; k=-; copies=- ;;
+            DTX1-*)           variant=1; k=-; copies=- ;;
+            *)                variant=-; k=-; copies=- ;;
+        esac
+        echo "$name  $(wc -c < "$image" | tr -d ' ')  $(sha "$image")" \
+             " $variant  $k  $copies"
+    done
+    echo
+    echo "the tools"
+    echo "name  bytes  sha256  platform"
+    for zip in "$OUT"/release/*.zip; do
+        name=$(basename "$zip")
+        platform=$(echo "$name" | sed "s/^dtx-tools-//; s/-v$VERSION\.zip$//")
+        echo "$name  $(wc -c < "$zip" | tr -d ' ')  $(sha "$zip")  $platform"
+    done
+} > "$MANIFEST"
+echo "$MANIFEST: $(grep -c . "$MANIFEST") lines"
+
 # The host's executables, tried as a user would: from a directory that is
 # not this repository, with nothing beside them. They hold only the images
 # they embed, so one that holds none fails here rather than in a release.
