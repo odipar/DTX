@@ -144,6 +144,27 @@ final class HouseStyleTest {
         }
     }
 
+    /**
+     * The names a struck entry stands inside, which are not that entry.
+     *
+     * <p>Windows is an operating system, and the entry struck is
+     * {@code window}, the reach a data set decodes through: a name spelled
+     * like a word is not that word. They are matched before the line is
+     * lowered, so the noun still reads as struck.
+     */
+    private static final List<String> NAMES = List.of("Windows");
+
+    /** {@code line} with the names out and the rest lowered. */
+    private static String read(String line) {
+        String held = line;
+        for (String name : NAMES) {
+            held = held.replace(name, " ");
+        }
+        // a space in front, so an entry that leads with one matches a word
+        // at the start of a line as well as inside
+        return " " + held.toLowerCase();
+    }
+
     @Test
     void noDocumentHasAStruckPhrase() throws IOException {
         List<Path> documents = documents();
@@ -152,9 +173,7 @@ final class HouseStyleTest {
         for (Path document : documents) {
             List<String> lines = Files.readAllLines(document);
             for (int at = 0; at < lines.size(); at++) {
-                // a space in front, so an entry that leads with one
-                // matches a word at the start of a line as well as inside
-                String line = " " + lines.get(at).toLowerCase();
+                String line = read(lines.get(at));
                 for (String struck : STRUCK) {
                     if (line.contains(struck)) {
                         hits.add(document + ":" + (at + 1)
@@ -196,12 +215,12 @@ final class HouseStyleTest {
                 for (String line : paragraph) {
                     run.append(' ').append(line.strip());
                 }
-                String joined = run.toString().toLowerCase();
+                String joined = read(run.toString());
                 for (String struck : STRUCK) {
                     int whole = occurrences(joined, struck);
                     int apart = 0;
                     for (String line : paragraph) {
-                        apart += occurrences(" " + line.toLowerCase(), struck);
+                        apart += occurrences(read(line), struck);
                     }
                     for (int n = apart; n < whole; n++) {
                         hits.add(document + ":" + (from + 1) + " has \""

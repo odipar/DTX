@@ -1,9 +1,26 @@
 # tools
 
-Each tool is a script under `bin/`. A script builds first where a source is
-newer than the last build, and then runs the tool out of `target/classes`.
-Paths reach the tool as the caller gave them, so a relative one is relative
-to the caller's directory and not to this repository's.
+Each tool is written twice, once in each tree, and the two write the same
+bytes. `test/test_parity.py` runs both over a corpus and holds them to it.
+
+In Java each is a script under `bin/`. A script builds first where a source
+is newer than the last build, and then runs the tool out of
+`target/classes`. Paths reach the tool as the caller gave them, so a
+relative one is relative to the caller's directory and not to this
+repository's.
+
+In Go each is a command under `go/cmd/`, built with `go build ./cmd/NAME`
+under `go/`. None of them takes a wrapper: Go builds an executable, so
+nothing has to find a runtime or a classpath before one runs, and there is
+no `dtx-run` to write.
+
+| what it does | Java | Go |
+|---|---|---|
+| text into a DTX file | `bin/dtx-write` | `dtx-write` |
+| a plain file into a DTX2 one | `bin/dtx-rewrite` | `dtx-rewrite` |
+| a DTX file into a 68000 image | `bin/dtx-package` | `dtx-package` |
+| the eight images the packager combines from | `bin/dtx-blobs` | `dtx-blobs` |
+| find the classpath and run one of the above | `bin/dtx-run` | none needed |
 
 ## Write
 
@@ -20,7 +37,7 @@ bin/dtx-write in.csv out.dtx -v2 -k1 -m960 -pst4
 | `-rRR` | the row the table repeats to, 0 to `R`. The default is `R`, where the table does not repeat |
 | `-kK` | the unit a DTX2 column is packed at, and `R` divides by it (R5.6). The default is 1 |
 | `-mN` | the ring a DTX2 column unpacks through, in bytes, 1 to 65535 (R5.4). The default is 960 |
-| `-pPACKER` | the ST4 executable a DTX2 file is packed by. The default is `st4` on the path |
+| `-pPACKER` | an ST4 executable to pack with, instead of the copy held here. Nothing needs one: name it to pack with a build newer than the copy |
 | `-copies[S]` | a match beyond the ring copies from the column's own literal stream, and `-copiesS` searches `S` seconds for a better parse. It reaches the packer as `-c`. YMX spells it the same way |
 
 `-k`, `-m` and `-p` reach a DTX2 file alone: no other variant packs.
@@ -69,17 +86,13 @@ and a caller who takes a release installs none.
 bin/dtx-package in.dtx out.bin
 ```
 
-Two tools do it, and a table packaged either way is the same file. The one
-above is the jar's; the other is a Go executable holding the eight images
-inside it, so it needs neither this repository nor a runtime beside it:
+The Go one holds the eight images inside it, so it needs neither this
+repository nor a runtime beside it:
 
 ```
 go build -o dtx-package ./cmd/dtx-package    # under go/
 ./dtx-package in.dtx out.bin
 ```
-
-`test/test_parity.py` packages a corpus both ways and holds the two to the
-same bytes.
 
 | flag | gives |
 |---|---|
@@ -130,6 +143,7 @@ writes the same eight into directories of your own.
 | flag | gives |
 |---|---|
 | `-aRMAC` | the assembler to run. The default is `rmac` on the path |
+| `-tTEMPLATES` | where `68k/` stands. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository has no directory to resolve a relative one against, so it names this |
 
 The table each build is assembled from is made rather than read: the code
 does not move with a table, and the five fields one would settle are
@@ -161,7 +175,7 @@ bin/dtx-rewrite in.dtx out.dtx -k1 -m960 -pst4
 |---|---|
 | `-kK` | the unit every column is packed at: 1, 2 or 4, and `R` divides by it (R5.6). The default is 1 |
 | `-mN` | the ring in bytes, 1 to 65535 (R5.4). The default is 960 |
-| `-pPACKER` | the ST4 executable to run. The default is `st4` on the path |
+| `-pPACKER` | as Write reads it |
 | `-copies[S]` | as Write reads it |
 
 Rewrite keeps no packer of its own. `-p` names the one ST4's own repository
@@ -189,6 +203,37 @@ copy code gives row 37 wrong, where the pattern first repeats past the
 ring. The other way round is safe: a decoder with the copy code reads a
 column without copies correctly, at 2.0 to 4.0% more cycles and 32 bytes
 more code.
+
+## Release
+
+The four Go commands for six platforms, each holding the eight images, and
+the images themselves:
+
+```
+release/publish.sh [version]
+TARGETS="linux-x64" release/publish.sh
+```
+
+**No Java runs.** The images come from the Go `dtx-blobs`, which assembles
+`68k/` with rmac, so the only tool this needs beside Go is that assembler.
+`go build` cross-compiles to any target from any host, which is why one
+machine covers Windows, macOS and Linux on both architectures.
+
+It writes `dist/release`: one zip a platform and the eight images, both
+named by the release. It builds `dtx-blobs` first, from a tree holding no
+image, since that is the one command that makes them rather than holding
+them; it fails where fewer than eight come out; and it ends by writing and
+packaging a table with the host's own executables, from a directory that is
+not this repository, so an executable holding no image fails there rather
+than in a release.
+
+Writing DTX2 asks for an ST4 packer, and each tree holds one:
+`src/main/java/org/st4`, taken from odipar/ST4@498aa25, and
+`go/internal/st4`, taken from odipar/YMX@498aa25, which is that same packer
+in Go. Neither is edited here beyond one comment naming where it came from,
+and the two pack the same bytes, which `test/test_parity.py` holds them to.
+So a release needs no packer beside it either. `-pPACKER` runs another where
+a caller has a newer build.
 
 ## The rigs
 
@@ -222,13 +267,14 @@ tables.
 python3 test/test_parity.py
 ```
 
-**The two packagers.** A corpus through the jar and through the Go
-executable, held to the same bytes. Fourteen tables, which reach every
-image the packager picks from: DTX0, DTX1, and DTX2 at each unit with the
-copy code and without. One table has one image, whichever tool a caller
-took.
+**The two trees.** Every tool run both ways over a corpus, and the files
+held to the same bytes: text written at each variant and each unit, a plain
+file rewritten, the eight images built, and fourteen tables packaged, which
+reach every image the packager picks from. One input has one output,
+whichever tree a caller took.
 
-It needs `mvn package`, Go on the path, and an ST4 packer at `$ST4`.
+It needs `mvn package`, Go on the path, rmac on it or at `$RMAC`, and an
+ST4 packer at `$ST4`.
 
 ## Through Maven
 

@@ -459,6 +459,15 @@ public final class Packager {
      *     table lands
      */
     static byte[] code(byte[] file, Path rmac) {
+        return code(file, rmac, carried());
+    }
+
+    /**
+     * The same, from the templates in {@code templates} rather than from
+     * where {@code DTX_68K} puts them. A tool run from outside this
+     * repository has no directory to resolve a relative one against.
+     */
+    static byte[] code(byte[] file, Path rmac, String templates) {
         try {
             Path work = Files.createTempDirectory("dtx68");
             try {
@@ -466,9 +475,9 @@ public final class Packager {
                 Path out = work.resolve("image.bin");
                 Files.writeString(states, table(file));
                 Process run = new ProcessBuilder(rmac.toString(), "-m68000",
-                        "-fr", "+o3", "-i" + work, "-i" + carried(),
+                        "-fr", "+o3", "-i" + work, "-i" + templates,
                         "-o", out.toString(),
-                        Path.of(carried(),
+                        Path.of(templates,
                                 template(Dtx.header(file).variant())).toString())
                         .redirectErrorStream(true).start();
                 byte[] said = run.getInputStream().readAllBytes();

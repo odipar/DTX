@@ -27,7 +27,7 @@ public final class Rewrite {
         }
         int unit = 1;
         int ring = 960;
-        String packer = "st4";
+        String packer = "";
         String copies = "";
         for (int i = 2; i < args.length; i++) {
             String arg = args[i];
@@ -49,11 +49,28 @@ public final class Rewrite {
             }
         }
         byte[] in = Files.readAllBytes(Path.of(args[0]));
-        byte[] out = Dtx2.from(in, new St4(Path.of(packer), copies), unit, ring);
+        byte[] out = Dtx2.from(in, packer(packer, copies), unit, ring);
         Files.write(Path.of(args[1]), out);
         Dtx.Header header = Dtx.header(in);
         System.out.printf("DTX%d %d bytes -> DTX2 %d bytes, %d rows,"
                 + " %d columns, k=%d, N=%d%n", header.variant(), in.length,
                 out.length, header.rows(), header.columns(), unit, ring);
+    }
+
+    /**
+     * What packs a column: the copy this repository holds, or a packer
+     * beside it where {@code -p} names one.
+     */
+    private static Packer packer(String named, String copies) {
+        if (named.isEmpty()) {
+            return copies.isEmpty() ? new St4()
+                    : new St4(true, seconds(copies));
+        }
+        return new St4Beside(Path.of(named), copies);
+    }
+
+    /** The seconds {@code -copiesS} searches for, or zero. */
+    private static double seconds(String copies) {
+        return copies.length() > 2 ? Double.parseDouble(copies.substring(2)) : 0;
     }
 }

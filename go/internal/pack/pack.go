@@ -8,6 +8,11 @@ package pack
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
 
 	"dtx/internal/dtx"
 	"dtx/internal/image"
@@ -407,4 +412,138 @@ func Image(file []byte) ([]byte, error) {
 		return nil, err
 	}
 	return Combine(code, file, header)
+}
+
+// The state block's fields the figures state, from doc/abi.md 3.
+const (
+	Row     = 0
+	Turn    = 4
+	Decoded = 8
+	Park    = 12
+)
+
+// equ gives one NAME equ VALUE line.
+func equ(name string, value int) string {
+	pad := ""
+	if len(name) < 8 {
+		pad = "\t"
+	}
+	return name + pad + "\tequ\t" + strconv.Itoa(value) + "\n"
+}
+
+// Figures gives what one table settles, as a template reads it: the equates,
+// and no instruction at all. Every figure a loop counts with reaches the
+// code at run time instead, out of the table's own header and the column
+// table (doc/tools.md).
+func Figures(file []byte) (string, error) {
+	header, err := dtx.ReadHeader(file)
+	if err != nil {
+		return "", err
+	}
+	variant := header.Variant
+	if variant != dtx.DTX0 && variant != dtx.DTX1 && variant != dtx.DTX2 {
+		return "", fmt.Errorf("the variant is 0, 1 or 2, not %d", variant)
+	}
+	var given Packed
+	period, state := 1, StateBytes(header)
+	if variant == dtx.DTX2 {
+		if given, err = ReadPacked(file, header); err != nil {
+			return "", err
+		}
+		if period, err = Period(header, given); err != nil {
+			return "", err
+		}
+		state = PackedStateBytes(header, given)
+	}
+	var out strings.Builder
+	fmt.Fprintf(&out, "; What org.dtx.Packager states of one table, for"+
+		" 68k/DTX.S to read.\n; DTX%d, R = %d, C = %d, RR = %d\n"+
+		"; Every instruction is the template's; nothing here is one.\n\n"+
+		"; The state block, doc/abi.md 3.\n",
+		variant, header.Rows, header.Columns(), header.Repeat)
+	out.WriteString(equ("DTX_ROW", Row))
+	out.WriteString(equ("DTX_TURN", Turn))
+	out.WriteString(equ("DTX_DECODED", Decoded))
+	out.WriteString(equ("DTX_PARK", Park))
+	out.WriteString(equ("DTX_CURSOR", Cursor))
+	out.WriteString("\n")
+	out.WriteString(equ("DTX_ROWBYTES", header.RowBytes()))
+	out.WriteString(equ("DTX_STATE", state))
+	if variant == dtx.DTX2 {
+		out.WriteString(equ("DTX_PERIOD", period))
+		out.WriteString(equ("DTX_N", given.Ring))
+		out.WriteString(equ("ST4_UNIT", given.Unit))
+		// The payload states whether its columns hold copies (R5.10), so
+		// the decoder built for them is settled by the file. That build
+		// writes the reach into two of its own instructions, and a 68030
+		// caller flushes the instruction cache after every call that seeds
+		// a decoder.
+		if given.Copies {
+			out.WriteString(equ("ST4_WINDOW", 1))
+			out.WriteString("; the columns were packed with st4 -c, so the" +
+				" decoder takes the copy code\n")
+		}
+	}
+	return out.String(), nil
+}
+
+// Templates gives where the templates and the carried decoder stand.
+func Templates() string {
+	if named := os.Getenv("DTX_68K"); named != "" {
+		return named
+	}
+	return "68k"
+}
+
+// Code gives rmac's assembly of the variant's template for this table, the
+// code alone. This is the one step an assembler is needed for.
+//
+// templates is where 68k/ stands. A tool run from outside this repository
+// has no directory to resolve a relative one against, so the caller names
+// it rather than taking Templates.
+func Code(file []byte, rmac, templates string) ([]byte, error) {
+	header, err := dtx.ReadHeader(file)
+	if err != nil {
+		return nil, err
+	}
+	figures, err := Figures(file)
+	if err != nil {
+		return nil, err
+	}
+	work, err := os.MkdirTemp("", "dtx68")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(work)
+	if err := os.WriteFile(filepath.Join(work, "DTX_table.i"),
+		[]byte(figures), 0o644); err != nil {
+		return nil, err
+	}
+	out := filepath.Join(work, "image.bin")
+	template := filepath.Join(templates,
+		fmt.Sprintf("DTX%d.S", header.Variant))
+	said, err := exec.Command(rmac, "-m68000", "-fr", "+o3", "-i"+work,
+		"-i"+templates, "-o", out, template).CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("%s gave %s", rmac, strings.TrimSpace(string(said)))
+	}
+	code, err := os.ReadFile(out)
+	if err != nil {
+		return nil, fmt.Errorf("%s wrote no image: %s", rmac, said)
+	}
+	return code, nil
+}
+
+// Blank zeroes the five fields a combine writes.
+//
+// Built code states no table. The assembler read one to build it, and what
+// it read stands in the format block: zeroing those five is what makes the
+// file a function of the template alone, and what makes code shipped without
+// a combine read a state block of zero bytes rather than some other table's.
+func Blank(code []byte) {
+	dtx.PutLong(code, FormatAt+StateAt, 0)
+	dtx.PutLong(code, FormatAt+TableAt, 0)
+	dtx.PutWord(code, FormatAt+RowBytesAt, 0)
+	dtx.PutWord(code, FormatAt+PeriodAt, 0)
+	dtx.PutWord(code, FormatAt+RingAt, 0)
 }

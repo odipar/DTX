@@ -35,7 +35,7 @@ public final class Write {
         int repeat = -1;
         int unit = 1;
         int ring = 960;
-        String packer = "st4";
+        String packer = "";
         String copies = "";
         for (int i = 2; i < args.length; i++) {
             String arg = args[i];
@@ -69,7 +69,7 @@ public final class Write {
         byte[] out = switch (variant) {
             case Dtx.DTX0 -> Dtx0.write(table);
             case Dtx.DTX1 -> Dtx1.write(table);
-            case Dtx.DTX2 -> Dtx2.write(table, new St4(Path.of(packer), copies),
+            case Dtx.DTX2 -> Dtx2.write(table, packer(packer, copies),
                     unit, ring);
             default -> throw new IllegalArgumentException(
                     "the variant is 0, 1 or 2, not " + variant);
@@ -83,6 +83,23 @@ public final class Write {
                 + " widths %s, RR=%d%s%n", args[0], variant, out.length,
                 table.rows(), table.columns(), drawn, table.repeat(),
                 variant == Dtx.DTX2 ? ", k=" + unit + ", N=" + ring : "");
+    }
+
+    /**
+     * What packs a column: the copy this repository holds, or a packer
+     * beside it where {@code -p} names one.
+     */
+    private static Packer packer(String named, String copies) {
+        if (named.isEmpty()) {
+            return copies.isEmpty() ? new St4()
+                    : new St4(true, seconds(copies));
+        }
+        return new St4Beside(Path.of(named), copies);
+    }
+
+    /** The seconds {@code -copiesS} searches for, or zero. */
+    private static double seconds(String copies) {
+        return copies.length() > 2 ? Double.parseDouble(copies.substring(2)) : 0;
     }
 
     /** The widths {@code -w} gives, one a column. */

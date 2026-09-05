@@ -109,7 +109,12 @@ public final class Blobs {
 
     /** The code one build assembles to, with the table's own figures out. */
     public static byte[] code(Build build, Path rmac) {
-        byte[] code = Packager.code(seed(build), rmac);
+        return code(build, rmac, Packager.carried());
+    }
+
+    /** The same, from the templates in {@code templates}. */
+    public static byte[] code(Build build, Path rmac, String templates) {
+        byte[] code = Packager.code(seed(build), rmac, templates);
         Packager.blank(code);
         return code;
     }
@@ -125,9 +130,12 @@ public final class Blobs {
     public static void main(String[] args) throws IOException {
         List<Path> into = new ArrayList<>();
         String rmac = "rmac";
+        String templates = Packager.carried();
         for (String arg : args) {
             if (arg.startsWith("-a")) {
                 rmac = arg.substring(2);
+            } else if (arg.startsWith("-t")) {
+                templates = arg.substring(2);
             } else if (arg.startsWith("-")) {
                 System.err.println("Blobs does not read " + arg);
                 System.exit(2);
@@ -137,7 +145,7 @@ public final class Blobs {
             }
         }
         if (into.isEmpty()) {
-            System.err.println("Blobs DIR [DIR..] [-aRMAC]");
+            System.err.println("Blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]");
             System.exit(2);
             return;
         }
@@ -147,12 +155,13 @@ public final class Blobs {
         for (Build build : all()) {
             byte[] code;
             try {
-                code = code(build, Path.of(rmac));
+                code = code(build, Path.of(rmac), templates);
             } catch (RuntimeException failed) {
                 throw new IllegalStateException("no code built for "
                         + build.name() + " with an assembler at " + rmac
+                        + " and templates at " + templates
                         + ": the build runs one, and -Drmac=PATH names"
-                        + " another. A release carries what it built, and a"
+                        + " another. A release holds what it built, and a"
                         + " caller who takes one runs no assembler.", failed);
             }
             for (Path at : into) {
