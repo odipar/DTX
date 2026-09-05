@@ -14,9 +14,9 @@ takes longer.
 
 ## The example tables
 
-Two tables, both of 64 rows at a ring of 960 bytes. Row `r`, column `i` is
-`r` times `i` plus one, modulo 251, so every value fits one byte, and the
-first rows of the three column table are:
+Two tables, both of 64 rows of two byte values at a ring of 960 bytes: one
+of three columns and one of twenty. Row `r`, column `i` is `r` times `i`
+plus one, modulo 251, so the first rows of the three column table are:
 
 | row | c0 | c1 | c2 |
 |---|---|---|---|
@@ -24,43 +24,8 @@ first rows of the three column table are:
 | 1 | 1 | 2 | 3 |
 | 2 | 2 | 4 | 6 |
 
-The widths are what the tables differ in. Under DTX0, DTX1 and DTX2 at `k`
-of 1 a column is 1, 2 or 4 bytes wide in turn; under DTX2 at `k` of 2 and
-4 every column is as wide as the unit, since a column is a whole number of
-units.
-
-### Three columns
-
-| column | DTX0, DTX1, DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
-|---|---|---|---|
-| c0 | 1 | 2 | 4 |
-| c1 | 2 | 2 | 4 |
-| c2 | 4 | 2 | 4 |
-
-### Twenty columns
-
-| column | DTX0, DTX1, DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
-|---|---|---|---|
-| c0 | 1 | 2 | 4 |
-| c1 | 2 | 2 | 4 |
-| c2 | 4 | 2 | 4 |
-| c3 | 1 | 2 | 4 |
-| c4 | 2 | 2 | 4 |
-| c5 | 4 | 2 | 4 |
-| c6 | 1 | 2 | 4 |
-| c7 | 2 | 2 | 4 |
-| c8 | 4 | 2 | 4 |
-| c9 | 1 | 2 | 4 |
-| c10 | 2 | 2 | 4 |
-| c11 | 4 | 2 | 4 |
-| c12 | 1 | 2 | 4 |
-| c13 | 2 | 2 | 4 |
-| c14 | 4 | 2 | 4 |
-| c15 | 1 | 2 | 4 |
-| c16 | 2 | 2 | 4 |
-| c17 | 4 | 2 | 4 |
-| c18 | 1 | 2 | 4 |
-| c19 | 2 | 2 | 4 |
+Every value of a table is one width (R6.3), so a table is `R`, `C` and that
+width and the code is built for it: the width table below is what it costs.
 
 ## What a call costs
 
@@ -68,47 +33,59 @@ units.
 
 | call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
 |---|---|---|---|---|---|
-| init | 592 | 824 | 6688 | 5296 | 5488 |
-| advance | 130 | 154 | 1650-3086 | 1688-1798 | 1750-1860 |
-| read | 228 | 536 | 536 | 460 | 484 |
-| take | 304 | 664 | 3618 | 2256 | 2342 |
-| jump to row 0 | 338 | 176 | 7652 | 6298 | 6552 |
-| jump to row 63 | 338 | 176 | 126334 | 100832 | 104628 |
-| code, bytes | 408 | 716 | 1476 | 1480 | 1484 |
+| init | 580 | 458 | 7120 | 5722 | 5680 |
+| advance | 130 | 106 | 1398-1508 | 1372-1482 | 594-1386 |
+| read | 140 | 188 | 188 | 188 | 188 |
+| take | 216 | 272 | 1698 | 1672 | 1576 |
+| jump to row 0 | 292 | 166 | 8104 | 6680 | 6652 |
+| jump to row 63 | 292 | 166 | 82424 | 80956 | 64796 |
+| code, bytes | 392 | 316 | 1080 | 1084 | 1092 |
 
 ### Twenty columns
 
 | call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
 |---|---|---|---|---|---|
-| init | 592 | 824 | 91392 | 33116 | 37116 |
-| advance | 130 | 154 | 1868-11208 | 1906 | 2104 |
-| read | 1064 | 1844 | 1844 | 1616 | 1776 |
-| take | 1140 | 1972 | 13050 | 3520 | 3878 |
-| jump to row 0 | 342 | 176 | 92574 | 34336 | 38534 |
-| jump to row 63 | 342 | 176 | 229970 | 105998 | 115120 |
-| code, bytes | 408 | 716 | 1476 | 1480 | 1484 |
+| init | 566 | 458 | 52390 | 38710 | 37270 |
+| advance | 130 | 106 | 1834 | 1590 | 1546 |
+| read | 374 | 834 | 834 | 834 | 834 |
+| take | 450 | 918 | 2670 | 2426 | 2382 |
+| jump to row 0 | 292 | 166 | 53810 | 39886 | 38402 |
+| jump to row 63 | 292 | 166 | 96014 | 86218 | 84062 |
+| code, bytes | 392 | 316 | 1080 | 1084 | 1092 |
 
-An advance under DTX2 is a range because a row refills one column of `P`
-rows, and the columns differ: a four byte column's refill decodes more
-than a one byte column's, and a turn past the last column does not refill.
-Under DTX2 at `k` of 2 and 4 in the twenty column table every column is
-the same width, so every advance that refills costs the same.
+An advance under DTX2 is a range where the columns differ in what their
+refills decode, and one figure where they do not: a row refills one column
+of `P` rows, and a turn past the last column does not refill.
 
-**What is flat and what is not.** Under DTX0 and DTX1 every call is flat
-in `R` and a read is linear in `C`. Under DTX2 a read is flat and linear in
+**What is flat and what is not.** Under DTX0 and DTX1 every call is flat in
+`R`, and a read is linear in `C`. Under DTX2 a read is flat and linear in
 `C`, an advance is flat and takes one column's refill, and a jump is not
 flat: it runs the advance's body once a row up to the target, so a jump to
 row 63 costs the 63 rows. A backward jump seeds every ring again first, so
 a jump to row 0 costs one init. A table that repeats costs that at every
 repeat, since the advance from row `R` minus one to `RR` is a jump.
 
-**Init under DTX2** is `C` decoder seeds and `C` refills of `P` rows, so
-it grows with `C` and with `P`: the init rows of the two tables.
+**Init under DTX2** is `C` decoder seeds and `C` refills of `P` rows, so it
+grows with `C` and with `P`: the init rows of the two tables.
 
-**A read** is `C` moves and the tests around them: a wide column whose
-place in the row is odd goes down as bytes, since a 68000 takes an address
-error on a word at an odd address, and the test costs each wide column a
-`btst` and a branch.
+**A read** under DTX0 is one run of bytes, at the widest move the row's
+bytes take. Under DTX1 and DTX2 it is `C` moves and a stride each: one
+value from each column, and the columns lie at one stride because every
+column is the same length.
+
+## What the width costs
+
+A read of the twenty column table, at each width:
+
+| width | DTX0 | DTX1 | DTX2 k=1 |
+|---|---|---|---|
+| 1 | 224 | 834 | 834 |
+| 2 | 374 | 834 | 834 |
+| 4 | 674 | 994 | 994 |
+
+A wider value moves more bytes and the row is longer, so a read grows with
+the width. It does not grow twice over: the loop is the same `C` turns at
+every width, and only the move inside it changes.
 
 ## What the copy code costs
 
@@ -118,9 +95,9 @@ advanced, on the three column table at each unit.
 
 | k | without | with | more |
 |---|---|---|---|
-| 1 | 137252 | 137408 | 156 |
-| 2 | 143816 | 143972 | 156 |
-| 4 | 149378 | 149534 | 156 |
+| 1 | 109806 | 110010 | 204 |
+| 2 | 106914 | 107070 | 156 |
+| 4 | 90726 | 90882 | 156 |
 
 The two decoders differ at init, where the one with the copy code writes
 the ring's size into two of its own instructions, and not in a row.

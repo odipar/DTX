@@ -20,21 +20,26 @@ final class WriteTest {
             throws IOException {
         Path text = work.resolve("t.csv");
         Files.writeString(text, Rig.numbers(64, 3));
-        Path first = work.resolve("first.dtx");
-        Write.main(new String[] {text.toString(), first.toString(), "-v2",
-                "-w1,2,4", "-k1", "-m960"});
-        Path again = work.resolve("again.dtx");
-        Write.main(new String[] {first.toString(), again.toString(), "-k2",
-                "-m64", "-copies"});
-        byte[] file = Files.readAllBytes(again);
-        Dtx.Header header = Dtx.header(file);
-        assertEquals(Dtx.DTX2, header.variant(), "the variant read is kept");
-        Packager.Packed packed = Packager.packed(file, header);
-        assertEquals(2, packed.unit());
-        assertEquals(64, packed.ring());
-        assertTrue(packed.copies());
-        assertEquals(Dtx.read(Files.readAllBytes(first)), Dtx.read(file),
-                "the same table at another unit and ring");
+        for (int width : new int[] {1, 2, 4}) {
+            Path first = work.resolve("first-w" + width + ".dtx");
+            Write.main(new String[] {text.toString(), first.toString(), "-v2",
+                    "-w" + width, "-k1", "-m960"});
+            Path again = work.resolve("again-w" + width + ".dtx");
+            Write.main(new String[] {first.toString(), again.toString(), "-k2",
+                    "-m64", "-copies"});
+            byte[] file = Files.readAllBytes(again);
+            Dtx.Header header = Dtx.header(file);
+            assertEquals(Dtx.DTX2, header.variant(),
+                    "the variant read is kept");
+            assertEquals(width, header.width(), "the width read is kept");
+            Packager.Packed packed = Packager.packed(file, header);
+            assertEquals(2, packed.unit());
+            assertEquals(64, packed.ring());
+            assertTrue(packed.copies());
+            assertEquals(Dtx.read(Files.readAllBytes(first)), Dtx.read(file),
+                    "the same table at another unit and ring, at a width of "
+                            + width);
+        }
     }
 
     @Test
@@ -42,20 +47,22 @@ final class WriteTest {
             throws IOException {
         Path text = work.resolve("t.csv");
         Files.writeString(text, "# a note\n" + Rig.numbers(8, 2));
-        Path packed = work.resolve("p.dtx");
-        Write.main(new String[] {text.toString(), packed.toString(), "-v2",
-                "-w1,2", "-r3", "-k1", "-m960"});
-        Path out = work.resolve("out.csv");
-        Write.main(new String[] {packed.toString(), out.toString()});
-        String written = Files.readString(out);
-        assertTrue(written.startsWith("# 8 rows, 2 columns, widths 1,2, RR 3\n"
-                + "c0,c1\n0,0\n1,2\n"), written);
-        Path back = work.resolve("back.dtx");
-        Write.main(new String[] {out.toString(), back.toString(), "-v1"});
-        assertEquals(Dtx.read(Files.readAllBytes(packed)),
-                Dtx.read(Files.readAllBytes(back)),
-                "through text and back, with the widths and repeat the"
-                        + " comment gives");
+        for (int width : new int[] {1, 2, 4}) {
+            Path packed = work.resolve("p-w" + width + ".dtx");
+            Write.main(new String[] {text.toString(), packed.toString(), "-v2",
+                    "-w" + width, "-r3", "-k1", "-m960"});
+            Path out = work.resolve("out-w" + width + ".csv");
+            Write.main(new String[] {packed.toString(), out.toString()});
+            String written = Files.readString(out);
+            assertTrue(written.startsWith("# 8 rows, 2 columns, width " + width
+                    + ", RR 3\nc0,c1\n0,0\n1,2\n"), written);
+            Path back = work.resolve("back-w" + width + ".dtx");
+            Write.main(new String[] {out.toString(), back.toString(), "-v1"});
+            assertEquals(Dtx.read(Files.readAllBytes(packed)),
+                    Dtx.read(Files.readAllBytes(back)),
+                    "through text and back, with the width and repeat the"
+                            + " comment gives");
+        }
     }
 
     @Test

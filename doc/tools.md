@@ -28,7 +28,7 @@ file to work on. The three trees print one text, which `ParityTest` compares.
 |---|---|---|---|
 | a table, from text or a DTX file, into a DTX file or text | `bin/dtx-write` | `dtx-write` | `dtx dtx-write` |
 | a DTX file into a 68000 image | `bin/dtx-package` | `dtx-package` | `dtx dtx-package` |
-| the eight images the packager combines from | `bin/dtx-blobs` | `dtx-blobs` | `dtx dtx-blobs` |
+| the twenty-two images the packager combines from | `bin/dtx-blobs` | `dtx-blobs` | `dtx dtx-blobs` |
 | find the classpath and run one of the above | `bin/dtx-run` | none needed | none needed |
 
 ## Write
@@ -47,17 +47,17 @@ bin/dtx-write in.dtx out.csv
 The first file is read as a DTX file where it opens with `DTX`, and as text
 otherwise. The second is written as text where its name ends in `.csv`, and
 as a DTX file otherwise. The table is the same under every variant (R1.3),
-so what comes out of a DTX file has the rows, widths, `R` and `RR` of what
-went in, and a DTX2 file written from a DTX2 file is that table packed at
-the unit and ring the flags give. A DTX2 file is unpacked with the copy of
-ST4 in this repository.
+so what comes out of a DTX file has the rows, the width, `R` and `RR` of
+what went in, and a DTX2 file written from a DTX2 file is that table packed
+at the unit and ring the flags give. A DTX2 file is unpacked with the copy
+of ST4 in this repository.
 
 | flag | gives |
 |---|---|
 | `-vV` | the variant to write: 0, 1 or 2. The default is the variant read, or 0 for text |
-| `-wW,W,..` | one width a column: 1, 2 or 4 each, for text. The default is what the text's first comment gives, or else the narrowest width that takes every value of the column. A DTX file gives its own widths |
+| `-wW` | the bytes every value of the table takes: 1, 2 or 4, for text. The default is what the text's first comment gives, or else the narrowest width that takes every value of the table. A DTX file gives its own width |
 | `-rRR` | the row the table repeats to, 0 to `R`. The default is what the DTX file or the text's first comment gives, or else `R`, where the table does not repeat |
-| `-kK` | the unit a DTX2 column is packed at, and `R` divides by it (R5.6). The default is 1 |
+| `-kK` | the unit a DTX2 column is packed at, and `R` times the width divides by it (R5.6). The default is 1 |
 | `-mN` | the ring a DTX2 column unpacks through, in bytes, 1 to 65535 (R5.4). The default is 960 |
 | `-pPACKER` | an ST4 executable to pack with, instead of the copy in this repository. Nothing needs one: name it to pack with a build newer than the copy |
 | `-copies[S]` | a match beyond the ring copies from the column's own literal stream, and `-copiesS` searches `S` seconds for a better parse. It reaches the packer as `-c`. YMX spells it the same way |
@@ -76,12 +76,13 @@ line before the first row of numbers in which no cell is a number: a line
 of column names, or a line describing the table.
 
 A value is decimal, or hexadecimal where it opens with `$`, and negative
-where it opens with `-`. A value of `W` bytes is stored most significant
-byte first, as every field of the header is, and a negative one in two's
-complement. A value fits `W` bytes where it lies from -2^(8W-1) to
-2^(8W)-1, so one width takes a signed column's values and an unsigned
-one's alike. DTX does not define more of a column than its width (R6.3), so
-which of the two a column is is defined elsewhere or not defined.
+where it opens with `-`. Every value of the table takes the same width `W`
+(R6.3). A value of `W` bytes is stored most significant byte first, as every
+field of the header is, and a negative one in two's complement. A value fits
+`W` bytes where it lies from -2^(8W-1) to 2^(8W)-1, so one width takes a
+signed column's values and an unsigned one's alike. DTX does not define more
+of a column than its width, so which of the two a column is is defined
+elsewhere or not defined.
 
 ```
 # a clock, a note and a step
@@ -90,25 +91,26 @@ which of the two a column is is defined elsewhere or not defined.
 2, $0102,  0
 ```
 
-Those three columns take widths 1, 2 and 1: column 1 has 256 upward, and
-column 2 a negative value.
+That table takes a width of 2: the width is the narrowest that takes every
+value of the table rather than of a column, and column 1 has values from 256
+up.
 
 Written out, a table is a comment giving its shape, a line of column
 names, `c0` onward, and then one row a line, each value the unsigned number
 its bytes give. The three columns above come out as:
 
 ```
-# 3 rows, 3 columns, widths 1,2,1, RR 3
+# 3 rows, 3 columns, width 2, RR 3
 c0,c1,c2
-0,256,254
-1,257,255
+0,256,65534
+1,257,65535
 2,258,0
 ```
 
-Read back, the comment gives the widths and the repeat where `-w` and `-r`
+Read back, the comment gives the width and the repeat where `-w` and `-r`
 do not, and the names are passed over, so the text a table was written as
 reads back to that table. A negative value comes out as the unsigned
-number of the same bytes, 254 for -2 in one byte, and reads back to the
+number of the same bytes, 65534 for -2 in two bytes, and reads back to the
 same bytes.
 
 `org.dtx.Csv` is the same reader and writer as a library, and `Table`,
@@ -119,37 +121,40 @@ out of a file.
 
 With `-copies` a match beyond the ring copies from the column's own literal
 stream, and that saves most at the small rings DTX2 reads through. Measured
-on a table of 512 rows repeating a pattern 37 rows long, at `N` of 64: the
-file goes from 1164 bytes to 272, and its image from 2792 to 1932.
+on a table of 512 rows repeating a pattern 37 rows long, at a width of 2 and
+`N` of 64, where the pattern runs to 74 bytes and reaches past the ring: the
+file goes from 2140 bytes to 356, and its image from 3300 to 1548.
 
 **The payload defines it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
 Write is the one tool that reads `-copies` and the packager takes the
 decoder the file needs. No packager has a flag for it.
 
 The flag is there because a decoder built without the copy code reads such
-a column wrongly and no ST4 data set defines which kind it is. Measured on the
-same table, a column packed with copies and read by a decoder without the
-copy code gives row 37 wrong, where the pattern first repeats past the
-ring. The other way round is safe: a decoder with the copy code reads a
-column without copies as the plain one does, at a few cycles more over 64
-rows (performance.md) and 30 to 36 bytes more code (experiments.md).
+a column wrongly and no ST4 data set defines which kind it is. Measured on
+the same table, a column packed with copies and read by a decoder without
+the copy code reads wrong at the row the pattern first repeats past the
+ring, and right at every row before it (experiments.md). The other way round
+is safe: a decoder with the copy code reads a column without copies as the
+plain one does, at a few cycles more over 64 rows (performance.md) and 32 to
+36 bytes more code (experiments.md).
 
 ## Package
 
 A DTX file of any variant into a standalone 68000 image: the code, then the
 table's bytes, reached PC relative. [abi.md](abi.md) defines the six calls
-into the image, and the state block a caller supplies.  It combines rather
-than assembles. The code does not move with the table, so it is built once and
-the tool takes the image for the build the table needs, writes the five fields
-the table gives into the format block, and appends the column table and the
-table's bytes. No assembler runs, and a caller who takes a release does not
-install one.
+into the image, and the state block a caller supplies. It combines rather
+than assembles. The code does not move with `R`, `C` or `RR`, so it is built
+ahead of time: one build a variant, one a width under DTX1 and DTX2, and under
+DTX2 one a unit and the copy code as well. The tool takes the image for the
+build the table needs, writes the five fields the table gives into the format
+block, and appends the table's bytes. No assembler runs, and a caller who
+takes a release does not install one.
 
 ```
 bin/dtx-package in.dtx out.bin
 ```
 
-The Go one contains the eight images, so it needs neither this
+The Go one contains the twenty-two images, so it needs neither this
 repository nor a runtime beside it:
 
 ```
@@ -162,17 +167,28 @@ go build -o dtx-package ./cmd/dtx-package    # under go/
 | `-aRMAC` | assemble the template with this rmac rather than take the carried code. The two give the same bytes, and a template edit is tried through this one |
 | `-s` | write the figures rather than the image, for reading or for a build of your own |
 
-The image contains one table and the code for that table's variant. What
-the table gives reaches the code at run time, out of the table's own header
-and the column table behind it, so one variant is one code at any `R`, `C`
-or `RR`. The tool prints the image's bytes and the state block's, and the
-format block defines the same figures for a caller to read out of the file.
+The image contains one table and the code for that table's variant, and under
+DTX1 and DTX2 for that table's width. `R`, `C` and `RR` reach the code at run
+time, out of the table's own header, so one build is one code at any of the
+three. The width is not one of them under DTX1 and DTX2: a read moves a value
+in one instruction, and a table of another width takes another build. Under
+DTX0 a read is one run of bytes, so one build reads every width.
+
+Under DTX0 and DTX1 the table's bytes follow the code with nothing between
+them. Every column is one width and one length, so a cursor and a stride
+reach them all and the packager does not write an entry a column. Under DTX2
+one stream record a column stands there, four longs each, giving where that
+column's four streams begin (abi.md 1). The tool prints the image's bytes
+and the state block's, and the format block defines the same figures for a
+caller to read out of the file.
 
 ## Build the images
 
-The eight files the packager combines from: DTX0, DTX1, and one a build of
-the decoder built into DTX2, which is a unit of 1, 2 or 4 with the copy
-code and without.
+The twenty-two files the packager combines from. DTX0 reads a row as one run
+of bytes, so its code does not move with the width and one file is every
+DTX0 table's. DTX1 moves a value a column, so it has one a width: three.
+DTX2 has one a width and a build of the decoder in it, a unit of 1, 2 or 4
+with the copy code and without: eighteen.
 
 The build makes them, so nothing here is run by hand. `mvn package` writes
 each of them three times:
@@ -180,15 +196,15 @@ each of them three times:
 | into | read by |
 |---|---|
 | the classes the jar is made of | the Java packager, off the classpath |
-| `build/68k` | a release, which attaches the eight, and the C# assembly, which embeds them from there |
+| `build/68k` | a release, which attaches all of them, and the C# assembly, which embeds them from there |
 | `go/internal/image/data` | `go:embed`, which reads only inside its own module |
 They are plain files and nothing about them is Java's, so a port in another
-language builds from the same eight. A Go executable built after the Maven
-build contains all eight and needs neither this repository nor an assembler
-beside it; one built from a tree whose build had not run does not contain one,
-and resolves an image through `DTX_68K` instead. The directory under `go/`
-contains a README and a `.gitignore` of its own and is committed empty of
-images, so the package compiles either way.
+language builds from the same twenty-two. A Go executable built after the
+Maven build contains all of them and needs neither this repository nor an
+assembler beside it; one built from a tree whose build had not run does not
+contain one, and resolves an image through `DTX_68K` instead. The directory
+under `go/` contains a README and a `.gitignore` of its own and is committed
+empty of images, so the package compiles either way.
 
 This is the one step rmac is needed for. `-Drmac=PATH` names one that is
 not on the path, and a build without either fails at it and names which.
@@ -199,24 +215,27 @@ where it is released, not where a table is packaged.
 bin/dtx-blobs DIR [DIR..]
 ```
 
-writes the same eight into directories of your own.
+writes the same twenty-two into directories of your own.
 
 | flag | gives |
 |---|---|
 | `-aRMAC` | the assembler to run. The default is `rmac` on the path |
 | `-tTEMPLATES` | where `68k/` stands. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository does not have a directory to resolve a relative one against, so it names this |
 
-The table each build is assembled from is made rather than read: the code
-does not move with a table, and the five fields one would give are
-zeroed, so an image does not define a table until a package writes one.
+The table each build is assembled from is made rather than read: at the
+build's own width the code is the same for any table, and the five fields
+one would give are zeroed, so an image does not define a table until a
+package writes one.
 
 A DTX2 image contains the decoder carried at
 [68k/ST4_wrap.S](../68k/ST4_wrap.S), built at the unit the payload defines.
 Init fills every ring before it returns, and one column is refilled a row
 after that, so a read takes one value from each ring and never decodes.
-The packager takes the period from the table and fails the package where
-no period meets every rule abi.md 4 defines: what it gives names the rule
-and the figures that break it.
+Every ring is `N` bytes and every column one width, so column `i`'s ring
+stands `i` rings past column 0's and one cursor arithmetic runs them all
+(R5.5). The packager takes the period from the table and fails the package
+where no period meets every rule abi.md 4 defines: what it gives names the
+rule and the figures that break it.
 
 A DTX2 image needs more of the caller than a plain one. Its state block
 contains a decoder state and a ring a column, so it runs to `NC` bytes
@@ -225,8 +244,8 @@ tool prints the figure and the format block defines it.
 
 ## Release
 
-The three Go commands for six platforms, each containing the eight images,
-and the images themselves:
+The three Go commands for six platforms, each containing the twenty-two
+images, and the images themselves:
 
 ```
 release/publish.sh [version]
@@ -238,16 +257,17 @@ TARGETS="linux-x64" release/publish.sh
 `go build` cross-compiles to any target from any host, so one machine
 covers Windows, macOS and Linux on both architectures.
 
-It writes `dist/release`: one zip a platform, one zip of the eight images, all
-named by the release, and `MANIFEST.txt`, written by `release/manifest.sh`,
-which gives every file's size and sha256 beside what identifies it - a
-variant, a unit and copies for an image, what it contains for a zip - so one
-release's file is told from another's without opening it. It builds
-`dtx-blobs` first, from a tree with no image, since that is the one command
-that makes them rather than containing them; it fails where fewer than eight
-come out; and it ends by writing and packaging a table with the host's own
-executables, from a directory that is not this repository, so an executable
-with no image fails there rather than in a release.
+It writes `dist/release`: one zip a platform, one zip of the twenty-two
+images, all named by the release, and `MANIFEST.txt`, written by
+`release/manifest.sh`, which gives every file's size and sha256 beside what
+identifies it - a variant, a width, a unit and copies for an image, what it
+contains for a zip - so one release's file is told from another's without
+opening it. It builds `dtx-blobs` first, from a tree with no image, since
+that is the one command that makes them rather than containing them; it
+fails where fewer than twenty-two come out; and it ends by writing and
+packaging a table with the host's own executables, from a directory that is
+not this repository, so an executable with no image fails there rather than
+in a release.
 
 Writing DTX2 needs an ST4 packer, and each tree contains one:
 `src/main/java/org/st4` and `dotnet/nt4`, both taken from
@@ -285,8 +305,8 @@ runs one call past its end marker does not change a byte a reader gives, and
 shows up only in the count.
 
 **The figures.** performance.md records what each call costs in 68000
-cycles, and the rig counts them again and checks every cell of its tables
-against its count.
+cycles and what a build's code runs to in bytes, and the rig measures both
+again and checks every cell of its tables against what it read.
 
 It needs `mvn compile`, [rmac](http://rmac.is-slick.com) on the path or at
 `$RMAC`, and `pip install unicorn`, which brings the emulator it runs the
@@ -295,18 +315,19 @@ code on. `$ST4` names a packer to pack with instead of the carried one.
 `ParityTest` and `StabilityTest` run under `mvn test` with the rest.
 
 **The three trees.** Every tool run in each of them over a corpus, and the
-files compared byte for byte: text written at each variant and each unit, a
-plain file rewritten, the eight images built, and eight tables packaged, which
-reach every image the packager combines with. One input has one output in
+files compared byte for byte: text written at each variant, width and unit,
+a plain file rewritten, the twenty-two images built, and a table packaged
+across the variants, the widths and the units. One input has one output in
 every tree. It needs Go, the .NET SDK and rmac, and is skipped without one of
 them.
 
-**The code a variant assembles to.** A corpus a variant at a time, every
+**The code a build assembles to.** A corpus a variant at a time, every
 image's code compared with the first one's byte for byte, so R, C and RR
-move the
-table and not the reader. Under DTX2 the six decoder builds are grouped, no
-two of them one code, and the copy code's size is read back out and
-compared with what doc/abi.md 5 gives. It needs rmac.
+move the table and not the reader. The width does move it: DTX0's code is
+one at every width, since a row is one run of bytes, and DTX1's is one a
+width, no two of the three one code. Under DTX2 the eighteen builds are
+grouped, no two of them one code, and the copy code's size is read back out
+and compared with what doc/abi.md 5 gives. It needs rmac.
 
 ## The style check
 

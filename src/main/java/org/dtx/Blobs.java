@@ -15,8 +15,11 @@ import java.util.List;
  * format block, and appends the column table and the table's bytes. This
  * writes those files, and it is the one step rmac is needed for.
  *
- * <p>Eight of them: DTX0, DTX1, and one a build of the decoder built into
- * DTX2, which is a unit of 1, 2 or 4 with the copy code and without.
+ * <p>Twenty-two of them. DTX0 reads a row as one run of bytes, so its code
+ * does not move with the width and one file is every DTX0 table's. DTX1
+ * moves a value a column, so it has one a width. DTX2 has one a width and a
+ * build of the decoder built into it, which is a unit of 1, 2 or 4 with the
+ * copy code and without.
  *
  * <p>The table each is assembled from fixes only the figures the assembler
  * reads, so it is made here rather than read: the columns do not contain
@@ -28,23 +31,30 @@ public final class Blobs {
     private Blobs() {
     }
 
-    /** One build of the code: a variant, and under DTX2 a decoder. */
-    public record Build(int variant, int unit, boolean copies) {
+    /**
+     * One build of the code: a variant, the width its values take, and
+     * under DTX2 a decoder.
+     */
+    public record Build(int variant, int width, int unit, boolean copies) {
 
         /** The file this build stands in. */
         public String name() {
-            return Packager.carriedName(variant, unit, copies);
+            return Packager.carriedName(variant, width, unit, copies);
         }
     }
 
     /** Every build, in the order the files are written. */
     public static List<Build> all() {
         List<Build> out = new ArrayList<>();
-        out.add(new Build(Dtx.DTX0, 0, false));
-        out.add(new Build(Dtx.DTX1, 0, false));
-        for (int unit : new int[] {1, 2, 4}) {
-            out.add(new Build(Dtx.DTX2, unit, false));
-            out.add(new Build(Dtx.DTX2, unit, true));
+        out.add(new Build(Dtx.DTX0, 1, 0, false));
+        for (int width : new int[] {1, 2, 4}) {
+            out.add(new Build(Dtx.DTX1, width, 0, false));
+        }
+        for (int width : new int[] {1, 2, 4}) {
+            for (int unit : new int[] {1, 2, 4}) {
+                out.add(new Build(Dtx.DTX2, width, unit, false));
+                out.add(new Build(Dtx.DTX2, width, unit, true));
+            }
         }
         return out;
     }
@@ -55,15 +65,13 @@ public final class Blobs {
      * 64 rows of two columns, at a ring of 960 where the build is packed.
      */
     public static byte[] seed(Build build) {
-        int[] width = build.variant() == Dtx.DTX2
-                ? new int[] {build.unit(), build.unit()}
-                : new int[] {1, 2, 4};
         int rows = 64;
-        byte[][] column = new byte[width.length][];
-        for (int i = 0; i < width.length; i++) {
-            column[i] = new byte[rows * width[i]];
+        int columns = 2;
+        byte[][] column = new byte[columns][];
+        for (int i = 0; i < columns; i++) {
+            column[i] = new byte[rows * build.width()];
         }
-        Table table = Table.of(rows, rows, width, column);
+        Table table = Table.of(rows, rows, build.width(), column);
         return switch (build.variant()) {
             case Dtx.DTX0 -> Dtx0.write(table);
             case Dtx.DTX1 -> Dtx1.write(table);

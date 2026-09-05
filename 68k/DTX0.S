@@ -22,7 +22,8 @@
 ; DTX0 lays the rows one after another, so one cursor walks them and a read is
 ; one run of bytes. The move that run takes is installed as well: a long where
 ; the row's bytes divide by four, a word where they are even, a byte where
-; they are odd.
+; they are odd. The width every value takes does not reach this file: a row is
+; a run either way, so one build reads a DTX0 table of any width.
 ;
 ; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here contains them: _columns is the
 ; last label and the code ends on a long, so the packager appends the .dtx
@@ -44,7 +45,7 @@
 ; The image, doc/abi.md 1: six slots, the format block, then the bodies.
 
         include "DTX_image.S"
-        DTX_IMAGE 0,1,0,0
+        DTX_IMAGE 0,1,0,0,0
 
 ; -----------------------------------------------------------------------------
 ; What a value is installed with. A 68000 reaches PC relative for a source
@@ -128,19 +129,16 @@ init_ready:
         move.l  a1,DTX_CURSOR(a0)
         rts
 
-; The payload's first byte in a1 and the header in a2, worked out rather than
-; assembled in: what the header runs to moves with C.
+; The payload's first byte in a1 and the header in a2. Where the table stands
+; is read out of the format block; the header is 16 bytes under every variant
+; and every C (SPEC.md 1), so the payload is 16 past it.
 DTX_payload:
         lea     _fmt(pc),a2
         movea.l a2,a1
         suba.w  #_fmt-_base,a1
         adda.l  8(a2),a1                ; where the table's header stands
         movea.l a1,a2
-        moveq   #0,d1
-        move.w  8(a2),d1                ; C
-        addi.l  #14+3,d1
-        andi.l  #-4,d1
-        adda.l  d1,a1                   ; the payload
+        adda.w  #16,a1                  ; the payload
         rts
 
 ; -----------------------------------------------------------------------------

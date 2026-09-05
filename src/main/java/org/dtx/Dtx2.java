@@ -30,11 +30,12 @@ public final class Dtx2 {
      * {@code table} as a DTX2 file, every column packed at one unit.
      *
      * @param packer what makes an ST4 data set of a column
-     * @param unit {@code k}: 1, 2 or 4, and {@code R} divides by it (R5.6)
+     * @param unit {@code k}: 1, 2 or 4, and a column's bytes divide by it
+     *     (R5.6)
      * @param ring {@code N}: the bytes a column unpacks through (R5.4)
      * @throws IllegalArgumentException where {@code unit} or {@code ring} is
-     *     outside what the payload can define, or {@code R} does not divide
-     *     by {@code unit}
+     *     outside what the payload can define, or a column's bytes do not
+     *     divide by {@code unit}
      */
     public static byte[] write(Table table, Packer packer, int unit, int ring) {
         if (unit != 1 && unit != 2 && unit != 4) {
@@ -44,9 +45,10 @@ public final class Dtx2 {
             throw new IllegalArgumentException(
                     "N is 1 to " + MAX_RING + ", not " + ring);
         }
-        if (table.rows() % unit != 0) {
-            throw new IllegalArgumentException("R is " + table.rows()
-                    + ", which does not divide by k of " + unit);
+        if (table.rows() * table.width() % unit != 0) {
+            throw new IllegalArgumentException("a column is " + table.rows()
+                    + " times " + table.width() + " bytes, which does not"
+                    + " divide by k of " + unit);
         }
         byte[][] set = new byte[table.columns()][];
         for (int i = 0; i < table.columns(); i++) {
@@ -80,7 +82,7 @@ public final class Dtx2 {
     /**
      * The DTX2 file of the table in a DTX file of any variant. The table is
      * the same under every variant (R1.3), so what comes back has the same
-     * rows, widths, {@code R} and {@code RR} as what went in, and a DTX2
+     * rows, width, {@code R} and {@code RR} as what went in, and a DTX2
      * file comes back packed at the unit and ring given here.
      */
     public static byte[] from(byte[] file, Packer packer, int unit, int ring) {
@@ -119,7 +121,7 @@ public final class Dtx2 {
             byte[] out = St4Decompressor.decode(set.control(), set.literal(),
                     set.byteOffsets(), set.wordOffsets(), set.unit(),
                     set.size(), set.window(), set.rewind()).output();
-            int bytes = header.rows() * header.width()[i];
+            int bytes = header.rows() * header.width();
             if (out.length != bytes) {
                 throw new IllegalArgumentException("column " + i
                         + " unpacks to " + out.length + " bytes, not the "
@@ -127,6 +129,7 @@ public final class Dtx2 {
             }
             column[i] = out;
         }
-        return Table.of(header.rows(), header.repeat(), header.width(), column);
+        return Table.of(header.rows(), header.repeat(), header.width(),
+                column);
     }
 }

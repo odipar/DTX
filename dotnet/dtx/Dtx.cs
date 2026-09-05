@@ -3,10 +3,9 @@ namespace Dtx;
 /// <summary>
 /// The header every DTX variant shares, and the numbers the variants take.
 ///
-/// <para>doc/SPEC.md section 1: DTX, the variant, R, C, RR, a width a
-/// column, and zero bytes up to the next long, so the payload begins on
-/// one. Every field of more than one byte is most significant byte
-/// first.</para>
+/// <para>doc/SPEC.md section 1: DTX, the variant, R, C, RR, the width every
+/// value takes, and one zero byte, so the payload begins on a long. Every
+/// field of more than one byte is most significant byte first.</para>
 /// </summary>
 public static class Format
 {
@@ -31,18 +30,18 @@ public static class Format
     /// </summary>
     public const int CopiesFlag = 1;
 
-    /// <summary>{@code at} up to the next multiple of {@code to}.</summary>
-    public static int Align(int at, int to) => (at + to - 1) / to * to;
+    /// <summary>What a header runs to, under every variant and every C.</summary>
+    public const int HeaderLength = 16;
 
-    /// <summary>What a header runs to: 14 plus C, up to the next long.</summary>
-    public static int HeaderLength(int columns) => Align(14 + columns, 4);
+    /// <summary>at up to the next multiple of to.</summary>
+    public static int Align(int at, int to) => (at + to - 1) / to * to;
 
     /// <summary>The header at the start of a file.</summary>
     /// <exception cref="ArgumentException">where the file is short of a
     /// header, does not open with DTX, or breaks a bound R6 sets</exception>
     public static Header ReadHeader(byte[] file)
     {
-        if (file.Length < 16)
+        if (file.Length < HeaderLength)
         {
             throw new ArgumentException(
                     $"a file of {file.Length} bytes does not contain a header");
@@ -57,6 +56,7 @@ public static class Format
         int rows = GetLong(file, 4);
         int columns = GetWord(file, 8);
         int repeat = GetLong(file, 10);
+        int width = file[14];
         if (rows < 1)
         {
             throw new ArgumentException($"R is 1 upward, not {rows}");
@@ -69,40 +69,12 @@ public static class Format
         {
             throw new ArgumentException($"RR is 0 to R, not {repeat}");
         }
-        int length = HeaderLength(columns);
-        if (file.Length < length)
+        if (width != 1 && width != 2 && width != 4)
         {
-            throw new ArgumentException($"a file of {file.Length} bytes is"
-                    + $" short of a header of {length}");
+            throw new ArgumentException(
+                    $"the width is 1, 2 or 4 bytes, not {width}");
         }
-        int[] width = new int[columns];
-        for (int i = 0; i < columns; i++)
-        {
-            width[i] = file[14 + i];
-            if (width[i] != 1 && width[i] != 2 && width[i] != 4)
-            {
-                throw new ArgumentException(
-                        $"column {i} is {width[i]} bytes wide, not 1, 2 or 4");
-            }
-        }
-        return new Header(file[3], rows, repeat, width, length);
-    }
-
-    /// <summary>
-    /// Where each column begins in a DTX1 payload. A column of two or four
-    /// bytes begins on an even offset, so a wide value is read whole.
-    /// </summary>
-    public static int[] Offsets(int rows, int[] width)
-    {
-        int[] at = new int[width.Length];
-        int next = 0;
-        for (int i = 0; i < width.Length; i++)
-        {
-            next = Align(next, 2);
-            at[i] = next;
-            next += rows * width[i];
-        }
-        return at;
+        return new Header(file[3], rows, columns, repeat, width);
     }
 
     // The four byte order helpers. A DTX file and a 68000 image are both
@@ -130,26 +102,15 @@ public static class Format
 }
 
 /// <summary>
-/// What a file's header defines. Length is the header's end, the payload's
-/// first byte.
+/// What a file's header defines: the byte at offset 3, R, C, RR, and the
+/// bytes every value takes.
 /// </summary>
-public sealed record Header(int Variant, int Rows, int Repeat, int[] Width,
-        int Length)
+public sealed record Header(int Variant, int Rows, int Columns, int Repeat,
+        int Width)
 {
-    /// <summary>C, the column count.</summary>
-    public int Columns => Width.Length;
+    /// <summary>What the header runs to, the payload's first byte.</summary>
+    public int Length => Format.HeaderLength;
 
-    /// <summary>A row's bytes, the sum of the widths.</summary>
-    public int RowBytes
-    {
-        get
-        {
-            int out_ = 0;
-            foreach (int w in Width)
-            {
-                out_ += w;
-            }
-            return out_;
-        }
-    }
+    /// <summary>A row's bytes: C values of W bytes.</summary>
+    public int RowBytes => Columns * Width;
 }

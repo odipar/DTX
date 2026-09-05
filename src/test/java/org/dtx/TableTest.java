@@ -13,7 +13,8 @@ final class TableTest {
     void aTableTakesTheBoundsR6Sets() {
         assertEquals(Example.ROWS, Example.table().rows());
         assertEquals(3, Example.table().columns());
-        assertEquals(7, Example.table().rowBytes());
+        assertEquals(6, Example.table().rowBytes());
+        assertEquals(2, Example.table().width());
     }
 
     @Test
@@ -25,12 +26,12 @@ final class TableTest {
         assertEquals("RR is 0 to R, not 4", assertThrows(
                 IllegalArgumentException.class,
                 () -> Table.of(3, 4, Example.WIDTH, column)).getMessage());
-        assertEquals("column 1 is 3 bytes wide, not 1, 2 or 4", assertThrows(
+        assertEquals("the width is 1, 2 or 4 bytes, not 3", assertThrows(
                 IllegalArgumentException.class,
-                () -> Table.of(3, 1, new int[] {1, 3, 2}, column)).getMessage());
-        assertEquals("column 0 holds 3 bytes, not 6", assertThrows(
+                () -> Table.of(3, 1, 3, column)).getMessage());
+        assertEquals("column 0 is 6 bytes, not 12", assertThrows(
                 IllegalArgumentException.class,
-                () -> Table.of(3, 1, new int[] {2, 4, 2}, column)).getMessage());
+                () -> Table.of(3, 1, 4, column)).getMessage());
     }
 
     @Test

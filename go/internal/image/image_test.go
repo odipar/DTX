@@ -6,33 +6,52 @@ import (
 	"testing"
 )
 
-// A build with the images has all eight, and each is the bytes the Maven
-// build wrote. A tree built without them does not contain one, which is the
-// other whole state: half of them would be a build gone wrong.
+// A build with the images contains all twenty-two, and each is the bytes the
+// Maven build wrote. A tree built without them does not contain one, which is
+// the other whole state: half of them would be a build gone wrong.
 func TestContainsEveryImageOrNone(t *testing.T) {
 	embedded := Embedded()
 	if embedded == 0 {
 		t.Skip("this build does not contain images: run mvn process-classes")
 	}
 	if embedded != len(Builds()) {
-		t.Fatalf("holds %d images, not the %d there are", embedded, len(Builds()))
+		t.Fatalf("%d images, not the %d there are", embedded, len(Builds()))
 	}
+	name := map[string]bool{}
 	for _, build := range Builds() {
-		bytes := Read(build.Variant, build.Unit, build.Copies)
-		name := Name(build.Variant, build.Unit, build.Copies)
+		bytes := Read(build.Variant, build.Width, build.Unit, build.Copies)
+		if name[build.Name()] {
+			t.Fatalf("two builds name %s", build.Name())
+		}
+		name[build.Name()] = true
 		if len(bytes) < 24+24 {
-			t.Fatalf("%s is %d bytes, too few to hold a format block",
-				name, len(bytes))
+			t.Fatalf("%s is %d bytes, too few for a format block",
+				build.Name(), len(bytes))
 		}
 		// doc/abi.md 1: the format block stands at +24 and opens with the
 		// variant this image reads.
 		if string(bytes[24:27]) != "DTX" || int(bytes[27]) != build.Variant {
 			t.Fatalf("%s opens %q at +24, not DTX%d",
-				name, bytes[24:28], build.Variant)
+				build.Name(), bytes[24:28], build.Variant)
 		}
 		if got := int(bytes[24+18]); got != build.Unit {
-			t.Fatalf("%s decodes at a unit of %d, not %d", name, got, build.Unit)
+			t.Fatalf("%s decodes at a unit of %d, not %d",
+				build.Name(), got, build.Unit)
 		}
+		// DTX0 reads a row as one run of bytes, so its code does not move
+		// with the width and its format block gives a width of 0.
+		want := build.Width
+		if build.Variant == 0 {
+			want = 0
+		}
+		if got := int(bytes[24+19]); got != want {
+			t.Fatalf("%s reads values of %d bytes, not %d",
+				build.Name(), got, want)
+		}
+	}
+	if len(name) != 22 {
+		t.Fatalf("%d builds, not the DTX0, three DTX1 and eighteen DTX2 there"+
+			" are", len(name))
 	}
 }
 
@@ -48,15 +67,14 @@ func TestTheEmbeddedImagesAreWhatTheBuildReleases(t *testing.T) {
 		t.Skip("no build/68k: run mvn process-classes")
 	}
 	for _, build := range Builds() {
-		name := Name(build.Variant, build.Unit, build.Copies)
-		want, err := os.ReadFile(filepath.Join(loose, name))
+		want, err := os.ReadFile(filepath.Join(loose, build.Name()))
 		if err != nil {
-			t.Fatalf("no %s in build/68k: %v", name, err)
+			t.Fatalf("no %s in build/68k: %v", build.Name(), err)
 		}
-		got := Read(build.Variant, build.Unit, build.Copies)
+		got := Read(build.Variant, build.Width, build.Unit, build.Copies)
 		if string(got) != string(want) {
 			t.Fatalf("%s is %d bytes carried and %d released",
-				name, len(got), len(want))
+				build.Name(), len(got), len(want))
 		}
 	}
 }

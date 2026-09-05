@@ -117,51 +117,42 @@ final class ConsistencyTest {
 
     /**
      * SPEC.md's pictures against the example table the same section defines.
-     * Every count a caption gives is recomputed from `R`, `C` and the
-     * widths, so a caption reworded away from what its picture draws fails
-     * here rather than standing.
+     * Every count a caption gives is recomputed from `R`, `C` and the width,
+     * so a caption reworded away from what its picture draws fails here
+     * rather than standing.
      */
     @Test
     void everyPictureAddsUpToTheExampleItDraws() throws IOException {
         String spec = read(SPEC);
         Matcher example = Pattern.compile("A table of `R` = (\\d+) rows and "
-                + "`C` = (\\d+) columns, of widths (\\d+), (\\d+) and "
-                + "(\\d+),").matcher(spec);
+                + "`C` = (\\d+) columns of ([a-z]+) byte values")
+                .matcher(spec);
         assertTrue(example.find(), "SPEC.md does not define an example table");
         int rows = Integer.parseInt(example.group(1));
         int columns = Integer.parseInt(example.group(2));
-        assertTrue(columns == 3, "the example has grown past three columns"
-                + " and this check reads three");
-        int[] width = new int[columns];
-        int row = 0;
-        StringBuilder sum = new StringBuilder();
-        for (int i = 0; i < columns; i++) {
-            width[i] = Integer.parseInt(example.group(3 + i));
-            row += width[i];
-            sum.append(i == 0 ? "" : " + ").append(width[i]);
-        }
+        int width = WORD.indexOf(example.group(3));
+        assertTrue(width == 1 || width == 2 || width == 4,
+                "the example's width is " + example.group(3));
+        int row = columns * width;
         List<String> wrong = new ArrayList<>();
 
-        // the header picture: 14 plus `C`, padded up to a long
-        int named = 14 + columns;
-        int padded = (named + 3) / 4 * 4;
+        // the header picture: 16 bytes, the width at 14 and a pad byte
         Matcher offsets = Pattern.compile(
                 "^ +0 +3 +4 +8 +10 +14 +(\\d+) +(\\d+)$", Pattern.MULTILINE)
                 .matcher(spec);
         if (!offsets.find()) {
             wrong.add("the header picture does not draw offsets");
         } else {
-            draws(wrong, offsets.group(1), named, "the widths begin at");
-            draws(wrong, offsets.group(2), padded, "the header runs to");
+            draws(wrong, offsets.group(1), 15, "the pad byte stands at");
+            draws(wrong, offsets.group(2), Dtx.HEADER, "the header runs to");
         }
-        for (int w : width) {
-            defines(wrong, spec, "| " + w + " |",
-                    "the header picture's width " + w);
-        }
+        defines(wrong, spec, "| " + width + " | 0 |",
+                "the header picture's width and pad");
 
-        // 2.1: a row is the sum of the widths, the payload `R` of them
-        defines(wrong, spec, "a row of the example: " + sum + ", "
-                + WORD.get(row) + " bytes", "2.1's row");
+        // 2.1: a row is C times the width, the payload R of them
+        defines(wrong, spec, "a row of the example: " + columns
+                + " columns of " + width + " bytes, " + WORD.get(row)
+                + " bytes", "2.1's row");
         for (int n = 0; n < rows; n++) {
             defines(wrong, spec, "row " + n + ", bytes " + n * row + " to "
                     + (n * row + row - 1), "2.1's row " + n);
@@ -169,18 +160,15 @@ final class ConsistencyTest {
         defines(wrong, spec, rows * row + " bytes, the table's values",
                 "2.1's payload");
 
-        // 2.2: each column begins on a word
-        int packed = 0;
-        for (int w : width) {
-            packed += packed % 2;
-            packed += rows * w;
-        }
-        defines(wrong, spec, packed + " bytes: the table's " + rows * row
-                + ", and " + WORD.get(packed - rows * row) + " byte of pad",
-                "2.2's payload");
+        // 2.2: the columns lie at one stride, and at this width no pad
+        int stride = Dtx1.stride(rows, width);
+        defines(wrong, spec, "the stride, " + stride, "2.2's stride");
+        defines(wrong, spec, Dtx1.payloadLength(rows, columns, width)
+                + " bytes, the table's values and no pad at a width of "
+                + width, "2.2's payload");
         assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
                 + "\nthe example is `R` = " + rows + ", `C` = " + columns
-                + ", widths " + sum);
+                + ", width " + width);
     }
 
     /** Adds to {@code wrong} where SPEC.md does not define {@code figure}. */
@@ -355,6 +343,6 @@ final class ConsistencyTest {
             }
         }
         assertTrue(wide.isEmpty(), () -> String.join("\n", wide)
-                + "\nAGENTS.md asks one width, held.");
+                + "\nAGENTS.md gives one wrap width, and a document keeps it.");
     }
 }

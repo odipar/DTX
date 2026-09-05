@@ -105,15 +105,11 @@ final class Rig {
     }
 
     /** The arguments Write takes for one table. */
-    static List<String> writeArgs(int variant, int[] width,
+    static List<String> writeArgs(int variant, int width,
             @Nullable Integer repeat, int unit, int ring, boolean copies) {
         List<String> argv = new ArrayList<>();
         argv.add("-v" + variant);
-        StringBuilder drawn = new StringBuilder();
-        for (int i = 0; i < width.length; i++) {
-            drawn.append(i == 0 ? "" : ",").append(width[i]);
-        }
-        argv.add("-w" + drawn);
+        argv.add("-w" + width);
         if (repeat != null) {
             argv.add("-r" + repeat);
         }
@@ -128,7 +124,7 @@ final class Rig {
     }
 
     /** One table written by the Java tree, as a .dtx file at {@code out}. */
-    static byte[] write(Path work, String csv, int variant, int[] width,
+    static byte[] write(Path work, String csv, int variant, int width,
             @Nullable Integer repeat, int unit, int ring, boolean copies) {
         try {
             Path text = work.resolve("t.csv");

@@ -14,10 +14,26 @@
 ; image begins, and DTX_TABLE_FOLLOWS where its code ends.
 ; -----------------------------------------------------------------------------
 
-; The six slots, the format block and DTX_metadata. The three figures a
+; The move one value takes. The width every value of the table takes reaches
+; the assembler as an equate, so a read moves a value in one instruction and
+; no call tests the width. One build a width is what that costs.
+        .macro  DTX_VALUE from,to
+        .if     DTX_WIDTH=1
+        move.b  \from,\to
+        .else
+        .if     DTX_WIDTH=2
+        move.w  \from,\to
+        .else
+        move.l  \from,\to
+        .endif
+        .endif
+        .endm
+
+; The six slots, the format block and DTX_metadata. The four figures a
 ; variant defines for itself reach it as arguments: P, N and k stand at 1, 0
-; and 0 where nothing is packed.
-        .macro  DTX_IMAGE variant,period,ring,unit
+; and 0 where nothing is packed, and the width at 0 where the code does not
+; move with it.
+        .macro  DTX_IMAGE variant,period,ring,unit,width
 _base:
         bra.w   DTX_init
         bra.w   DTX_metadata
@@ -35,7 +51,7 @@ _fmt:
         dc.w    DTX_ROWBYTES
         dc.w    \period
         dc.w    \ring
-        dc.b    \unit,0
+        dc.b    \unit,\width
         dc.l    _columns-_base          ; where the column table begins
 
 ; DTX_metadata. The format block is at a fixed place in the image, so one
@@ -57,9 +73,10 @@ DTX_metadata:
 ; What follows the code. Nothing stands after this label: the packager
 ; appends the column table and then the .dtx file to what rmac writes, so
 ; _columns is where the first of them lands and the code ends on a long to
-; put it there. The format block defines where each begins, and no
-; instruction reaches either by a displacement the assembler works out:
-; both move with C, and the code does not.
+; put it there. DTX0 and DTX1 do not have a column table, so under those two
+; the table's own header is the first byte there. The format block defines
+; where each begins, and no instruction reaches either by a displacement the
+; assembler works out: both move with C, and the code does not.
         .macro  DTX_TABLE_FOLLOWS
         .align  4
 _columns:

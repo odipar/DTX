@@ -28,27 +28,30 @@ import org.junit.jupiter.api.Test;
 class StabilityTest {
 
     /** One table of the corpus: what it is called, and its figures. */
-    private record Shape(String name, int rows, int[] width,
+    private record Shape(String name, int rows, int columns, int width,
             @Nullable Integer repeat) {}
 
-    private static final List<Shape> TABLES = List.of(
-            new Shape("R=64  C=2 widths 1,1  no repeat", 64, new int[] {1, 1}, null),
-            new Shape("R=128 C=2 widths 1,1  no repeat", 128, new int[] {1, 1}, null),
-            new Shape("R=512 C=2 widths 1,1  no repeat", 512, new int[] {1, 1}, null),
-            new Shape("R=64  C=2 widths 1,1  RR=0", 64, new int[] {1, 1}, 0),
-            new Shape("R=64  C=2 widths 1,1  RR=32", 64, new int[] {1, 1}, 32),
-            new Shape("R=64  C=1 widths 1", 64, new int[] {1}, null),
-            new Shape("R=64  C=3 widths 1,1,1", 64, new int[] {1, 1, 1}, null),
-            new Shape("R=64  C=4 widths 1,2,4,1", 64, new int[] {1, 2, 4, 1}, null),
-            new Shape("R=64  C=8 widths all 1", 64, new int[] {1, 1, 1, 1, 1, 1, 1, 1}, null));
-
-    /** Every width is a whole number of units, or no budget is one. */
-    private static List<Shape> packedCorpus(int unit) {
+    /** The corpus at one width: R, C and RR move, and the width does not. */
+    private static List<Shape> corpus(int width) {
         return List.of(
-                new Shape("R=64  C=2", 64, new int[] {unit, unit}, null),
-                new Shape("R=128 C=2", 128, new int[] {unit, unit}, null),
-                new Shape("R=64  C=2 RR=0", 64, new int[] {unit, unit}, 0),
-                new Shape("R=64  C=3", 64, new int[] {unit, unit, unit}, null));
+                new Shape("R=64  C=2 no repeat", 64, 2, width, null),
+                new Shape("R=128 C=2 no repeat", 128, 2, width, null),
+                new Shape("R=512 C=2 no repeat", 512, 2, width, null),
+                new Shape("R=64  C=2 RR=0", 64, 2, width, 0),
+                new Shape("R=64  C=2 RR=32", 64, 2, width, 32),
+                new Shape("R=64  C=1", 64, 1, width, null),
+                new Shape("R=64  C=3", 64, 3, width, null),
+                new Shape("R=64  C=8", 64, 8, width, null),
+                new Shape("R=64  C=20", 64, 20, width, null));
+    }
+
+    /** A packed corpus: C stays small beside R, since P is at least C. */
+    private static List<Shape> packedCorpus(int width) {
+        return List.of(
+                new Shape("R=64  C=2", 64, 2, width, null),
+                new Shape("R=128 C=2", 128, 2, width, null),
+                new Shape("R=64  C=2 RR=0", 64, 2, width, 0),
+                new Shape("R=64  C=3", 64, 3, width, null));
     }
 
     private static void needsRmac() {
@@ -67,7 +70,7 @@ class StabilityTest {
     private static byte[] code(int variant, Shape shape, int unit, int ring,
             boolean copies) {
         Path work = Rig.work("dtxstable");
-        String csv = csv(shape.rows(), shape.width());
+        String csv = csv(shape.rows(), shape.columns());
         byte[] blob = Rig.write(work, csv, variant, shape.width(),
                 shape.repeat(), unit, ring, copies);
         byte[] image = Packager.combine(
@@ -80,11 +83,11 @@ class StabilityTest {
         return out;
     }
 
-    /** Comma separated text of these rows at these widths. */
-    private static String csv(int rows, int[] width) {
+    /** Comma separated text of these rows and columns. */
+    private static String csv(int rows, int columns) {
         StringBuilder out = new StringBuilder();
         for (int r = 0; r < rows; r++) {
-            for (int i = 0; i < width.length; i++) {
+            for (int i = 0; i < columns; i++) {
                 out.append(i == 0 ? "" : ",").append(r * (i + 1) % 97);
             }
             out.append('\n');
@@ -96,11 +99,11 @@ class StabilityTest {
     void oneVariantAssemblesToOneCodeAtAnyRowsColumnsOrRepeat() {
         needsRmac();
         for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1, Dtx.DTX2}) {
-            List<Shape> corpus = variant == Dtx.DTX2
-                    ? packedCorpus(1) : TABLES;
-            byte[] first = code(variant, corpus.get(0), 1, 960, false);
-            String name = corpus.get(0).name();
-            for (Shape shape : corpus.subList(1, corpus.size())) {
+            List<Shape> shapes = variant == Dtx.DTX2
+                    ? packedCorpus(1) : corpus(1);
+            byte[] first = code(variant, shapes.get(0), 1, 960, false);
+            String name = shapes.get(0).name();
+            for (Shape shape : shapes.subList(1, shapes.size())) {
                 assertArrayEquals(first, code(variant, shape, 1, 960, false),
                         "DTX" + variant + ": " + shape.name()
                         + " assembles to code \"" + name + "\" does not");
@@ -109,30 +112,58 @@ class StabilityTest {
     }
 
     @Test
-    void aPackedImageHasOneCodeADecoderAndNoTwoDecodersAreOneCode() {
+    void dtx0ReadsEveryWidthAndDtx1OneCodeAWidth() {
         needsRmac();
-        // k and copies build the decoder, not the table, so a DTX2 image may
-        // have different code for each of them and must not for R, C or RR.
+        // A DTX0 read is one run of bytes, so its code does not move with
+        // the width. A DTX1 read moves a value, so its code does.
+        byte[] plain = code(Dtx.DTX0, corpus(1).get(0), 1, 960, false);
+        Set<String> apart = new HashSet<>();
+        for (int width : new int[] {1, 2, 4}) {
+            assertArrayEquals(plain,
+                    code(Dtx.DTX0, corpus(width).get(0), 1, 960, false),
+                    "DTX0 at a width of " + width);
+            byte[] column = code(Dtx.DTX1, corpus(width).get(0), 1, 960, false);
+            for (Shape shape : corpus(width).subList(1, 4)) {
+                assertArrayEquals(column,
+                        code(Dtx.DTX1, shape, 1, 960, false),
+                        "DTX1 at a width of " + width + ": " + shape.name());
+            }
+            apart.add(new String(column,
+                    java.nio.charset.StandardCharsets.ISO_8859_1));
+        }
+        assertEquals(3, apart.size(),
+                "three widths, and no two of them one DTX1 code");
+    }
+
+    @Test
+    void aPackedImageHasOneCodeABuildAndNoTwoBuildsAreOneCode() {
+        needsRmac();
+        // The width, k and copies build the code, not the table, so a DTX2
+        // image may have different code for each of them and must not for
+        // R, C or RR.
         Set<String> apart = new HashSet<>();
         List<Integer> sizes = new ArrayList<>();
-        for (int unit : new int[] {1, 2, 4}) {
-            for (boolean copies : new boolean[] {false, true}) {
-                List<Shape> corpus = packedCorpus(unit);
-                byte[] first = code(Dtx.DTX2, corpus.get(0), unit, 960, copies);
-                for (Shape shape : corpus.subList(1, corpus.size())) {
-                    assertArrayEquals(first,
-                            code(Dtx.DTX2, shape, unit, 960, copies),
-                            "k=" + unit
-                            + (copies ? " with copies" : " without copies")
-                            + ": " + shape.name() + " moved the code");
+        for (int width : new int[] {1, 2, 4}) {
+            for (int unit : new int[] {1, 2, 4}) {
+                for (boolean copies : new boolean[] {false, true}) {
+                    List<Shape> shapes = packedCorpus(width);
+                    byte[] first = code(Dtx.DTX2, shapes.get(0), unit, 960,
+                            copies);
+                    for (Shape shape : shapes.subList(1, shapes.size())) {
+                        assertArrayEquals(first,
+                                code(Dtx.DTX2, shape, unit, 960, copies),
+                                "w=" + width + " k=" + unit
+                                + (copies ? " with copies" : " without copies")
+                                + ": " + shape.name() + " moved the code");
+                    }
+                    apart.add(new String(first,
+                            java.nio.charset.StandardCharsets.ISO_8859_1));
+                    sizes.add(first.length);
                 }
-                apart.add(new String(first,
-                        java.nio.charset.StandardCharsets.ISO_8859_1));
-                sizes.add(first.length);
             }
         }
-        assertEquals(6, apart.size(),
-                "six builds, and no two of them one code: " + sizes);
+        assertEquals(18, apart.size(),
+                "eighteen builds, and no two of them one code: " + sizes);
     }
 
     @Test

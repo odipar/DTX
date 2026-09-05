@@ -10,13 +10,13 @@ it.
 
 - one zip a platform, over six: Windows, macOS and Linux, each on x64 and
   arm64. A zip contains the three tools as executables, and each executable
-  contains the eight 68000 images, so a caller who takes one has the whole
-  of what packaging needs
-- one zip of the eight images, one file a build inside it, for a caller
-  who takes an image and no tool (BINARIES.md)
+  contains the twenty-two 68000 images, so a caller who takes one has the
+  whole of what packaging needs
+- one zip of the twenty-two images, one file a build inside it, for a
+  caller who takes an image and no tool (BINARIES.md)
 - `MANIFEST.txt`: every file's size and sha256 beside what identifies it -
-  a variant, a unit and copies for an image, what it contains for a zip -
-  and the source commit the release was built from
+  a variant, a width, a unit and copies for an image, what it contains for
+  a zip - and the source commit the release was built from
 
 The version names every file. It is read out of `pom.xml`, or given as the
 script's one argument. The pom names the release being cut, and moves to
@@ -32,8 +32,8 @@ assembler, and no image is tracked in the tree.
 
 <https://github.com/odipar/DTX/releases/tag/v0.1.0>, built from the commit
 tagged `v0.1.0`. The first release, so this lists what there is rather than
-what changed: DTX0, DTX1 and DTX2 as SPEC.md defines them; one 68000 image a
-build, eight in one zip, under the calling convention of abi.md; the four
-tools of tools.md, as executables for the six platforms; and the ST4 packer
-carried in each tree, so a DTX2 table packs with nothing installed beside the
-tools.
+what changed: DTX0, DTX1 and DTX2 as SPEC.md defined them at that tag, each
+column of its own width; one 68000 image a build, eight in one zip, under the
+calling convention of abi.md; the four tools of tools.md, as executables for
+the six platforms; and the ST4 packer carried in each tree, so a DTX2 table
+packs with nothing installed beside the tools.

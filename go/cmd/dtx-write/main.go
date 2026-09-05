@@ -4,7 +4,7 @@
 // another variant, unit or ring, and reads a DTX file out as text.
 // doc/tools.md defines the tool.
 //
-//	dtx-write in out [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
+//	dtx-write in out [-vV] [-wW] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
 package main
 
 import (
@@ -23,7 +23,7 @@ import (
 // What -help prints: the synopsis, a line a flag with the default in
 // parentheses, examples, and the section of doc/tools.md that describes the
 // tool. The Java and C# trees print the same text.
-const help = `dtx-write in out [-vV] [-wW,W,..] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
+const help = `dtx-write in out [-vV] [-wW] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
 
 Writes the table in the first file to the second. The first is a DTX file
 of any variant, or comma separated text; the second is a DTX file of
@@ -31,9 +31,9 @@ variant V, or text where its name ends in .csv.
 
   -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for
                text)
-  -wW,W,..     text: the width of each column in bytes, 1, 2 or 4 (what the
-               text's first comment gives, or else the narrowest that fits
-               each column's values)
+  -wW          text: the bytes every value takes, 1, 2 or 4 (what the
+               text's first comment gives, or else the narrowest that
+               fits every value)
   -rRR         the repeat: the row an advance past the last steps to, R for
                none (what the file or the text's first comment gives, or R)
   -kK          DTX2: the unit, 1, 2 or 4 (1)
@@ -52,8 +52,8 @@ Examples
       literal stream
   dtx-write t.dtx t.csv
       a DTX file of any variant read out as text
-  dtx-write t.csv t.dtx -v1 -w1,2,4 -r32
-      text into a DTX1 file at the widths given, repeating at row 32
+  dtx-write t.csv t.dtx -v1 -w2 -r32
+      text into a DTX1 file of two byte values, repeating at row 32
 
 doc/tools.md, Write.
 `
@@ -96,14 +96,14 @@ func run(args []string) error {
 	}
 	named := args[:2]
 	variant, repeat, unit, ring := -1, -1, 1, 960
-	widths, packer, copies := "", "", ""
+	width, packer, copies := "", "", ""
 	for _, arg := range args[2:] {
 		var err error
 		switch {
 		case strings.HasPrefix(arg, "-v"):
 			variant, err = strconv.Atoi(arg[2:])
 		case strings.HasPrefix(arg, "-w"):
-			widths = arg[2:]
+			width = arg[2:]
 		case strings.HasPrefix(arg, "-r"):
 			repeat, err = strconv.Atoi(arg[2:])
 		case strings.HasPrefix(arg, "-k"):
@@ -135,9 +135,9 @@ func run(args []string) error {
 	}
 	var table *dtx.Table
 	if bytes.HasPrefix(in, dtx.Magic) {
-		if widths != "" {
-			return misuse(fmt.Sprintf("-w%s gives text its widths, and %s is"+
-				" a DTX file with its own", widths, named[0]))
+		if width != "" {
+			return misuse(fmt.Sprintf("-w%s gives text its width, and %s is"+
+				" a DTX file with its own", width, named[0]))
 		}
 		header, err := dtx.ReadHeader(in)
 		if err != nil {
@@ -156,7 +156,7 @@ func run(args []string) error {
 		}
 	} else {
 		text := string(in)
-		width, err := readWidths(widths, text)
+		taken, err := readWidth(width, text)
 		if err != nil {
 			return err
 		}
@@ -167,9 +167,9 @@ func run(args []string) error {
 			}
 		}
 		if given < 0 {
-			table, err = csv.TableAt(text, width)
+			table, err = csv.TableAt(text, taken)
 		} else {
-			table, err = csv.Table(text, width, given)
+			table, err = csv.Table(text, taken, given)
 		}
 		if err != nil {
 			return err
@@ -200,10 +200,6 @@ func run(args []string) error {
 	if err := os.WriteFile(named[1], out, 0o644); err != nil {
 		return err
 	}
-	drawn := make([]string, table.Columns())
-	for i := range drawn {
-		drawn[i] = strconv.Itoa(table.Width(i))
-	}
 	kind, packing := "text", ""
 	if !toText {
 		kind = fmt.Sprintf("DTX%d", variant)
@@ -211,9 +207,9 @@ func run(args []string) error {
 			packing = fmt.Sprintf(", k=%d, N=%d", unit, ring)
 		}
 	}
-	fmt.Printf("%s -> %s %d bytes, %d rows, %d columns, widths %s,"+
+	fmt.Printf("%s -> %s %d bytes, %d rows, %d columns, width %d,"+
 		" RR=%d%s\n", named[0], kind, len(out), table.Rows(),
-		table.Columns(), strings.Join(drawn, ","), table.Repeat(), packing)
+		table.Columns(), table.Width(), table.Repeat(), packing)
 	return nil
 }
 
@@ -223,26 +219,18 @@ func repeating(t *dtx.Table, repeat int) (*dtx.Table, error) {
 	for i := range column {
 		column[i] = t.Column(i)
 	}
-	return dtx.NewTable(t.Rows(), repeat, t.Widths(), column)
+	return dtx.NewTable(t.Rows(), repeat, t.Width(), column)
 }
 
-// readWidths gives the widths -w defines, or else the widths the text's
-// first comment gives, or else the narrowest the text takes.
-func readWidths(given, text string) ([]int, error) {
+// readWidth gives the width -w defines, or else the width the text's first
+// comment gives, or else the narrowest the text takes.
+func readWidth(given, text string) (int, error) {
 	if given == "" {
-		return csv.Widths(text)
+		return csv.Width(text)
 	}
-	cell := strings.Split(given, ",")
-	for len(cell) > 1 && cell[len(cell)-1] == "" {
-		// a trailing comma is passed over, as the Java tree passes it over
-		cell = cell[:len(cell)-1]
-	}
-	width := make([]int, len(cell))
-	for i, one := range cell {
-		var err error
-		if width[i], err = strconv.Atoi(strings.TrimSpace(one)); err != nil {
-			return nil, fmt.Errorf("-w gives %q, which is not a width", one)
-		}
+	width, err := strconv.Atoi(strings.TrimSpace(given))
+	if err != nil {
+		return 0, fmt.Errorf("-w gives %q, which is not a width", given)
 	}
 	return width, nil
 }

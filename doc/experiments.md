@@ -7,47 +7,52 @@ decoder's bytes against rmac, and the rig `68k/test/emu/test_dtx.py`
 counts the cycles.
 
 The numbers table is the rig's: row `r`, column `i` is `r` times `i` plus
-one, modulo 251, at the widths given.
+one, modulo 251, at the width given. Every value of a table takes one
+width (R6.3), so the width is a figure of the table like `R` and `C`.
 
 ## Where DTX2 becomes the smaller of the two
 
 R5.7: a packed table is smaller than a plain one once it has rows enough
-for the packing to cost less than it saves. The numbers table at widths 1,
-2 and 4, packed at `k` of 1 and `N` of 960, DTX1 against DTX2:
+for the packing to cost less than it saves. The numbers table of three
+columns at a width of 1, packed at `k` of 1 and `N` of 960, DTX1 against
+DTX2:
 
 | R | DTX1 bytes | DTX2 bytes | DTX2 over DTX1 |
 |---|---|---|---|
-| 3 | 42 | 144 | 3.43 |
-| 6 | 62 | 168 | 2.71 |
-| 12 | 104 | 192 | 1.85 |
-| 24 | 188 | 248 | 1.32 |
-| 48 | 356 | 364 | 1.02 |
-| 64 | 468 | 440 | 0.94 |
-| 96 | 692 | 592 | 0.86 |
-| 128 | 916 | 744 | 0.81 |
-| 256 | 1812 | 1348 | 0.74 |
-| 512 | 3604 | 1800 | 0.50 |
+| 3 | 27 | 140 | 5.19 |
+| 6 | 34 | 152 | 4.47 |
+| 12 | 52 | 164 | 3.15 |
+| 24 | 88 | 200 | 2.27 |
+| 48 | 160 | 272 | 1.70 |
+| 64 | 208 | 320 | 1.54 |
+| 96 | 304 | 416 | 1.37 |
+| 128 | 400 | 512 | 1.28 |
+| 256 | 784 | 896 | 1.14 |
+| 512 | 1552 | 908 | 0.59 |
 
-DTX2 is the smaller from between 48 and 64 rows on this table, and at 512
-rows it is half of DTX1. Below 48 it is the larger: the 28 byte ST4 header
-a column and the payload's offsets do not shrink with `R`.
+DTX2 is the larger up to 256 rows on this table and the smaller at 512,
+where it is under three fifths of DTX1. What packing costs does not shrink
+with `R`: the 28 byte ST4 header a column, and the payload's offsets. What
+it saves does, and on this table it overtakes between 256 and 512 rows,
+where the values begin to repeat: they are taken modulo 251.
 
 ## Copies from the literal stream, at a small ring
 
-A 512 row table of two columns, widths 1 and 2, repeating a pattern 37 rows
-long, so a match reaches further back than a ring of 64 bytes:
+A 512 row table of two columns at a width of 2, repeating a pattern 37
+rows long, so a column's pattern is 74 bytes and a match reaches further
+back than a ring of 64:
 
 | written as | file bytes | image bytes |
 |---|---|---|
-| DTX1 | 1552 | 2356 |
-| DTX2, N=64 | 1164 | 2792 |
-| DTX2, N=64, copies | 272 | 1932 |
-| DTX2, N=128, copies | 220 | 1880 |
+| DTX1 | 2064 | 2428 |
+| DTX2, N=64 | 2140 | 3300 |
+| DTX2, N=64, copies | 356 | 1548 |
+| DTX2, N=128, copies | 252 | 1444 |
 
 Without copies the ring is too short for the pattern and DTX2 packs to
-three quarters of DTX1. With them a match beyond the ring copies from the
-column's own literal stream, and the file is under a fifth of DTX1's. The
-image moves less than the file, since the code inside it does not move.
+more than DTX1. With them a match beyond the ring copies from the column's
+own literal stream, and the file is under a fifth of DTX1's. The image
+moves less than the file, since the code inside it does not move.
 
 ## What the copy code costs
 
@@ -80,13 +85,19 @@ it takes the smaller decoder (abi.md 8).
 
 A 68000 takes an address error on a word or long at an odd address, and
 Unicorn's model of it does not: it reads and writes the bytes. The rig ran
-under that model, so a wide column whose place in the row is odd, a two
+under that model, so a wide column whose place in the row was odd, a two
 byte column after a one byte one, was read with one word move on every
 table it passed, and would have faulted on the hardware. The rig watches
-every access now and fails a misaligned one as the 68000 does, and the read
-tests each wide entry and moves bytes where its offset is odd. What that
-cost: a read of three columns grew by a `btst` and a branch a wide column,
-DTX1's code from 592 bytes to 716 and DTX2's from 1352 to 1476.
+every access now and fails a misaligned one as the 68000 does. The read
+then tested each wide value and moved bytes where its offset was odd,
+which cost a `btst` and a branch a column and took DTX1's code from 592
+bytes to 716 and DTX2's from 1352 to 1476.
+
+One width a table (R6.3) took the test out again. Every value is the
+table's width, the row it goes to stands on a long, and the payload and
+every ring stand on a long, so at a width of 2 or 4 both sides of the move
+are on that width's boundary. DTX1's code is 316 bytes now and DTX2's
+1080, and the rig's alignment hook passes every table it runs.
 
 ## A column packed with copies, read without them
 

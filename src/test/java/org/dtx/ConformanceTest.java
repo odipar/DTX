@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 class ConformanceTest {
 
     /** One table of the kit: its name, its text, and how it is written. */
-    private record Source(String name, String text, int variant, int[] width,
+    private record Source(String name, String text, int variant, int width,
             @Nullable Integer repeat, int unit, int ring, boolean copies,
             String exercises) {}
 
@@ -54,31 +54,43 @@ class ConformanceTest {
     }
 
     private static final List<Source> KIT = List.of(
-            new Source("dtx0-three-widths", numbers(8, 3), 0, new int[] {1, 2, 4}, null, 1, 960, false,
-                    "DTX0: a row of 1, 2 and 4 byte columns, the wide ones on odd offsets"),
-            new Source("dtx0-one-column", numbers(5, 1), 0, new int[] {1}, null, 1, 960, false,
+            new Source("dtx0-w1", numbers(8, 3), 0, 1, null, 1, 960, false,
+                    "DTX0 at a width of 1: an odd row, so a row begins on an odd offset"),
+            new Source("dtx0-w2", numbers(8, 3), 0, 2, null, 1, 960, false,
+                    "DTX0 at a width of 2"),
+            new Source("dtx0-w4", numbers(6, 3), 0, 4, null, 1, 960, false,
+                    "DTX0 at a width of 4"),
+            new Source("dtx0-one-column", numbers(5, 1), 0, 1, null, 1, 960, false,
                     "DTX0: one column, one byte, five rows"),
-            new Source("dtx0-repeat", numbers(8, 2), 0, new int[] {1, 1}, 3, 1, 960, false,
+            new Source("dtx0-repeat", numbers(8, 2), 0, 1, 3, 1, 960, false,
                     "DTX0: a table that repeats at row 3"),
-            new Source("dtx1-three-widths", numbers(8, 3), 1, new int[] {1, 2, 4}, null, 1, 960, false,
-                    "DTX1: a byte column before a word one, so the word column begins on a pad byte"),
-            new Source("dtx1-widest-first", numbers(6, 3), 1, new int[] {4, 2, 1}, null, 1, 960, false,
-                    "DTX1: the widest column first, so no pad byte at all"),
-            new Source("dtx1-one-row", numbers(1, 2), 1, new int[] {1, 4}, null, 1, 960, false,
+            new Source("dtx1-w1-odd-rows", numbers(7, 3), 1, 1, null, 1, 960, false,
+                    "DTX1 at a width of 1 and an odd R, so a pad byte stands between columns"),
+            new Source("dtx1-w2", numbers(8, 3), 1, 2, null, 1, 960, false,
+                    "DTX1 at a width of 2, where a column is a whole number of words"),
+            new Source("dtx1-w4", numbers(6, 3), 1, 4, null, 1, 960, false,
+                    "DTX1 at a width of 4"),
+            new Source("dtx1-one-row", numbers(1, 2), 1, 4, null, 1, 960, false,
                     "DTX1: one row, R of 1"),
-            new Source("dtx1-repeat-at-0", numbers(4, 2), 1, new int[] {2, 2}, 0, 1, 960, false,
+            new Source("dtx1-repeat-at-0", numbers(4, 2), 1, 2, 0, 1, 960, false,
                     "DTX1: RR of 0, the table repeats from its first row"),
-            new Source("dtx2-k1", numbers(64, 3), 2, new int[] {1, 2, 4}, null, 1, 960, false,
-                    "DTX2 at k of 1: three widths, N of 960, P of 3"),
-            new Source("dtx2-k2", numbers(64, 2), 2, new int[] {2, 2}, null, 2, 960, false,
-                    "DTX2 at k of 2: every column a whole number of units"),
-            new Source("dtx2-k4", numbers(64, 2), 2, new int[] {4, 4}, null, 4, 960, false,
-                    "DTX2 at k of 4"),
-            new Source("dtx2-repeat", numbers(64, 2), 2, new int[] {1, 1}, 16, 1, 960, false,
+            new Source("dtx2-w1-k1", numbers(64, 3), 2, 1, null, 1, 960, false,
+                    "DTX2 at a width of 1 and k of 1: N of 960, P of 3"),
+            new Source("dtx2-w2-k2", numbers(64, 2), 2, 2, null, 2, 960, false,
+                    "DTX2 at a width of 2 and k of 2, a unit a value"),
+            new Source("dtx2-w4-k4", numbers(64, 2), 2, 4, null, 4, 960, false,
+                    "DTX2 at a width of 4 and k of 4"),
+            new Source("dtx2-w4-k1", numbers(64, 2), 2, 4, null, 1, 960, false,
+                    "DTX2 at a width of 4 and k of 1, a unit below the width"),
+            new Source("dtx2-w1-k4", numbers(64, 2), 2, 1, null, 4, 960, false,
+                    "DTX2 at a width of 1 and k of 4, a unit above the width"),
+            new Source("dtx2-repeat", numbers(64, 2), 2, 1, 16, 1, 960, false,
                     "DTX2: a table that repeats at row 16, a jump backward on a packed reader"),
-            new Source("dtx2-rows-not-a-multiple-of-p", numbers(50, 3), 2, new int[] {1, 1, 1}, null, 1, 960, false,
+            new Source("dtx2-rows-not-a-multiple-of-p", numbers(50, 3), 2, 1, null, 1, 960, false,
                     "DTX2: R of 50 at P of 3, so the last refill of a column is short"),
-            new Source("dtx2-copies", repeating(), 2, new int[] {1, 2}, null, 1, 64, true,
+            new Source("dtx2-twenty-columns", numbers(64, 20), 2, 2, null, 1, 960, false,
+                    "DTX2: C of 20, so P is 20 and a read walks twenty rings"),
+            new Source("dtx2-copies", repeating(), 2, 2, null, 1, 64, true,
                     "DTX2 with copies from the literal stream, at a ring of 64 the pattern does not fit"));
 
     private static Path kit() {
@@ -107,9 +119,8 @@ class ConformanceTest {
 
     private static byte[] rows(Table table) {
         byte[] plain = Dtx0.write(table);
-        int header = Dtx.headerLength(table.columns());
-        byte[] out = new byte[plain.length - header];
-        System.arraycopy(plain, header, out, 0, out.length);
+        byte[] out = new byte[plain.length - Dtx.HEADER];
+        System.arraycopy(plain, Dtx.HEADER, out, 0, out.length);
         return out;
     }
 
@@ -124,17 +135,13 @@ class ConformanceTest {
 
     /** One row of SOURCES.md, as the test writes it. */
     private static String row(Source source, byte[] table) {
-        StringBuilder widths = new StringBuilder();
-        for (int i = 0; i < source.width().length; i++) {
-            widths.append(i == 0 ? "" : ",").append(source.width()[i]);
-        }
-        String options = "-v" + source.variant() + " -w" + widths
+        String options = "-v" + source.variant() + " -w" + source.width()
                 + (source.repeat() == null ? "" : " -r" + source.repeat())
                 + (source.variant() == Dtx.DTX2 ? " -k" + source.unit() + " -m" + source.ring() : "")
                 + (source.copies() ? " -copies" : "");
         String text = source.text().equals(repeating()) ? "repeating"
                 : "numbers " + source.text().split("\n").length + " "
-                        + source.width().length;
+                        + source.text().split("\n")[0].split(",").length;
         return "| `" + source.name() + "` | " + text + " | `" + options + "` | "
                 + table.length + " | " + sha256(table).substring(0, 16) + " | "
                 + source.exercises() + " |";

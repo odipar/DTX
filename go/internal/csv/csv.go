@@ -7,16 +7,17 @@
 // column names, or a line describing the table. A value is decimal, or
 // hexadecimal where it opens with $, and negative where it opens with -.
 //
-// A value of W bytes is stored most significant byte first, as every field
-// of the header is, and a negative one in two's complement. A value fits W
-// bytes where it lies from -2^(8W-1) to 2^(8W)-1, so one width takes what a
-// signed column's values and an unsigned one's alike. DTX does not define
-// more of a column than its width, so which of the two a column is, the
-// caller defines elsewhere.
+// Every value of the table takes the same width W (R6.3). A value of W
+// bytes is stored most significant byte first, as every field of the header
+// is, and a negative one in two's complement. A value fits W bytes where it
+// lies from -2^(8W-1) to 2^(8W)-1, so one width takes a signed column's
+// values and an unsigned one's alike. DTX does not define more of a column
+// than its width, so which of the two a column is, the caller defines
+// elsewhere.
 //
 // A table is written out the other way as well: a comment that gives the
 // shape, a line of column names, then one row a line, each value the
-// unsigned number its bytes give. Read back, the comment gives the widths
+// unsigned number its bytes give. Read back, the comment gives the width
 // and the repeat where the caller does not give them, and the names are
 // passed over, so the text a table was written as reads back to that table.
 package csv
@@ -29,8 +30,8 @@ import (
 	"dtx/internal/dtx"
 )
 
-// Table gives the rows of text at the given widths, repeating at repeat.
-func Table(text string, width []int, repeat int) (*dtx.Table, error) {
+// Table gives the rows of text at the given width, repeating at repeat.
+func Table(text string, width, repeat int) (*dtx.Table, error) {
 	row, err := rows(text)
 	if err != nil {
 		return nil, err
@@ -38,9 +39,9 @@ func Table(text string, width []int, repeat int) (*dtx.Table, error) {
 	return table(row, width, repeat)
 }
 
-// TableAt gives the rows of text at the given widths, repeating at the row
+// TableAt gives the rows of text at the given width, repeating at the row
 // the first comment gives or else at R.
-func TableAt(text string, width []int) (*dtx.Table, error) {
+func TableAt(text string, width int) (*dtx.Table, error) {
 	row, err := rows(text)
 	if err != nil {
 		return nil, err
@@ -55,25 +56,21 @@ func TableAt(text string, width []int) (*dtx.Table, error) {
 	return table(row, width, repeat)
 }
 
-// Widths gives the widths the first comment of text gives, or else the
-// narrowest width of 1, 2 and 4 that takes every value of each column.
-func Widths(text string) ([]int, error) {
-	given := comment(text, "widths ")
+// Width gives the width the first comment of text gives, or else the
+// narrowest of 1, 2 and 4 that takes every value of it.
+func Width(text string) (int, error) {
+	given := comment(text, "width ")
 	if given == "" {
-		return Narrowest(text)
-	}
-	cell := strings.Split(given, ",")
-	for len(cell) > 1 && cell[len(cell)-1] == "" {
-		// a trailing comma is passed over, as the Java tree passes it over
-		cell = cell[:len(cell)-1]
-	}
-	width := make([]int, len(cell))
-	for i, one := range cell {
-		var err error
-		if width[i], err = strconv.Atoi(strings.TrimSpace(one)); err != nil {
-			return nil, fmt.Errorf(
-				"the comment gives %q, which is not a width", one)
+		row, err := rows(text)
+		if err != nil {
+			return 0, err
 		}
+		return narrowest(row)
+	}
+	width, err := strconv.Atoi(given)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"the comment gives %q, which is not a width", given)
 	}
 	return width, nil
 }
@@ -93,46 +90,31 @@ func Repeat(text string) (int, error) {
 	return repeat, nil
 }
 
-// Narrowest gives the narrowest width of 1, 2 and 4 that takes every value
-// of each column of text.
-func Narrowest(text string) ([]int, error) {
-	row, err := rows(text)
-	if err != nil {
-		return nil, err
-	}
-	return narrowest(row)
-}
-
-// Text gives t as text: a comment giving R, C, the widths and RR; a line of
+// Text gives t as text: a comment giving R, C, the width and RR; a line of
 // column names, c0 onward; then one row a line, one value a column, each the
-// unsigned number its bytes give. TableAt, at the widths Widths gives, reads
+// unsigned number its bytes give. TableAt, at the width Width gives, reads
 // it back to the same table.
 func Text(t *dtx.Table) string {
 	var out strings.Builder
-	fmt.Fprintf(&out, "# %d rows, %d columns, widths ", t.Rows(), t.Columns())
+	fmt.Fprintf(&out, "# %d rows, %d columns, width %d, RR %d\n",
+		t.Rows(), t.Columns(), t.Width(), t.Repeat())
 	column := make([][]byte, t.Columns())
 	for i := range column {
 		if i > 0 {
 			out.WriteByte(',')
 		}
-		out.WriteString(strconv.Itoa(t.Width(i)))
+		fmt.Fprintf(&out, "c%d", i)
 		column[i] = t.Column(i)
 	}
-	fmt.Fprintf(&out, ", RR %d\n", t.Repeat())
-	for i := range column {
-		if i > 0 {
-			out.WriteByte(',')
-		}
-		fmt.Fprintf(&out, "c%d", i)
-	}
 	out.WriteByte('\n')
+	width := t.Width()
 	for r := 0; r < t.Rows(); r++ {
 		for i := range column {
 			if i > 0 {
 				out.WriteByte(',')
 			}
-			w := t.Width(i)
-			out.WriteString(strconv.FormatUint(get(column[i], r*w, w), 10))
+			out.WriteString(
+				strconv.FormatUint(get(column[i], r*width, width), 10))
 		}
 		out.WriteByte('\n')
 	}
@@ -142,7 +124,7 @@ func Text(t *dtx.Table) string {
 // comment gives what follows key in the first comment of text, up to a comma
 // followed by a space or the end of the line, or empty where the text does
 // not open with a comment giving it. The comment is the one Text writes:
-// # 3 rows, 3 columns, widths 1,2,1, RR 3.
+// # 3 rows, 3 columns, width 2, RR 3.
 func comment(text, key string) string {
 	for _, line := range strings.Split(text, "\n") {
 		read := strings.TrimSpace(line)
@@ -174,28 +156,23 @@ func get(in []byte, at, width int) uint64 {
 	return value
 }
 
-func table(row [][]int64, width []int, repeat int) (*dtx.Table, error) {
-	for _, w := range width {
-		if w != 1 && w != 2 && w != 4 {
-			return nil, fmt.Errorf(
-				"a column is 1, 2 or 4 bytes wide, not %d", w)
-		}
+func table(row [][]int64, width, repeat int) (*dtx.Table, error) {
+	if width != 1 && width != 2 && width != 4 {
+		return nil, fmt.Errorf(
+			"the width is 1, 2 or 4 bytes, not %d", width)
 	}
-	if len(row[0]) != len(width) {
-		return nil, fmt.Errorf("%d widths for %d columns",
-			len(width), len(row[0]))
-	}
-	column := make([][]byte, len(width))
-	for i, w := range width {
-		column[i] = make([]byte, len(row)*w)
+	columns := len(row[0])
+	column := make([][]byte, columns)
+	for i := range column {
+		column[i] = make([]byte, len(row)*width)
 		for r := range row {
 			value := row[r][i]
-			if !fits(value, w) {
+			if !fits(value, width) {
 				return nil, fmt.Errorf(
 					"row %d column %d gives %d, which %d bytes do not take",
-					r, i, value, w)
+					r, i, value, width)
 			}
-			put(column[i], r*w, value, w)
+			put(column[i], r*width, value, width)
 		}
 	}
 	return dtx.NewTable(len(row), repeat, width, column)
@@ -221,7 +198,7 @@ func rows(text string) ([][]int64, error) {
 				return nil, fmt.Errorf("C is 1 to 256, not %d", columns)
 			}
 		} else if len(cell) != columns {
-			return nil, fmt.Errorf("line %d holds %d values, not %d",
+			return nil, fmt.Errorf("line %d gives %d values, not %d",
 				at+1, len(cell), columns)
 		}
 		row := make([]int64, columns)
@@ -274,16 +251,15 @@ func digit(c rune, hex bool) bool {
 		hex && (c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F')
 }
 
-// narrowest gives the narrowest width each column of row takes.
-func narrowest(row [][]int64) ([]int, error) {
-	width := make([]int, len(row[0]))
-	for i := range width {
-		taken := 1
-		for _, read := range row {
-			for !fits(read[i], taken) {
+// narrowest gives the narrowest width that takes every value of every column.
+func narrowest(row [][]int64) (int, error) {
+	taken := 1
+	for _, read := range row {
+		for _, value := range read {
+			for !fits(value, taken) {
 				if taken == 4 {
-					return nil, fmt.Errorf("column %d gives %d, which no"+
-						" width of 1, 2 or 4 bytes takes", i, read[i])
+					return 0, fmt.Errorf("the text gives %d, which no width"+
+						" of 1, 2 or 4 bytes takes", value)
 				}
 				if taken == 1 {
 					taken = 2
@@ -292,9 +268,8 @@ func narrowest(row [][]int64) ([]int, error) {
 				}
 			}
 		}
-		width[i] = taken
 	}
-	return width, nil
+	return taken, nil
 }
 
 // value gives the number cell gives, or what it is that is not one.
