@@ -240,7 +240,7 @@ Writing DTX2 asks for an ST4 packer, and each tree holds one:
 odipar/ST4@498aa25, and `go/internal/st4`, taken from odipar/YMX@498aa25,
 which is that same packer in Go. None is edited here beyond one comment
 naming where it came from, and the three pack the same bytes, which
-`test/test_parity.py` holds them to. So a release needs no packer beside it
+`ParityTest` holds them to. So a release needs no packer beside it
 either. `-pPACKER` runs another where a caller has a newer build.
 
 ## The rigs
@@ -268,21 +268,23 @@ run one call past its end marker changes no byte a reader gives, and shows
 up only in the count.
 
 It needs `mvn compile`, [rmac](http://rmac.is-slick.com) on the path or at
-`$RMAC`, `pip install unicorn`, and an ST4 packer at `$ST4` for the packed
-tables.
+`$RMAC`, and `pip install unicorn`, which brings the emulator it runs the
+code on. `$ST4` names a packer to pack with instead of the carried one.
 
-```
-python3 test/test_parity.py
-```
+`ParityTest` and `StabilityTest` run under `mvn test` with the rest.
 
 **The three trees.** Every tool run in each of them over a corpus, and the
 files held to the same bytes: text written at each variant and each unit, a
-plain file rewritten, the eight images built, and fourteen tables packaged,
+plain file rewritten, the eight images built, and eight tables packaged,
 which reach every image the packager picks from. One input has one output,
-whichever tree a caller took.
+whichever tree a caller took. It needs Go, the .NET SDK and rmac, and is
+skipped without one of them.
 
-It needs `mvn package`, Go on the path, the .NET SDK, and rmac on it or at
-`$RMAC`.
+**The code a variant assembles to.** A corpus a variant at a time, every
+image's code held to the first one's byte for byte, so R, C and RR move the
+table and not the reader. Under DTX2 the six decoder builds are grouped, no
+two of them one code, and the copy code's size is read back out and held to
+what doc/abi.md 5 states. It needs rmac.
 
 ## Through Maven
 
