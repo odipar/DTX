@@ -120,7 +120,7 @@
                         </goals>
                         <configuration>
                             <executable>java</executable>
-                            <commandlineArgs>-ea -cp %classpath org.dtx.Blobs ${project.build.outputDirectory}/org/dtx/68k ${project.basedir}/build/68k ${project.basedir}/go/internal/image/data -a${rmac}</commandlineArgs>
+                            <commandlineArgs>-ea -cp %classpath org.dtx.Blobs ${project.build.outputDirectory}/org/dtx/68k ${project.basedir}/build/68k ${project.basedir}/go/internal/image/data -a${rmac} -t${project.basedir}/68k</commandlineArgs>
                         </configuration>
                     </execution>
                     <execution>

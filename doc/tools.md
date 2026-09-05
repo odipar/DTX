@@ -10,8 +10,9 @@ relative one is relative to the caller's directory and not to this
 repository's.
 
 In Go each is a command under `go/cmd/`, built with `go build ./cmd/NAME`
-under `go/`. There is no `dtx-run` there: Go builds an executable, so
-nothing has to find a classpath first.
+under `go/`. None of them takes a wrapper: Go builds an executable, so
+nothing has to find a runtime or a classpath before one runs, and there is
+no `dtx-run` to write.
 
 | what it does | Java | Go |
 |---|---|---|
@@ -142,6 +143,7 @@ writes the same eight into directories of your own.
 | flag | gives |
 |---|---|
 | `-aRMAC` | the assembler to run. The default is `rmac` on the path |
+| `-tTEMPLATES` | where `68k/` stands. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository has no directory to resolve a relative one against, so it names this |
 
 The table each build is assembled from is made rather than read: the code
 does not move with a table, and the five fields one would settle are
@@ -201,6 +203,33 @@ copy code gives row 37 wrong, where the pattern first repeats past the
 ring. The other way round is safe: a decoder with the copy code reads a
 column without copies correctly, at 2.0 to 4.0% more cycles and 32 bytes
 more code.
+
+## Release
+
+The four Go commands for six platforms, each holding the eight images, and
+the images themselves:
+
+```
+release/publish.sh [version]
+TARGETS="linux-x64" release/publish.sh
+```
+
+**No Java runs.** The images come from the Go `dtx-blobs`, which assembles
+`68k/` with rmac, so the only tool this needs beside Go is that assembler.
+`go build` cross-compiles to any target from any host, which is why one
+machine covers Windows, macOS and Linux on both architectures.
+
+It writes `dist/release`: one zip a platform and the eight images, both
+named by the release. It builds `dtx-blobs` first, from a tree holding no
+image, since that is the one command that makes them rather than holding
+them; it fails where fewer than eight come out; and it ends by writing and
+packaging a table with the host's own executables, from a directory that is
+not this repository, so an executable holding no image fails there rather
+than in a release.
+
+Writing DTX2 asks for an ST4 packer, which no tree here holds and the
+format states as a separate program (SPEC.md 2.3). That is the one thing a
+caller supplies, and the language it is written in is its own.
 
 ## The rigs
 

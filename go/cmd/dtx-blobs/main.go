@@ -9,7 +9,7 @@
 // does not move with a table, and pack.Blank zeroes the five fields the one
 // used did settle, so what comes out is a function of the template alone.
 //
-//	dtx-blobs DIR [DIR..] [-aRMAC]
+//	dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 package main
 
 import (
@@ -82,11 +82,14 @@ func seed(build image.Build) ([]byte, error) {
 
 func run(args []string) error {
 	rmac := "rmac"
+	templates := pack.Templates()
 	var into []string
 	for _, arg := range args {
 		switch {
 		case strings.HasPrefix(arg, "-a"):
 			rmac = arg[2:]
+		case strings.HasPrefix(arg, "-t"):
+			templates = arg[2:]
 		case strings.HasPrefix(arg, "-"):
 			return fmt.Errorf("dtx-blobs does not read %s", arg)
 		default:
@@ -94,7 +97,7 @@ func run(args []string) error {
 		}
 	}
 	if len(into) == 0 {
-		return fmt.Errorf("dtx-blobs DIR [DIR..] [-aRMAC]")
+		return fmt.Errorf("dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]")
 	}
 	for _, at := range into {
 		if err := os.MkdirAll(at, 0o755); err != nil {
@@ -106,11 +109,12 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		code, err := pack.Code(file, rmac)
+		code, err := pack.Code(file, rmac, templates)
 		if err != nil {
-			return fmt.Errorf("no code built for %s with an assembler at %s:"+
-				" %w", image.Name(build.Variant, build.Unit, build.Copies),
-				rmac, err)
+			return fmt.Errorf("no code built for %s with an assembler at %s"+
+				" and templates at %s: %w",
+				image.Name(build.Variant, build.Unit, build.Copies),
+				rmac, templates, err)
 		}
 		pack.Blank(code)
 		name := image.Name(build.Variant, build.Unit, build.Copies)

@@ -497,7 +497,11 @@ func Templates() string {
 
 // Code gives rmac's assembly of the variant's template for this table, the
 // code alone. This is the one step an assembler is needed for.
-func Code(file []byte, rmac string) ([]byte, error) {
+//
+// templates is where 68k/ stands. A tool run from outside this repository
+// has no directory to resolve a relative one against, so the caller names
+// it rather than taking Templates.
+func Code(file []byte, rmac, templates string) ([]byte, error) {
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
 		return nil, err
@@ -516,10 +520,10 @@ func Code(file []byte, rmac string) ([]byte, error) {
 		return nil, err
 	}
 	out := filepath.Join(work, "image.bin")
-	template := filepath.Join(Templates(),
+	template := filepath.Join(templates,
 		fmt.Sprintf("DTX%d.S", header.Variant))
 	said, err := exec.Command(rmac, "-m68000", "-fr", "+o3", "-i"+work,
-		"-i"+Templates(), "-o", out, template).CombinedOutput()
+		"-i"+templates, "-o", out, template).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("%s gave %s", rmac, strings.TrimSpace(string(said)))
 	}
