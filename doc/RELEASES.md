@@ -28,6 +28,52 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
+### 0.4.0, 2026-09-06
+
+<https://github.com/odipar/DTX/releases/tag/v0.4.0>, built from the commit
+tagged `v0.4.0`.
+
+**A caller written against 0.3.0's calling convention has to change, and a
+DTX2 file that repeats has to be written again.** The tools of both
+releases read every file the other writes, and only one file differs at
+all: a DTX2 table that repeats. What broke is the 68000 side.
+
+- An advance gives the address of the row's first value and nothing else.
+  It gave the row in `d0` as well, or $FFFFFFFF at the end. A row is what a
+  jump takes, and a caller counts its own rows against the `R` and `RR`
+  that `DTX_metadata` gives.
+- The state block is 12 bytes under DTX0 and DTX1 where it was 20, and 56
+  plus 32`C` plus `NC` under DTX2 where it was 52. A caller reads its size
+  out of the format block, as it always could.
+- A 0.4.0 image reads a 0.3.0 DTX2 file that repeats wrongly: its data sets
+  end where this release's loop, so the reader runs the decoder past the
+  end marker. Write such a file again with this release's `dtx-write`. A DTX2
+  file that does not repeat, and every DTX0 and DTX1 file, is byte for byte
+  what 0.3.0 wrote.
+
+What changed since 0.3.0:
+
+- **A DTX2 table that repeats loops in ST4, not in the reader.** The
+  advance out of the last row was a jump that re-seeded every decoder and
+  ran the turn forward to `RR`: on 64 rows of three two byte columns,
+  46514 cycles against 1264 for an ordinary advance. Every data set of a
+  table that repeats loops at `RR` now, so the rows come round and the
+  repeat is an advance. A loop longer than a back reference reaches is
+  replayed, as ST4 defines: the decoder's registers go away at the loop's
+  first unit and come back at the column's end.
+- **No call keeps a row.** Every compare left the advance with it. On 64
+  rows of three two byte columns an advance is 70 cycles under DTX0 where
+  it was 126, and 66 under DTX1 where it was 122. DTX0's code is 132 bytes
+  where it was 208, and DTX1's 84 where it was 160.
+- **The rows decoded still shorten a column's last refill** where the data
+  sets end. That is why a DTX2 advance is cheaper than 0.3.0's: on twenty
+  two byte columns it takes 1432 cycles on average over 64 rows where
+  0.3.0 took 1512.
+- R5.11 is the rule this adds: `RR` times the width divides by `k`, so row
+  `RR` begins a unit of the column. A writer given a table that breaks it
+  fails, naming the rule.
+- The README has sections, a usage section and an attribution section.
+
 ### 0.3.0, 2026-09-06
 
 <https://github.com/odipar/DTX/releases/tag/v0.3.0>, built from the commit
