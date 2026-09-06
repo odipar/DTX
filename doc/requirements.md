@@ -113,6 +113,14 @@ before what it describes, and what things are called comes before both.
   took it from anywhere but the file could be given one that differs from the
   bytes.
 
+- **R5.11** Every data set of a payload loops, so no set ends and a reader
+  decodes one row after another with no figure to count against. Where
+  `RR` is below `R` the set loops at row `RR`, so the rows come round and
+  nothing is decoded twice. Where the table does not repeat the set loops
+  at its last unit, and what stands past row `R` minus one is not defined.
+  Row `RR` begins a unit of the column, so `RR` times the width divides by
+  `k`.
+
 ## R6. The constraints
 
 What a table may contain, and what a reader does where it contains
