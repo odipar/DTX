@@ -473,13 +473,10 @@ func TestAReplayedPayloadTakesASecondDecoderStateAColumn(t *testing.T) {
 	}
 }
 
-// A refill takes a whole period and a replayed set puts the registers away at
-// RR and back at R, so both rows fall on a period: P divides RR and the rows
-// from RR to R, doc/abi.md 4.
-func TestAReplayedPayloadTakesAPeriodThatDividesTheRepeat(t *testing.T) {
-	// Three columns of two byte values at a ring of 960: P of 3 divides N by
-	// the width, and a replayed payload repeating at row 16 of 64 takes 4,
-	// the first period from C that divides 16 and the 48 rows to R.
+// The reader puts a replayed set's registers away and takes them back at
+// the exact row, splitting the refill the row falls inside, so the period
+// is the same for every RR and R, doc/abi.md 4.
+func TestAReplayedPayloadTakesThePeriodWhateverItsRepeat(t *testing.T) {
 	for _, one := range []struct {
 		name   string
 		file   []byte
@@ -487,8 +484,10 @@ func TestAReplayedPayloadTakesAPeriodThatDividesTheRepeat(t *testing.T) {
 	}{
 		{"P is C where the sets loop by their end marker",
 			sets(64, 16, 3, 2, 1, 960, false, -1), 3},
-		{"P divides RR and the rows from it where the pass is replayed",
-			sets(64, 16, 3, 2, 1, 960, false, 32), 4},
+		{"P is C where the pass is replayed from a row it does not divide",
+			sets(64, 16, 3, 2, 1, 960, false, 32), 3},
+		{"P is C where the pass is replayed from row 3 of 64",
+			sets(64, 3, 2, 2, 1, 960, false, 6), 2},
 	} {
 		head, err := dtx.ReadHeader(one.file)
 		if err != nil {
@@ -505,24 +504,6 @@ func TestAReplayedPayloadTakesAPeriodThatDividesTheRepeat(t *testing.T) {
 		if period != one.period {
 			t.Fatalf("%s: P is %d, not %d", one.name, period, one.period)
 		}
-	}
-	// A repeat of 3 leaves 61 rows to R, and no period from C of 2 divides
-	// both, so the package fails and the message names the rule.
-	file := sets(64, 3, 2, 2, 1, 960, false, 6)
-	head, err := dtx.ReadHeader(file)
-	if err != nil {
-		t.Fatal(err)
-	}
-	given, err := ReadPacked(file, head)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = Period(head, given); err == nil {
-		t.Fatal("a replayed payload repeating at row 3 took a period")
-	}
-	if !strings.HasSuffix(err.Error(), ", and RR of 3 and the rows from it"+
-		" to R divide by P, since these data sets are replayed") {
-		t.Fatalf("the error is %q", err)
 	}
 }
 

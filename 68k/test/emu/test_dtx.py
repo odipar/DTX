@@ -575,6 +575,14 @@ PACKED = [
     # P: the set loops by its end marker, and the reader's count comes round
     # at the first period end past R rather than on it.
     ("a loop by the marker, R odd", numbers(51, 2), 1, 20, 1, 960),
+    # A replayed pass whose loop begins and ends on no period: the reader
+    # splits the refill the row falls inside, so RR and R divide by nothing.
+    ("a replayed pass from row 101", numbers(512, 2), 2, 101, 1, 64),
+    ("a replayed pass of 511 rows", numbers(511, 2), 2, 0, 1, 64),
+    # A table shorter than a period: the seed decodes R rows, and the first
+    # period's budget is 0.
+    ("two rows of three columns", numbers(2, 3), 1, None, 1, 960),
+    ("one row that repeats to itself", numbers(1, 2), 2, 0, 1, 960),
 ]
 
 

@@ -137,31 +137,22 @@ func Period(header dtx.Header, given Packed) (int, error) {
 		return 0, fmt.Errorf("a column is %d times %d bytes, which does not"+
 			" divide by k of %d", rows, width, k)
 	}
-	// A replayed set puts the decoder's registers away where its loop begins
-	// and back at the column's end, and a refill takes a whole period, so
-	// both rows fall on a period (abi.md 4).
-	repeat := header.Repeat
-	lands := !given.Replayed
-	for p := columns; p <= rows; p++ {
+	// A table shorter than a period takes the period all the same: the
+	// reader seeds its rows, and the first period's budget is 0 (abi.md 4).
+	for p := columns; p <= max(rows, columns); p++ {
 		budget := p * width / k
 		if n < 2*p*width {
 			break
 		}
 		if n%(p*width) == 0 && p*width%k == 0 &&
-			budget >= 1 && budget <= 65535 &&
-			(lands || (repeat%p == 0 && (rows-repeat)%p == 0)) {
+			budget >= 1 && budget <= 65535 {
 			return p, nil
 		}
 	}
-	replayed := ""
-	if !lands {
-		replayed = fmt.Sprintf(", and RR of %d and the rows from it to R"+
-			" divide by P, since these data sets are replayed", repeat)
-	}
 	return 0, fmt.Errorf("no period from C of %d to R of %d meets N of %d and"+
 		" k of %d: N divides by P times the width, is at least twice that,"+
-		" the budget is a whole number of units%s",
-		columns, rows, n, k, replayed)
+		" and the budget is a whole number of units",
+		columns, rows, n, k)
 }
 
 // ColumnTable gives the table behind the image's code: one stream record a

@@ -84,32 +84,35 @@ DTX_LEFTFIG         equ     40              ; what a period's budget counts
                                             ; its rows against: R where the
                                             ; sets end, so the last period is
                                             ; short and the one after it has
-                                            ; no budget, and R plus P where
-                                            ; they loop, which no period
+                                            ; no budget, and $7FFFFFFF where
+                                            ; they loop, which no count
                                             ; reaches
-DTX_SAVEAT          equ     44              ; the row a loop begins at, or -1
-DTX_ENDAT           equ     48              ; the row a pass ends at, or -1
+DTX_SAVEAT          equ     44              ; the units a column decodes
+                                            ; before the row its loop begins
+                                            ; at, where a pass is replayed
+DTX_LOOPFIG         equ     48              ; the units of the loop, RR to R
 DTX_SAVED           equ     52              ; where the decoders' registers
                                             ; go, in the block, or 0 where
                                             ; nothing is put away
-DTX_NEXT           equ     56              ; the decoder state whose turn
+DTX_NEXT            equ     56              ; the decoder state whose turn
                                             ; the next row is
 DTX_RING0           equ     60              ; column 0's ring, the pointer's
 DTX_RINGEND0        equ     64              ; one past its last byte
-DTX_MODE            equ     68              ; a word: what a marked state does
-                                            ; before its refill, 0 to put its
-                                            ; registers away and 1 to take
-                                            ; them back
 DTX_DECODERS        equ     72
 
 ; One decoder state: the eight registers in movem's order, then the ring's
-; end, where the registers go at a loop, and the budget. A budget of 0 is a
-; turn with no refill: a turn past the last column, or a column whose set
-; has ended. A negative budget marks the state for the period: the refill
-; puts the registers away first, or takes them back, as DTX_MODE says.
+; end, where the registers go at a loop, the budget, the phase and the
+; mark. A budget of 0 is a turn with no refill: a turn past the last
+; column, or a column whose set has ended. The mark is the units the
+; decoder has left before the row its registers are put away at, or taken
+; back at, and 0 where no such row is ahead; the phase says which of the
+; two, 0 to put them away and 1 to take them back. A refill the mark falls
+; inside is split there.
 DTX_D_END           equ     32
 DTX_D_SAVED         equ     36
 DTX_D_BUDGET        equ     40
+DTX_D_PHASE         equ     42
+DTX_D_MARK          equ     44
 DTX_D_SIZE          equ     48
 
 ; -----------------------------------------------------------------------------
@@ -182,16 +185,85 @@ DTX_state:
         .endm
 
 ; -----------------------------------------------------------------------------
-; DTX_seed. Every decoder seeded, every ring filled with P rows, the pointer
-; a row below row 0, and the first period's budget in every state. Init
-; takes it, and so does a jump that runs from row 0.
+; One refill of the state in a3, whose budget is in d3: the registers
+; loaded, the decoder run for the budget, the write pointer taken back to
+; the ring start where it landed on the ring end, and the registers stored.
+; N divides by P times the width, so a full refill lands on the end or
+; short of it and the compare is exact. ST4 clobbers a3, so the state is
+; read out of the block again after the decoder.
+;
+; Where the state's mark falls inside the budget the refill is split at
+; it: the decoder runs to the mark, its registers are put away or taken
+; back as the phase says, and it runs for the rest. A pass that is
+; replayed puts the registers away where its loop begins and takes them
+; back where it ends, every pass, so the next mark is the loop's units on;
+; the first mark puts them away, and every mark after takes them back.
+; ST4 leaves a1, the write pointer, out of a replay: it walks the ring on
+; and the pass it belongs to is the caller's, not the stream's, so the
+; copy back takes seven registers and a1 stands as it is.
+;
+; A macro rather than a subroutine: the advance runs it in line, and the
+; seed once a column.
+
+        .macro  DTX_REFILL
+        move.l  DTX_D_MARK(a3),d4
+        beq.s   .whole\~
+        moveq   #0,d5
+        move.w  d3,d5
+        sub.l   d5,d4                   ; the mark past this refill
+        ble.s   .split\~
+        move.l  d4,DTX_D_MARK(a3)
+.whole\~:
+        movem.l (a3),d0-d2/a0-a2/a4-a5
+        bsr     ST4_resume
+        bra.s   .filled\~
+.split\~:
+        neg.l   d4                      ; the rest, past the mark
+        move.w  d4,-(a7)
+        sub.w   d4,d3                   ; up to the mark
+        movem.l (a3),d0-d2/a0-a2/a4-a5
+        bsr     ST4_resume
+        movea.l DTX_NEXT(a6),a3
+        tst.w   DTX_D_PHASE(a3)
+        bne.s   .back\~
+        move.w  #1,DTX_D_PHASE(a3)
+        movea.l DTX_D_SAVED(a3),a3
+        movem.l d0-d2/a0-a2/a4-a5,(a3)
+        bra.s   .rest\~
+.back\~:
+        movea.l DTX_D_SAVED(a3),a4
+        movem.l (a4),d0-d2/a0
+        movem.l 20(a4),a2/a4-a5
+.rest\~:
+        movea.l DTX_NEXT(a6),a3
+        moveq   #0,d3
+        move.w  (a7)+,d3
+        move.l  DTX_LOOPFIG(a6),d4
+        sub.l   d3,d4
+        move.l  d4,DTX_D_MARK(a3)       ; the next mark, the loop on
+        tst.w   d3
+        beq.s   .filled\~
+        bsr     ST4_resume
+.filled\~:
+        movea.l DTX_NEXT(a6),a3
+        cmpa.l  DTX_D_END(a3),a1
+        bne.s   .short\~
+        suba.l  DTX_NFIG(a6),a1
+.short\~:
+        movem.l d0-d2/a0-a2/a4-a5,(a3)
+        .endm
+
+; -----------------------------------------------------------------------------
+; DTX_seed. Every decoder seeded, every ring filled with a period's rows,
+; or R where the table is shorter, the pointer a row below row 0, and the
+; first period's budget in every state. Init takes it, and so does a jump
+; that runs from row 0.
 ;
 ; One loop over the columns. ST4 clobbers a3, so where the column stands is
-; worked out again after every call into it. The state's three fields are
-; written before the decoder runs, and the write pointer goes back to the
-; ring start where the fill landed on the ring end: N divides by P times
-; the width, so a full refill lands on the end or short of it and the
-; compare is exact.
+; worked out again after every call into it. The state's fields are
+; written before the decoder runs: a loop that begins at row 0 begins where
+; ST4_init leaves the decoder, so those registers are put away here, and
+; any other loop's row is the state's first mark.
 
 DTX_seed:
         clr.w   DTX_FILL(a6)
@@ -208,8 +280,15 @@ seed_column:
         add.l   a6,d4
         move.l  d4,DTX_D_SAVED(a3)      ; where the registers go, 32 a column
         move.l  DTX_PERIODFIG(a6),d3
+        cmp.l   DTX_LEFTFIG(a6),d3
+        ble.s   .period
+        move.l  DTX_LEFTFIG(a6),d3      ; a table shorter than a period
+.period:
         DTX_BUDGET
-        move.w  d3,DTX_D_BUDGET(a3)     ; a period's rows in units
+        move.w  d3,DTX_D_BUDGET(a3)
+        clr.w   DTX_D_PHASE(a3)
+        clr.l   DTX_D_MARK(a3)
+        move.l  a3,-(a7)
         bsr.s   DTX_record              ; a3 the record
         movea.l DTX_PAYLOAD(a6),a0
         movea.l a0,a2
@@ -221,20 +300,27 @@ seed_column:
         adda.l  DTX_S_D(a3),a5
         move.w  DTX_NFIG+2(a6),d3       ; N, a ring's bytes, in a word
         bsr     ST4_init
-        bsr     DTX_first
-        move.l  DTX_PERIODFIG(a6),d3
-        DTX_BUDGET
-        bsr     ST4_resume
-        bsr.s   DTX_state               ; a3 the state again
-        cmpa.l  DTX_D_END(a3),a1
-        bne.s   .short
-        suba.l  DTX_NFIG(a6),a1
-.short:
+        movea.l (a7)+,a3                ; the state
+        move.l  a3,DTX_NEXT(a6)         ; the refill reads the state here
         movem.l d0-d2/a0-a2/a4-a5,(a3)
+        tst.l   DTX_SAVED(a6)
+        beq.s   .marked                 ; nothing is put away
+        move.l  DTX_SAVEAT(a6),d4
+        bne.s   .ahead
+        movea.l DTX_D_SAVED(a3),a3      ; the loop begins at row 0: put away
+        movem.l d0-d2/a0-a2/a4-a5,(a3)
+        movea.l DTX_NEXT(a6),a3
+        move.w  #1,DTX_D_PHASE(a3)
+        move.l  DTX_LOOPFIG(a6),d4
+.ahead:
+        move.l  d4,DTX_D_MARK(a3)
+.marked:
+        move.w  DTX_D_BUDGET(a3),d3
+        DTX_REFILL
         addq.w  #1,DTX_FILL(a6)
         move.w  DTX_FILL(a6),d4
         cmp.w   DTX_CFIG(a6),d4
-        bcs.s   seed_column
+        bcs     seed_column
 
 ; A turn past the last column is idle: every decoder state from C to P
 ; minus one gets a budget of 0, and nothing else in it is read.
@@ -249,16 +335,20 @@ seed_column:
         dbra    d4,.idle
 .idled:
 
-; The seed gave every column a period's rows, which the count starts from;
-; the first turn is column 0's, and a period of turns is to come. The
-; pointer stands a row below column 0's first row, so the advance into row
-; 0 steps like any other advance. Then the marks a loop puts on the first
-; period, and its budget, which is short where R is under 2P.
-        move.l  DTX_PERIODFIG(a6),DTX_DONE(a6)
+; The seed gave every column a period's rows, or R, which the count
+; starts from; the first turn is column 0's, and a period of turns is to
+; come. The pointer stands a row below column 0's first row, so the
+; advance into row 0 steps like any other advance. Then the first period's
+; budget, which is short where R is under 2P.
+        move.l  DTX_PERIODFIG(a6),d3
+        cmp.l   DTX_LEFTFIG(a6),d3
+        ble.s   .counted
+        move.l  DTX_LEFTFIG(a6),d3
+.counted:
+        move.l  d3,DTX_DONE(a6)
         move.w  DTX_PERIODFIG+2(a6),DTX_TURN(a6)
         lea     DTX_DECODERS(a6),a3
         move.l  a3,DTX_NEXT(a6)
-        clr.w   DTX_MODE(a6)
         move.l  DTX_RING0(a6),d0
         subq.l  #DTX_WIDTH,d0
         move.l  d0,DTX_POINTER(a6)
@@ -300,27 +390,28 @@ DTX_init:
         add.l   d0,d2
         move.l  d2,DTX_RINGEND0(a6)
 
-; What a period's budget counts its rows against, and the two rows a pass
-; turns on. Where RR is below R the sets loop at it (R5.11): the count comes
-; round there, and R plus P is a figure no period reaches, so every refill
-; takes a whole period. Where the table does not repeat the sets end at R:
-; the count stops there, the last period of refills is short and the one
-; after it gets a budget of 0, and neither row is reached, since the count
-; never stands on -1 and never passes $7FFFFFFF.
+; What a period's budget counts its rows against, and where a pass that
+; is replayed turns. Where RR is below R the sets loop at it (R5.11) and
+; no count is kept: $7FFFFFFF is a figure no count reaches, so every
+; refill takes a whole period. Where the table does not repeat the sets
+; end at R: the count stops there, the last period of refills is short and
+; the one after it gets a budget of 0. The two figures a replay turns on
+; are units of a column: the units before its loop's first row, and the
+; units of the loop.
         move.l  4(a2),d3                ; R
         move.l  10(a2),d4               ; RR
-        move.l  d4,DTX_SAVEAT(a6)
-        move.l  d3,DTX_ENDAT(a6)
         cmp.l   d3,d4
         bcs.s   .loops
         move.l  d3,DTX_LEFTFIG(a6)      ; the sets end at R
-        moveq   #-1,d3
-        move.l  d3,DTX_SAVEAT(a6)
-        move.l  #$7FFFFFFF,DTX_ENDAT(a6)
         bra.s   .counted
 .loops:
-        add.l   DTX_PERIODFIG(a6),d3
-        move.l  d3,DTX_LEFTFIG(a6)      ; R plus P, which no period reaches
+        move.l  #$7FFFFFFF,DTX_LEFTFIG(a6)
+        sub.l   d4,d3                   ; the loop's rows
+        DTX_BUDGET
+        move.l  d3,DTX_LOOPFIG(a6)
+        move.l  d4,d3                   ; the rows before the loop
+        DTX_BUDGET
+        move.l  d3,DTX_SAVEAT(a6)
 .counted:
 
 ; Where the decoders' registers go, behind the rings, and 0 where nothing is
@@ -348,12 +439,9 @@ DTX_init:
 
 ; -----------------------------------------------------------------------------
 ; One row: the column whose turn it is is refilled, the turn steps, and the
-; pointer moves. The state's budget says what the turn does: 0 nothing, a
-; positive budget a refill of that many units, a negative one the same after
-; the registers are put away or taken back. ST4 clobbers a3, so the state
-; is read out of the block again after the decoder for the write pointer's
-; wrap and the registers' store. Then the next state's address goes into
-; the block, and the last turn of a period ends it.
+; pointer moves. The state's budget says what the turn does: 0 nothing, and
+; any other a refill of that many units. Then the next state's address goes
+; into the block, and the last turn of a period ends it.
 ;
 ; The pointer moves after the refill: the row it moves onto is not one the
 ; refill writes (doc/abi.md 4), and a1 comes out of the step the pointer
@@ -366,16 +454,7 @@ DTX_init:
         movea.l DTX_NEXT(a6),a3
         move.w  DTX_D_BUDGET(a3),d3
         beq.s   .idle\~
-        bmi.s   .marked\~
-        movem.l (a3),d0-d2/a0-a2/a4-a5
-.refill\~:
-        bsr     ST4_resume
-        movea.l DTX_NEXT(a6),a3
-        cmpa.l  DTX_D_END(a3),a1
-        bne.s   .short\~
-        suba.l  DTX_NFIG(a6),a1
-.short\~:
-        movem.l d0-d2/a0-a2/a4-a5,(a3)
+        DTX_REFILL
 .idle\~:
         lea     DTX_D_SIZE(a3),a3
         move.l  a3,DTX_NEXT(a6)
@@ -390,44 +469,13 @@ DTX_init:
         movea.l DTX_RING0(a6),a1
 .kept\~:
         move.l  a1,DTX_POINTER(a6)
-        bra.s   .done\~
-.marked\~:
-        bsr     DTX_marked
-        bra.s   .refill\~
-.done\~:
         .endm
-
-; The marked refill's first half: the registers put away, or taken back.
-; a3 is the state and d3 its budget, negated; d3 comes back the budget and
-; the registers come back loaded, as an unmarked refill loads them.
-;
-; ST4 leaves a1, the write pointer, out of a replay: it walks the ring on
-; and the pass it belongs to is the caller's, not the stream's. So the copy
-; back takes seven registers out of the saved eight and a1 out of the state,
-; and the decoder keeps the ring position its last refill left.
-
-DTX_marked:
-        neg.w   d3
-        tst.w   DTX_MODE(a6)
-        bne.s   .back
-        movem.l (a3),d0-d2/a0-a2/a4-a5
-        movea.l DTX_D_SAVED(a3),a3
-        movem.l d0-d2/a0-a2/a4-a5,(a3)
-        rts
-.back:
-        movea.l DTX_D_SAVED(a3),a4
-        movem.l (a4),d0-d2/a0
-        movea.l 16(a3),a1
-        movem.l 20(a4),a2/a4-a5
-        rts
 
 ; -----------------------------------------------------------------------------
 ; A period ended: every column took its refill and those rows are decoded.
 ; The next turn is column 0's, and the rows the period decoded go onto the
 ; count. Where the sets end the count stops at R, so the last period is
-; short and the one after it is empty; where they loop the count comes
-; round at the row a pass ends on, or the first period end past it
-; (DTX_next).
+; short and the one after it is empty; where they loop no count is kept.
 
 DTX_period:
         lea     DTX_DECODERS(a6),a3
@@ -445,39 +493,11 @@ DTX_period:
 .over:
         rts
 
-; The period to come: its marks, and then its budget.
-;
-; The marks. A marked period just ended where the budgets stand negative,
-; and they go back first. Then the count against the two rows: the row a
-; loop begins at marks the period to put the registers away, and the row
-; a pass ends at marks it to take them back and puts the count back to
-; the loop's row. A pass that is replayed ends on a period, so the count
-; stands on that row; a pass that loops by its set's end marker ends
-; where it ends, R dividing by P or not, so the count comes round at the
-; first period end at or past it, and nothing is put away or marked.
-;
-; The budget. A whole period keeps the budget the seed wrote, and a pass
-; that loops never has a short one, so a budget is written only where the
-; sets end, short or 0.
+; The period to come: its budget. A whole period keeps the budget the seed
+; wrote, and a pass that loops never has a short one, so a budget is
+; written only where the sets end, short or 0.
 
 DTX_next:
-        tst.w   DTX_DECODERS+DTX_D_BUDGET(a6)
-        bpl.s   .plain
-        bsr.s   DTX_flip
-.plain:
-        move.l  DTX_DONE(a6),d3
-        cmp.l   DTX_SAVEAT(a6),d3
-        beq.s   .away
-        cmp.l   DTX_ENDAT(a6),d3
-        blt.s   .budget
-        move.l  DTX_SAVEAT(a6),DTX_DONE(a6)
-        move.w  #1,DTX_MODE(a6)
-        bsr.s   DTX_flip
-        bra.s   .budget
-.away:
-        clr.w   DTX_MODE(a6)
-        bsr.s   DTX_flip
-.budget:
         move.l  DTX_LEFTFIG(a6),d3
         sub.l   DTX_DONE(a6),d3
         cmp.l   DTX_PERIODFIG(a6),d3
@@ -497,40 +517,6 @@ DTX_next:
 .kept:
         rts
 
-; Every column's budget negated: onto a marked period, and off it.
-DTX_flip:
-        tst.l   DTX_SAVED(a6)
-        beq.s   .none
-        lea     DTX_DECODERS+DTX_D_BUDGET(a6),a3
-        move.w  DTX_CFIG(a6),d4
-        subq.w  #1,d4
-.column:
-        neg.w   (a3)
-        lea     DTX_D_SIZE(a3),a3
-        dbra    d4,.column
-.none:
-        rts
-
-; -----------------------------------------------------------------------------
-; A replayed pass whose loop begins at row 0 begins where ST4_init leaves
-; the decoder, so those are the registers to put away, at the seed. Every
-; other loop begins at a period, and the marks find it.
-
-DTX_first:
-        tst.l   DTX_SAVED(a6)
-        beq.s   .none
-        tst.l   DTX_SAVEAT(a6)
-        bne.s   .none
-        movea.l a6,a3
-        adda.l  DTX_SAVED(a6),a3
-        moveq   #0,d4
-        move.w  DTX_FILL(a6),d4
-        lsl.l   #5,d4
-        adda.l  d4,a3
-        movem.l d0-d2/a0-a2/a4-a5,(a3)
-.none:
-        rts
-
 ; -----------------------------------------------------------------------------
 ; DTX_step: one row for a jump, which runs it once a row.
 
@@ -548,7 +534,7 @@ DTX_jump:
         move.l  d0,-(a7)                ; the rows still to step
         bsr     DTX_seed                ; the cursor a row below row 0
 .run:
-        bsr.s   DTX_step
+        bsr     DTX_step
         subq.l  #1,(a7)
         bpl.s   .run
         addq.l  #4,a7

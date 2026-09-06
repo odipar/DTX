@@ -306,32 +306,33 @@ that `a6` reaches:
 | +28 | 4 | `P` |
 | +32 | 4 | `N` |
 | +36 | 4 | the rows every column has produced |
-| +40 | 4 | what a period's budget counts those rows against: `R` where the sets end, `R` plus `P` where they loop |
-| +44 | 4 | `RR`, the row a loop begins at, or -1 where the sets end |
-| +48 | 4 | `R`, the row a pass ends at, or $7FFFFFFF where the sets end |
+| +40 | 4 | what a period's budget counts those rows against: `R` where the sets end, $7FFFFFFF where they loop |
+| +44 | 4 | the units a column decodes before the row its loop begins at, where a pass is replayed |
+| +48 | 4 | the units of the loop, `RR` to `R`, where a pass is replayed |
 | +52 | 4 | where the decoders' registers go at the loop's row, or 0 where none go anywhere |
 | +56 | 4 | the decoder state whose turn the next row is |
 | +60 | 4 | column 0's ring, the pointer's own |
 | +64 | 4 | one past its last byte |
-| +68 | 2 | what a marked state does before its refill: 0 puts its registers away, 1 takes them back |
-| +70 | 2 | unused |
+| +68 | 4 | unused |
 
 The rows every column has produced grow at each period's end, by `P` or
-by what is left to `R`, and are compared there with the two rows: once a
-period rather than once a row. Where the sets end, the last period's
-budget is short and the one after it is 0. Where a back reference reaches
-the loop's first unit, the set loops by its end marker and +52 reads
-zero: the count comes round to `RR` at the first period end at or past
-`R`, and no register goes anywhere. Where the pass is replayed, the
-period after the loop's row puts every column's registers away, each at
-its own refill, and the period after the pass's row takes them back the
-same way: the budgets of such a period stand negated, and the word at
-+68 says which of the two a refill does first.
+by what is left to `R`, once a period rather than once a row. Where the
+sets end, the last period's budget is short and the one after it is 0;
+where they loop no count is kept. Where a back reference
+reaches the loop's first unit, the set loops by its end marker and +52
+reads zero: no register goes anywhere. Where the pass is replayed, each
+column's decoder state has a mark, the units it has left before the
+row its registers are put away at, or taken back at, and the refill that
+mark falls inside is split there: the decoder runs to the mark, its
+registers are put away or taken back, and it runs for the rest. The
+first mark puts them away at `RR`, and every mark after takes them back
+at `R`, the loop's units on each time; a loop that begins at row 0 is put
+away at the seed. So `RR` and `R` fall on any row.
 
 Then, under DTX2 only, at +72, one **decoder state** a turn, 48 bytes at
 a stride of 48: the eight longs a column's decoder is saved in between
 refills, in `movem`'s own order, so that `movem.l (a3)+,d0-d2/a0-a2/a4-a5`
-loads them whole, and three fields the refill reads:
+loads them whole, and four fields the refill reads:
 
 | at in the decoder state | contains |
 |---|---|
@@ -345,8 +346,9 @@ loads them whole, and three fields the refill reads:
 | +28 | `a5`, the position in stream D |
 | +32 | one past the ring's last byte |
 | +36 | where the registers go at the loop's row |
-| +40 | the budget, a word: the refill's units, 0 on an idle turn, negated through a marked period |
-| +42 | unused, to +48 |
+| +40 | the budget, a word: the refill's units, 0 on an idle turn or where the set has ended |
+| +42 | the phase, a word: 0 where the next mark puts the registers away, 1 where it takes them back |
+| +44 | the mark, a long: the units left before that row, 0 where no such row is ahead |
 
 A turn past `C` minus one has a state whose budget is 0, and nothing else
 in it is read.
@@ -388,8 +390,9 @@ over the row the read on that row is about to take.
 
 **The four rules the packager checks, and fails the package on.**
 
-- `P` is at least `C`, so one column a row refills every column in time,
-  and at most `R`, since no refill takes more rows than the table has
+- `P` is at least `C`, so one column a row refills every column in time.
+  A table of fewer rows than `P` seeds them all, and its first period's
+  budget is 0
 - `N` divides by `P` times the width, so a full refill lands on the ring
   end or short of it and never straddles it
 - `N` is at least 2`P` times the width, so a ring contains two periods and
@@ -414,8 +417,8 @@ driven past its data set.
 `P` is the lever. `P` equal to `C` gives the smallest rings and the
 flattest cost; a larger `P` uses more ring and leaves `P` minus `C`
 rows a period with no refill. The packager takes the smallest `P` at least
-`C` that meets every rule above, and it fails the package where no such
-`P` stands below `R`.
+`C` that meets every rule above, and it fails the package where none
+does.
 
 **The repeat.** A data set of a table that repeats loops at `RR` (R5.11),
 so the rows come round because the sets do, and the advance out of row `R`
@@ -423,10 +426,9 @@ minus one is the advance into row `RR`. A loop longer than a back
 reference reaches is replayed instead: the set records the unit its loop
 begins at, the reader puts every column's registers but the write pointer
 away at the loop's row and takes them back at the pass's end, each column
-at its own refill, and the rows from `RR` to `R` minus one decode again
-each pass. Both rows fall on a period, so the packager asks of such a
-table that `RR` and `R` minus `RR` divide by `P`; a table whose loop a
-back reference reaches is under no such rule.
+at its own refill, splitting the refill the row falls inside (section 3),
+and the rows from `RR` to `R` minus one decode again each pass. `RR` and
+`R` fall on any row: no rule binds them to the period.
 
 ---
 

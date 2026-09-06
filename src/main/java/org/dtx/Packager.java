@@ -130,29 +130,22 @@ public final class Packager {
                     + " times " + width + " bytes, which does not divide by"
                     + " k of " + k);
         }
-        // A replayed set puts the decoder's registers away where its loop
-        // begins and back at the column's end, and a refill takes a whole
-        // period, so both rows fall on a period (abi.md 4).
-        int repeat = header.repeat();
-        boolean lands = !packed.replayed();
-        for (int p = columns; p <= rows; p++) {
+        // A table shorter than a period takes the period all the same: the
+        // reader seeds its rows, and the first period's budget is 0 (abi.md 4).
+        for (int p = columns; p <= Math.max(rows, columns); p++) {
             long budget = (long) p * width / k;
             if (n < 2 * p * width) {
                 break;
             }
             if (n % (p * width) == 0 && (long) p * width % k == 0
-                    && budget >= 1 && budget <= 65535
-                    && (lands || (repeat % p == 0 && (rows - repeat) % p == 0))) {
+                    && budget >= 1 && budget <= 65535) {
                 return p;
             }
         }
         throw new IllegalArgumentException("no period from C of " + columns
                 + " to R of " + rows + " meets N of " + n + " and k of " + k
                 + ": N divides by P times the width, is at least twice that,"
-                + " the budget is a whole number of units"
-                + (lands ? "" : ", and RR of " + repeat + " and the rows from"
-                        + " it to R divide by P, since these data sets are"
-                        + " replayed"));
+                + " and the budget is a whole number of units");
     }
 
     /**

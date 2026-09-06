@@ -28,6 +28,27 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
+### Not yet cut
+
+**No file changes, and no caller's code but one that read the block's
+words at +44, +48 and +68.**
+
+- A replayed pass puts each column's registers away and takes them back
+  at the exact row its loop begins and ends at, splitting the refill the
+  row falls inside, where it did so at a period's end and asked of the
+  packager that `RR` and `R` minus `RR` divide by `P`. That rule is gone:
+  a table repeats at any row, and packs at the period its ring gives
+  rather than one its loop divides by.
+- A table of fewer rows than a period packages: the reader seeds its rows
+  and its first period's budget is 0, where the packager failed it.
+- The block's words at +44 and +48 are the units before the loop and the
+  units of the loop; +68 is unused; a decoder state has a phase and a
+  mark at +42 and +44.
+- On 64 rows of three two byte columns an advance is 676 to 928 cycles
+  where it was 658 to 1002, and on twenty columns 1112 where it was 1094:
+  the mark's test on every refill, and no marked period. DTX2's code is
+  1448 bytes at `k` of 1 where it was 1244.
+
 ### 0.5.0, 2026-09-06
 
 <https://github.com/odipar/DTX/releases/tag/v0.5.0>, built from the commit
