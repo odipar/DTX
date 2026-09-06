@@ -1,7 +1,7 @@
 # releases
 
-What a release contains stands here, and each one published lists below
-it.
+What a release contains stands here, and each one published is listed
+below it.
 
 ## What a release contains
 
@@ -33,12 +33,13 @@ assembler, and no image is tracked in the tree.
 <https://github.com/odipar/DTX/releases/tag/v0.2.0>, built from the commit
 tagged `v0.2.0`.
 
-**It does not read 0.1.0's files, and 0.1.0 does not read its own.** The
-header changed shape under the same variant numbers, so a table written by
-0.1.0 reads as a table of another shape rather than as an error: its first
-column's width byte reads as the table's width and its payload begins four
-bytes later than the reader looks. Rewrite such a file with 0.1.0's
-`dtx-write` into text and read the text back with this release's.
+**It does not read 0.1.0's files, and 0.1.0 does not read this release's.**
+The header changed shape under the same variant numbers, so a table written
+by 0.1.0 reads as a table of another shape rather than as an error: its
+first column's width byte reads as the table's width, and its payload
+begins where 14 plus `C` rounds up to a long, past where the reader looks
+for every `C` but 1 and 2. Rewrite such a file with 0.1.0's `dtx-write`
+into text and read the text back with this release's.
 
 What changed since 0.1.0:
 

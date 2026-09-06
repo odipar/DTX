@@ -13,6 +13,8 @@ import java.util.List;
  * in one is not read. Java, Go and C# write {@code //} and {@code /* *}{@code /};
  * an assembler source writes {@code ;}; Python and a shell script write
  * {@code #}, and Python's triple-quoted docstrings are read as comments too.
+ * A Java text block runs from one {@code """} to the next and is a string,
+ * so a {@code //} inside one does not open a comment.
  */
 public final class Comments {
 
@@ -30,13 +32,14 @@ public final class Comments {
         boolean cLike = name.endsWith(".java") || name.endsWith(".go")
                 || name.endsWith(".cs");
         boolean python = name.endsWith(".py");
+        boolean java = name.endsWith(".java");
         char mark = cLike ? '/' : name.endsWith(".S") ? ';' : '#';
         List<Comment> out = new ArrayList<>();
         StringBuilder run = new StringBuilder();
         int line = 1;
         int began = 1;
         // 0 code, 1 a string, 2 a line comment, 3 a block comment, 4 a
-        // python docstring
+        // python docstring, 5 a java text block
         int in = 0;
         char quote = 0;
         for (int at = 0; at < text.length(); at++) {
@@ -48,10 +51,10 @@ public final class Comments {
             switch (in) {
                 case 0 -> {
                     if (one == '"' || one == '\'') {
-                        if (python && next == one
+                        if ((python || java && one == '"') && next == one
                                 && at + 2 < text.length()
                                 && text.charAt(at + 2) == one) {
-                            in = 4;
+                            in = python ? 4 : 5;
                             quote = one;
                             began = line;
                             at += 2;
@@ -98,7 +101,7 @@ public final class Comments {
                         run.append(one);
                     }
                 }
-                default -> {
+                case 4 -> {
                     if (one == quote && next == quote
                             && at + 2 < text.length()
                             && text.charAt(at + 2) == quote) {
@@ -108,6 +111,15 @@ public final class Comments {
                         at += 2;
                     } else {
                         run.append(one);
+                    }
+                }
+                default -> {
+                    // a text block is a string: nothing in it is read
+                    if (one == quote && next == quote
+                            && at + 2 < text.length()
+                            && text.charAt(at + 2) == quote) {
+                        in = 0;
+                        at += 2;
                     }
                 }
             }

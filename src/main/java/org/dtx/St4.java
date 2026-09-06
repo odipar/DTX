@@ -13,9 +13,10 @@ import org.st4.Units;
  * odipar/ST4@498aa25 and not edited here. So a tool writes DTX2 with no
  * packer beside it, and {@link St4Beside} runs one where a caller names it.
  *
- * <p>The packer takes what {@code st4 -f -kK -mN -l65535} gives it, and {@code -c} beside them where the columns contain copies. The
- * ring is bytes and the packer counts units, so {@code -m} is the ring
- * divided by the unit, at most what a word offset can give.
+ * <p>The packer takes what {@code st4 -f -kK -mN -l65535} gives it, and
+ * {@code -c} beside them where the columns contain copies. The ring is bytes
+ * and the packer counts units, so {@code -m} is the ring divided by the unit,
+ * at most what a word offset can give.
  *
  * <p>{@code -l65535} meets ST4_wrap's assumption 4: no operation is longer
  * than the 65535 units the 68000 decoders count in a word. ST4's own
@@ -35,8 +36,8 @@ public final class St4 implements Packer {
     }
 
     /**
-     * A packer that so that a match beyond the ring copies from the column's own
-     * literal stream, which packs a small ring far smaller.
+     * A packer under which a match beyond the ring copies from the column's
+     * own literal stream, which packs a small ring far smaller.
      *
      * @param copies whether to pack copies
      * @param seconds how long to search beyond the opening passes for a

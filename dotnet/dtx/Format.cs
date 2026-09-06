@@ -25,6 +25,14 @@ public static class Format
     public const int MaxRing = 65535;
 
     /// <summary>
+    /// The largest R a header defines (R6.1). The field is four bytes, and
+    /// a reader takes it as a signed long, so a count above this is out of
+    /// bounds; the error gives the count the field defines rather than the
+    /// negative it reads as. RR is 0 to R, so the one bound covers both.
+    /// </summary>
+    public const int MaxRows = int.MaxValue;
+
+    /// <summary>
     /// The flags bit at payload byte 3 that marks every column was packed
     /// with copies from its own literal stream, R5.10.
     /// </summary>
@@ -53,19 +61,19 @@ public static class Format
                 throw new ArgumentException("the file does not open with DTX");
             }
         }
-        int rows = GetLong(file, 4);
+        long rows = GetLong(file, 4) & 0xFFFFFFFFL;
         int columns = GetWord(file, 8);
-        int repeat = GetLong(file, 10);
+        long repeat = GetLong(file, 10) & 0xFFFFFFFFL;
         int width = file[14];
-        if (rows < 1)
+        if (rows < 1 || rows > MaxRows)
         {
-            throw new ArgumentException($"R is 1 upward, not {rows}");
+            throw new ArgumentException($"R is 1 to {MaxRows}, not {rows}");
         }
         if (columns < 1 || columns > 256)
         {
             throw new ArgumentException($"C is 1 to 256, not {columns}");
         }
-        if (repeat < 0 || repeat > rows)
+        if (repeat > rows)
         {
             throw new ArgumentException($"RR is 0 to R, not {repeat}");
         }
@@ -74,7 +82,8 @@ public static class Format
             throw new ArgumentException(
                     $"the width is 1, 2 or 4 bytes, not {width}");
         }
-        return new Header(file[3], rows, columns, repeat, width);
+        return new Header(file[3], (int) rows, columns, (int) repeat,
+                width);
     }
 
     // The four byte order helpers. A DTX file and a 68000 image are both

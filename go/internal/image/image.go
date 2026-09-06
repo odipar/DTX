@@ -55,18 +55,27 @@ func Read(variant, width, unit int, copies bool) []byte {
 }
 
 // Code gives one image's bytes, from what this build contains or, where it
-// does not contain one, from the directory DTX_68K names.
+// does not contain one, from build/68k, where the Maven build writes the
+// twenty-two.
+//
+// DTX_68K names where the templates stand, 68k/, and build/68k stands beside
+// it under the same parent.
 func Code(variant, width, unit int, copies bool) ([]byte, error) {
 	name := Name(variant, width, unit, copies)
 	if bytes := Read(variant, width, unit, copies); bytes != nil {
 		return bytes, nil
 	}
-	at := os.Getenv("DTX_68K")
-	if at == "" {
-		return nil, fmt.Errorf("this build does not contain %s, and DTX_68K"+
-			" does not name a directory with one", name)
+	templates := os.Getenv("DTX_68K")
+	if templates == "" {
+		templates = "68k"
 	}
-	return os.ReadFile(filepath.Join(at, name))
+	at := filepath.Join(filepath.Dir(templates), "build", "68k")
+	code, err := os.ReadFile(filepath.Join(at, name))
+	if err != nil {
+		return nil, fmt.Errorf("this build does not contain %s, and %s does"+
+			" not have one: %w", name, at, err)
+	}
+	return code, nil
 }
 
 // Build is one build of the code: a variant, the width its values take, and
@@ -86,8 +95,8 @@ func (b Build) Name() string {
 // Builds gives every build, in the order the Maven build writes them.
 //
 // Twenty-two: one DTX0, one DTX1 a width, and one DTX2 a width and a build
-// of the decoder built into it, which is a unit of 1, 2 or 4 with the copy
-// code and without.
+// of the decoder built into it: a unit of 1, 2 or 4, with the copy code and
+// without.
 func Builds() []Build {
 	out := []Build{{0, 1, 0, false}}
 	for _, width := range []int{1, 2, 4} {

@@ -11,14 +11,14 @@
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C and RR reach it at run time
 ; rather than at assembly time, so every DTX1 image of one width contains the
-; same instructions and the table behind them is what differs. What that
-; costs is a read-only image: the code writes to itself at init, so it stands
-; in RAM and a 68030 caller flushes the instruction cache after DTX_init.
+; same instructions and the table behind them differs. That costs a read-only
+; image: the code writes to itself at init, so it stands in RAM and a 68030
+; caller flushes the instruction cache after DTX_init.
 ;
 ; THE WIDTH DOES MOVE THE CODE. Every value of a table is one width (R6.3),
 ; and it reaches the assembler as an equate, so a read moves a value in one
-; instruction. One build a width is what that costs, and the packager takes
-; the build the table's header names.
+; instruction. That costs one build a width, and the packager takes the build
+; the table's header names.
 ;
 ; DTX1 lays a column's values together and every column is the same length,
 ; so the columns stand at one stride: the value of column i for the row the
@@ -41,32 +41,21 @@
 
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
-        DTX_IMAGE 1,1,0,0,DTX_WIDTH
+        DTX_IMAGE 1,0,DTX_WIDTH
 
 ; -----------------------------------------------------------------------------
-; What a value is installed with. A 68000 reaches PC relative for a source
-; and never for a destination, so a site is lea'd into a4 and written through
-; it, and the assembler works out where each site stands.
+; A value times the width, in one instruction: add.l dn,dn is the cheapest
+; double a 68000 has, so a width of 2 takes that and a width of 4 a shift.
+; At a width of 1 the value stands as it is and this macro is empty.
 
-        .macro  DTX_INSTALL_L   value,site
-        lea     \site+2(pc),a4
-        move.l  \value,(a4)
+        .macro  DTX_SCALE value
+        .if     DTX_WIDTH=2
+        add.l   \value,\value
+        .endif
+        .if     DTX_WIDTH=4
+        lsl.l   #2,\value
+        .endif
         .endm
-
-; -----------------------------------------------------------------------------
-; DTX_payload. The payload's first byte in a1 and the table's header in a2.
-; Where the table stands is read out of the format block; the header is 16
-; bytes under every variant and every C (SPEC.md 1), so the payload is 16
-; past it.
-
-DTX_payload:
-        lea     _fmt(pc),a2
-        movea.l a2,a1
-        suba.w  #_fmt-_base,a1
-        adda.l  8(a2),a1
-        movea.l a1,a2                   ; the header
-        adda.w  #16,a1                  ; the payload
-        rts
 
 ; -----------------------------------------------------------------------------
 ; DTX_init. It installs R and RR, and leaves the pointer a row below row 0.
@@ -76,7 +65,7 @@ DTX_init:
         clr.w   DTX_TURN(a0)
         clr.l   DTX_DECODED(a0)
 
-        bsr     DTX_payload             ; a1 the payload, a2 the header
+        bsr.s   DTX_payload             ; a1 the payload, a2 the header
         move.l  4(a2),d3                ; R
         move.l  10(a2),d5               ; RR
         DTX_INSTALL_L d3,advance_rows
@@ -85,7 +74,7 @@ DTX_init:
 
 ; The pointer a row below row 0, so the advance into row 0 steps like any
 ; other advance.
-        suba.w  #DTX_WIDTH,a1
+        subq.l  #DTX_WIDTH,a1
         move.l  a1,DTX_POINTER(a0)
         rts
 
@@ -97,7 +86,7 @@ DTX_jump:
         move.l  d0,DTX_ROW(a0)
         move.l  d0,d1
         DTX_SCALE d1
-        bsr     DTX_payload
+        bsr.s   DTX_payload
         adda.l  d1,a1
         move.l  a1,DTX_POINTER(a0)
         rts
@@ -117,7 +106,7 @@ advance_repeat:
         move.l  #0,d0                   ; installed: RR
 advance_end:
         cmpi.l  #0,d0                   ; installed: R
-        bcs.w   DTX_jump                ; RR below R: the repeat is a jump
+        bcs.s   DTX_jump                ; RR below R: the repeat is a jump
         moveq   #-1,d0                  ; the end, and it is sticky
         movea.l DTX_POINTER(a0),a1      ; the last row stands where it stood
         rts

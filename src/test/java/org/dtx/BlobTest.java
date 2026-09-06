@@ -24,23 +24,9 @@ import org.junit.jupiter.api.Test;
 class BlobTest {
 
     private static Path rmac() {
-        String named = System.getenv("RMAC");
-        Path at = Path.of(named == null ? "rmac" : named);
-        Assumptions.assumeTrue(named != null || onThePath(at), "no rmac at " + at);
-        return at;
-    }
-
-    private static boolean onThePath(Path rmac) {
-        String path = System.getenv("PATH");
-        if (path == null) {
-            return false;
-        }
-        for (String at : path.split(":")) {
-            if (Files.isExecutable(Path.of(at).resolve(rmac.toString()))) {
-                return true;
-            }
-        }
-        return false;
+        String at = Rig.rmac();
+        Assumptions.assumeTrue(Rig.onThePath(at), "no rmac at " + at);
+        return Path.of(at);
     }
 
     @Test
@@ -129,7 +115,7 @@ class BlobTest {
 
     @Test
     void carriedCodeDoesNotDefineATable() {
-        // A build does not define a table: the five fields a combine writes
+        // A build does not define a table: the six fields a combine writes
         // read zero, so code shipped without one does not define a table, not
         // even the one it was assembled from.
         for (Blobs.Build build : Blobs.all()) {
@@ -146,6 +132,8 @@ class BlobTest {
                     build.name() + " defines a period");
             assertEquals(0, Dtx.getWord(code, at + Packager.RING_AT),
                     build.name() + " defines a ring");
+            assertEquals(0, Dtx.getLong(code, at + Packager.STRIDE_AT),
+                    build.name() + " defines a stride");
             assertEquals(code.length,
                     Dtx.getLong(code, at + Packager.COLUMNS_AT),
                     build.name() + " puts the column table off its own end");

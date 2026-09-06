@@ -193,8 +193,11 @@ func run(args []string) error {
 		case dtx.DTX1:
 			out = dtx.WriteDtx1(table)
 		case dtx.DTX2:
-			out, err = dtx.WriteDtx2(table,
-				packerFor(packer, copies), unit, ring)
+			with, taken := packerFor(packer, copies)
+			if taken != nil {
+				return taken
+			}
+			out, err = dtx.WriteDtx2(table, with, unit, ring)
 		default:
 			return fmt.Errorf("the variant is 0, 1 or 2, not %d", variant)
 		}
@@ -242,24 +245,29 @@ func readWidth(given, text string) (int, error) {
 
 // packerFor gives what packs a column: the port in this executable, or
 // an ST4 executable beside it where -p names one.
-func packerFor(named, copies string) dtx.Packer {
+func packerFor(named, copies string) (dtx.Packer, error) {
 	if named != "" {
-		return st4.Beside{Path: named, CopiesFlag: copies}
+		return st4.Beside{Path: named, CopiesFlag: copies}, nil
 	}
 	if copies == "" {
-		return st4.Packer{}
+		return st4.Packer{}, nil
 	}
-	return st4.Packer{CopiesFlag: true, Seconds: seconds(copies)}
+	search, err := seconds(copies)
+	if err != nil {
+		return nil, err
+	}
+	return st4.Packer{CopiesFlag: true, Seconds: search}, nil
 }
 
-// seconds gives what -copiesS searches for, or zero.
-func seconds(copies string) float64 {
+// seconds gives what -copiesS searches for, zero where -copies stands on its
+// own, and the tool's line for an S that is not a number.
+func seconds(copies string) (float64, error) {
 	if len(copies) <= 2 {
-		return 0
+		return 0, nil
 	}
 	out, err := strconv.ParseFloat(copies[2:], 64)
 	if err != nil {
-		return 0
+		return 0, misuse("dtx-write does not read -copies" + copies[2:])
 	}
-	return out
+	return out, nil
 }

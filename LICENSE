@@ -2,9 +2,9 @@ DTX License
 ===========
 
 DTX is a data format: a table of R rows and C columns, in one of the
-variants doc/SPEC.md defines. This repository holds the specification, the
-requirements it is written against, the terminology and glossary, and the
-tests that hold the documents to one another.
+variants doc/SPEC.md defines. This repository contains the specification,
+the requirements it is written against, the terminology and glossary, and
+the tests that keep the documents to one another.
 
 The format may be implemented freely. doc/SPEC.md is the contract, and an
 independent reader or writer owes only the acknowledgement below.
@@ -16,8 +16,8 @@ independent reader or writer owes only the acknowledgement below.
 2. THE READERS, WRITERS AND TESTS can be used freely within your own
    programs, for any platform, even for commercial releases. The only
    condition is that you must indicate somehow in your documentation that
-   you have used DTX. They are everything under src/, go/, dotnet/, 68k/
-   and test/.
+   you have used DTX. They are everything under src/, go/, dotnet/ and
+   68k/.
 
 Attribution
 -----------
@@ -31,21 +31,21 @@ Attribution
 * src/main/java/org/st4 is a carried copy of that repository's packer, at
   odipar/ST4@498aa25 and not edited here, so a DTX2 file is written with
   no packer beside this one. ST4's own license puts its compressor under
-  the BSD 3-Clause License, which is below, and this repository holds a
+  the BSD 3-Clause License, which is below, and this repository contains a
   copy of that compressor.
 * go/internal/st4 is the same packer in Go, a carried copy of
-  odipar/YMX@498aa25's go/internal/st4, whose own package comment names
-  the Java it is a port of. One line of that comment is edited here to
-  name where the copy came from, and beside.go is DTX's own. The BSD
-  3-Clause License below covers it as it covers the Java.
+  odipar/YMX@611e321's go/internal/st4, whose own package comment names
+  the Java it is a port of. The package comment is edited here to name
+  where the copy came from; no code is. beside.go and packer.go are DTX's
+  own. The BSD 3-Clause License below covers it as it covers the Java.
 * dotnet/nt4 is that same packer in C#, a carried copy of
   odipar/ST4@498aa25's csharp/src/Nt4, not edited here. The project builds
   it with the implicit usings its own tree builds it with. The BSD
   3-Clause License below covers it too.
 * 68k/ST4_wrap.S is a carried copy of that repository's file, at
-  odipar/ST4@02f3cc0, so a packaged DTX2 reader holds a decoder. ST4's
-  license lets a decompressor be used freely, on the one condition that
-  your documentation says you used ZX1, via ST4.
+  odipar/ST4@02f3cc0, so a packaged DTX2 reader contains a decoder. ST4's
+  license permits a decompressor to be used freely, on the one condition
+  that your documentation indicates that you have used ZX1, via ST4.
 
 BSD 3-Clause License (the carried ST4 compressor)
 ------------------------------------------------

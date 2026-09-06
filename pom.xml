@@ -87,13 +87,15 @@
                 <version>3.5.2</version>
             </plugin>
             <plugin>
-                <!-- The two tools doc/tools.md states. -->
+                <!-- Two of the tools doc/tools.md defines, as Maven
+                     executions. -->
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.0</version>
                 <executions>
                     <execution>
-                        <!-- Comma separated text into a DTX file of any variant:
+                        <!-- A table, out of text or a DTX file, into a DTX
+                             file or text:
                                mvn -q compile exec:exec@write \
                                    -Dargs="in.csv out.dtx -v2 -k1 -m960 -pst4" -->
                         <id>write</id>
@@ -108,11 +110,11 @@
                     <execution>
                         <!-- The code the packager combines from, one file a
                              build. Three directories read them: the classes
-                             the jar is made of, build/68k for a release to
-                             attach, and go/internal/image/data, which
-                             go:embed reaches only inside its own module. This is the
-                             one step rmac is needed for: name another with
-                             -Drmac=PATH. -->
+                             the jar is made of, build/68k for the C# assembly
+                             to embed, and go/internal/image/data, which
+                             go:embed reaches only inside its own module. This
+                             is the one step rmac is needed for: name another
+                             with -Drmac=PATH. -->
                         <id>blobs</id>
                         <phase>process-classes</phase>
                         <goals>

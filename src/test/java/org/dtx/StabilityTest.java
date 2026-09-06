@@ -2,12 +2,16 @@ package org.dtx;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -172,11 +176,11 @@ class StabilityTest {
         needsRmac();
         // doc/experiments.md defines ST4_wrap.S's bytes at each unit, with the
         // copy code and without: assembled alone, here, and compared with it.
-        String doc = java.nio.file.Files.readString(
+        String doc = Files.readString(
                 Rig.root().resolve("doc/experiments.md"));
-        java.util.regex.Matcher row = java.util.regex.Pattern.compile(
+        Matcher row = Pattern.compile(
                 "^\\| ([124]) \\| (\\d+) \\| (\\d+) \\| (\\d+) \\|$",
-                java.util.regex.Pattern.MULTILINE).matcher(doc);
+                Pattern.MULTILINE).matcher(doc);
         int units = 0;
         while (row.find()) {
             int unit = Integer.parseInt(row.group(1));
@@ -197,7 +201,7 @@ class StabilityTest {
     private static int decoder(int unit, boolean copies) throws Exception {
         Path work = Rig.work("dtxdecoder");
         Path source = work.resolve("w.S");
-        java.nio.file.Files.writeString(source, "        .68000\n        .text\n"
+        Files.writeString(source, "        .68000\n        .text\n"
                 + "ST4_UNIT equ " + unit + "\n"
                 + (copies ? "ST4_WINDOW equ 1\n" : "")
                 + "        include \"ST4_wrap.S\"\n        end\n");
@@ -205,7 +209,7 @@ class StabilityTest {
         Rig.run(List.of(Rig.rmac(), "-m68000", "-fr", "+o3",
                 "-i" + Rig.root().resolve("68k"), "-o", out.toString(),
                 source.toString()));
-        return (int) java.nio.file.Files.size(out);
+        return (int) Files.size(out);
     }
 
     @Test
@@ -219,12 +223,12 @@ class StabilityTest {
             cost[unit] = code(Dtx.DTX2, shape, unit, 960, true).length
                     - code(Dtx.DTX2, shape, unit, 960, false).length;
         }
-        String said = java.nio.file.Files.readString(
+        String said = Files.readString(
                 Rig.root().resolve("doc/abi.md"));
-        java.util.regex.Matcher defines = java.util.regex.Pattern.compile(
-                "copy code, which measures (\\d+) bytes more at `k` of 1\\s+"
-                + "and 2 and (\\d+) at `k` of 4").matcher(said);
-        org.junit.jupiter.api.Assertions.assertTrue(defines.find(),
+        Matcher defines = Pattern.compile(
+                "copy code,\\s+which measures (\\d+) bytes more at `k` of"
+                + " 1\\s+and 2\\s+and (\\d+) at `k` of 4").matcher(said);
+        assertTrue(defines.find(),
                 "doc/abi.md 5 no longer defines the copy code's size");
         assertEquals(cost[1], Integer.parseInt(defines.group(1)),
                 "the copy code at k of 1");

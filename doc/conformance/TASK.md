@@ -21,7 +21,7 @@ SOURCES.md lists them. Each is complete: the header, and the payload of its
 variant. A DTX2 table's data sets are ST4 version 7 (SPEC.md 2.3), packed
 with the copy of ST4 in this repository, at the unit and ring the row
 gives, and `dtx2-copies` was packed with copies from the literal stream,
-which its payload's flag byte marks.
+which its payload's flags byte marks.
 
 ## The rules
 
@@ -33,7 +33,7 @@ which its payload's flag byte marks.
   enters a read.
 - Under DTX2 a reader checks every data set's first long against
   `$53 $34 $07 k` (R5.2), and a decoder built without the copy code
-  reads `dtx2-copies` wrongly: the flag byte marks the build (R5.10).
+  reads `dtx2-copies` wrongly: the flags byte marks the build (R5.10).
 - The bytes a reader gives are compared with `NAME.rows` whole. A row that
   differs in one byte fails the table.
 

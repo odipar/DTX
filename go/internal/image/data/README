@@ -4,7 +4,8 @@ The Maven build writes the twenty-two here, as it writes them to build/68k
 and into the classes the jar is made of, so a Go executable built after it
 needs neither this repository nor an assembler beside it.
 
-A tree built without them contains none, and Read then gives nothing back:
-a caller resolves an image as it otherwise would, through DTX_68K.
+A tree built without them does not contain one, and Read then gives nil
+back: a caller resolves an image as it otherwise would, out of build/68k
+beside the templates DTX_68K names.
 
 The .bin files are build output and are not committed.

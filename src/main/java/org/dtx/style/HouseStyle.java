@@ -252,12 +252,12 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
         return false;
     }
 
-    /** What a build writes, which is not read. */
+    /** What a build or an editor writes beside the tree, which is not read. */
     private static boolean built(Path path) {
         String at = path.toString();
         return at.contains("/target/") || at.contains("/obj/")
                 || at.contains("/dotnet/bin/") || at.contains("/dist/")
-                || at.contains("/.git/");
+                || at.contains("/.git/") || at.contains("/.idea/");
     }
 
     /** Every Markdown file under {@code root} but those that give the rules. */
@@ -273,7 +273,14 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
         }
     }
 
-    /** Every source file under {@code root} whose comments the tree writes. */
+    /**
+     * Every source file under {@code root} whose comments the tree writes.
+     *
+     * <p>A name is read by its extension, and two kinds do not carry one:
+     * the scripts under {@code bin/}, which a shell reads, and a
+     * {@code .gitignore}. Both write their comments behind a {@code #}, as
+     * a shell script does.
+     */
     public List<Path> sources(Path root) throws IOException {
         try (Stream<Path> tree = Files.walk(root)) {
             return tree.filter(Files::isRegularFile)
@@ -281,13 +288,21 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
                         String at = path.toString();
                         return at.endsWith(".java") || at.endsWith(".go")
                                 || at.endsWith(".cs") || at.endsWith(".S")
-                                || at.endsWith(".py") || at.endsWith(".sh");
+                                || at.endsWith(".py") || at.endsWith(".sh")
+                                || at.endsWith(".gitignore") || inBin(path);
                     })
                     .filter(path -> !built(path))
                     .filter(path -> !isCarried(path))
                     .sorted()
                     .toList();
         }
+    }
+
+    /** Whether {@code path} is one of the scripts under {@code bin/}. */
+    private static boolean inBin(Path path) {
+        Path up = path.getParent();
+        return up != null && up.getFileName() != null
+                && up.getFileName().toString().equals("bin");
     }
 
     /** Every hit in the documents and source comments under {@code root}. */

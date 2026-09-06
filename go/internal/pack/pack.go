@@ -20,6 +20,10 @@ import (
 
 // The state block's fields, from doc/abi.md 3.
 const (
+	Row     = 0
+	Turn    = 4
+	Decoded = 8
+	Park    = 12
 	Pointer = 16
 )
 
@@ -49,10 +53,6 @@ const PackedHead = 52
 // Plain is the state block DTX0 and DTX1 take: the head, and one pointer.
 const Plain = Pointer + 4
 
-// Copies is the flags bit at payload byte 3 that marks every column was
-// packed with copies from its own literal stream, R5.10.
-const Copies = 1
-
 // Packed gives what a DTX2 payload defines: the ring, the unit, whether its
 // columns contain copies from the literal stream, and where each column's data
 // set begins in the payload. The DTX2 reader in dtx reads the same payload,
@@ -66,20 +66,20 @@ func ReadPacked(file []byte, header dtx.Header) (Packed, error) {
 }
 
 // Decoders gives where the decoder states stand in the state block, doc/abi.md 3.
-func Decoders(header dtx.Header) int {
+func Decoders() int {
 	return PackedHead
 }
 
 // Ring gives where the rings stand in the state block.
 func Ring(header dtx.Header) int {
-	return Decoders(header) + 32*header.Columns
+	return Decoders() + 32*header.Columns
 }
 
-// StateBytes gives the state block a plain reader of this table takes.
+// StateBytes gives the state block a plain reader takes.
 //
-// The same under DTX0 and DTX1, and the same at every C: every column is one
-// width, so one pointer walks them all.
-func StateBytes(header dtx.Header) int {
+// The same under DTX0 and DTX1, and the same at every C and every width:
+// every column is one width, so one pointer walks them all.
+func StateBytes() int {
 	return Plain
 }
 
@@ -90,8 +90,8 @@ func PackedStateBytes(header dtx.Header, given Packed) int {
 
 // Stride gives the stride from one column's value to the next, in the row an
 // advance points at: the width under DTX0, where a row's values stand one
-// after another; the length of a column under DTX1, where the columns lie at
-// one stride; and N under DTX2, where every column has a ring of that size.
+// after another; a column's length under DTX1, R times the width up to a
+// word; and N under DTX2, where every column has a ring of that size.
 // DTX_metadata gives it, out of the format block.
 func Stride(header dtx.Header, given Packed) int {
 	switch header.Variant {
@@ -105,7 +105,7 @@ func Stride(header dtx.Header, given Packed) int {
 }
 
 // Period gives the period a table of these takes, the smallest that meets
-// every rule of doc/abi.md 4, or an error naming the rule none meets.
+// every rule of doc/abi.md 4, or an error listing the rules and the figures.
 func Period(header dtx.Header, given Packed) (int, error) {
 	rows := header.Rows
 	width := header.Width
@@ -163,15 +163,15 @@ func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
 //
 // The code is the same bytes any table that follows it, so what a combine
 // writes is the six fields the table gives. It checks the three it cannot
-// write: the variant, the width the code reads values at, and under DTX2 the
-// unit the decoder built into the code decodes at.
+// write: the variant, the width the code reads values at, under DTX1 and
+// DTX2, and the unit the decoder decodes at, zero under the plain variants.
 func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 	if len(code) < FormatAt+Format {
 		return nil, fmt.Errorf("code of %d bytes does not contain a format block",
 			len(code))
 	}
 	if string(code[FormatAt:FormatAt+3]) != "DTX" {
-		return nil, fmt.Errorf("the code opens with no format block")
+		return nil, fmt.Errorf("the code does not contain a format block at +16")
 	}
 	if int(code[FormatAt+3]) != header.Variant {
 		return nil, fmt.Errorf("the code reads DTX%d and the table is DTX%d",
@@ -209,7 +209,7 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 	out = append(out, code...)
 	out = append(out, entries...)
 	out = append(out, file...)
-	state := StateBytes(header)
+	state := StateBytes()
 	period := 1
 	if header.Variant == dtx.DTX2 {
 		state = PackedStateBytes(header, given)
@@ -231,10 +231,10 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 
 // Image gives the image for this table, from the code this build contains.
 //
-// Which of the twenty-two it takes is the file's to define: the variant, the
-// width every value takes, and under DTX2 the unit its data sets are packed
-// at and whether they contain copies from the literal stream (R5.10). No
-// word from a caller enters it, so no word can differ from the bytes.
+// The file defines which of the twenty-two it takes: the variant, the width
+// every value takes, and under DTX2 the unit its data sets are packed at and
+// whether they contain copies from the literal stream (R5.10). No word from
+// a caller enters it, so no word can differ from the bytes.
 func Image(file []byte) ([]byte, error) {
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
@@ -255,14 +255,6 @@ func Image(file []byte) ([]byte, error) {
 	return Combine(code, file, header)
 }
 
-// The state block's fields the figures define, from doc/abi.md 3.
-const (
-	Row     = 0
-	Turn    = 4
-	Decoded = 8
-	Park    = 12
-)
-
 // equ gives one NAME equ VALUE line.
 func equ(name string, value int) string {
 	pad := ""
@@ -275,7 +267,8 @@ func equ(name string, value int) string {
 // Figures gives what one table gives, as a template reads it: the equates,
 // and no instruction. R, C and RR reach the code at run time instead, out of
 // the table's own header, and what is left is the width, the row's bytes and
-// the state block (doc/tools.md).
+// the state block, and under DTX2 the period, N, the unit and the copy code
+// (doc/tools.md).
 func Figures(file []byte) (string, error) {
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
@@ -286,7 +279,7 @@ func Figures(file []byte) (string, error) {
 		return "", fmt.Errorf("the variant is 0, 1 or 2, not %d", variant)
 	}
 	var given Packed
-	period, state := 1, StateBytes(header)
+	period, state := 1, StateBytes()
 	if variant == dtx.DTX2 {
 		if given, err = ReadPacked(file, header); err != nil {
 			return "", err
@@ -298,23 +291,30 @@ func Figures(file []byte) (string, error) {
 	}
 	var out strings.Builder
 	fmt.Fprintf(&out, "; What org.dtx.Packager writes of one table, for"+
-		" 68k/DTX.S to read.\n; DTX%d, R = %d, C = %d, W = %d, RR = %d\n"+
+		" 68k/DTX%d.S to read.\n; DTX%d, R = %d, C = %d, W = %d, RR = %d\n"+
 		"; Every instruction is the template's; nothing here is one.\n\n"+
 		"; The state block, doc/abi.md 3.\n",
-		variant, header.Rows, header.Columns, header.Width, header.Repeat)
+		variant, variant, header.Rows, header.Columns, header.Width,
+		header.Repeat)
 	out.WriteString(equ("DTX_ROW", Row))
 	out.WriteString(equ("DTX_TURN", Turn))
 	out.WriteString(equ("DTX_DECODED", Decoded))
 	out.WriteString(equ("DTX_PARK", Park))
 	out.WriteString(equ("DTX_POINTER", Pointer))
-	out.WriteString("\n")
+	out.WriteString("\n; What the code takes at assembly time.\n")
 	out.WriteString(equ("DTX_WIDTH", header.Width))
+	if variant == dtx.DTX2 {
+		out.WriteString(equ("ST4_UNIT", given.Unit))
+	}
+	out.WriteString("\n; The rest of what the table gives. A combine writes" +
+		" these into the format\n; block and the code reads them from there" +
+		" (doc/abi.md 1), so they stand\n; here for a caller reading the" +
+		" figures rather than for the assembler.\n")
 	out.WriteString(equ("DTX_ROWBYTES", header.RowBytes()))
 	out.WriteString(equ("DTX_STATE", state))
 	if variant == dtx.DTX2 {
 		out.WriteString(equ("DTX_PERIOD", period))
 		out.WriteString(equ("DTX_N", given.Ring))
-		out.WriteString(equ("ST4_UNIT", given.Unit))
 		// The payload defines whether its columns contain copies (R5.10), so
 		// the decoder built for them is fixed by the file. That build
 		// writes the reach into two of its own instructions, and a 68030
@@ -367,7 +367,12 @@ func Code(file []byte, rmac, templates string) ([]byte, error) {
 	said, err := exec.Command(rmac, "-m68000", "-fr", "+o3", "-i"+work,
 		"-i"+templates, "-o", out, template).CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("%s gave %s", rmac, strings.TrimSpace(string(said)))
+		// Where rmac is not there its output is empty and the message would
+		// end at "gave ", so the error from the run is wrapped into it.
+		if trimmed := strings.TrimSpace(string(said)); trimmed != "" {
+			return nil, fmt.Errorf("%s gave %s: %w", rmac, trimmed, err)
+		}
+		return nil, err
 	}
 	code, err := os.ReadFile(out)
 	if err != nil {
@@ -380,8 +385,8 @@ func Code(file []byte, rmac, templates string) ([]byte, error) {
 //
 // Built code does not define a table. The assembler read one to build it, and
 // what it read stands in the format block: zeroing those six makes the file
-// a function of the template alone, and what makes code shipped without a
-// combine read a state block of zero bytes rather than some other table's.
+// a function of the template alone, and makes code shipped without a combine
+// read a state block of zero bytes rather than some other table's.
 func Blank(code []byte) {
 	dtx.PutLong(code, FormatAt+StateAt, 0)
 	dtx.PutLong(code, FormatAt+TableAt, 0)

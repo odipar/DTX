@@ -31,14 +31,27 @@ public static class Program
             name = args[0];
             rest = args[1..];
         }
-        switch (name)
+        try
         {
-            case "dtx-write": return Dtx.Tools.Write(rest);
-            case "dtx-package": return Dtx.Tools.Package(rest);
-            case "dtx-blobs": return Dtx.Tools.Blobs(rest);
-            default:
-                Console.Error.WriteLine($"dtx does not hold a tool named {name}");
-                return 2;
+            switch (name)
+            {
+                case "dtx-write": return Dtx.Tools.Write(rest);
+                case "dtx-package": return Dtx.Tools.Package(rest);
+                case "dtx-blobs": return Dtx.Tools.Blobs(rest);
+                default:
+                    Console.Error.WriteLine(
+                            $"dtx does not contain a tool named {name}");
+                    return 2;
+            }
+        }
+        catch (Exception failed) when (failed is ArgumentException
+                || failed is InvalidOperationException || failed is IOException)
+        {
+            // A malformed text, a missing file or a unit no variant takes
+            // gives the message on standard error and 1, as the Go tools do.
+            // A flag a tool does not read exits with 2.
+            Console.Error.WriteLine(failed.Message);
+            return 1;
         }
     }
 }

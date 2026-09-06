@@ -9,18 +9,20 @@ same change (requirements.md, R0.6 to R0.9).
 | `C` | The table's column count. | terminology.md, tables, rows and columns |
 | column | One field of a row, `W` bytes wide. | terminology.md, tables, rows and columns |
 | column table | What stands behind a packaged reader's code and before its table: under DTX2 one stream record a column, four longs. DTX0 and DTX1 do not have one. | abi.md 1 |
+| copy code | The part of an ST4 decoder that copies from a column's own literal stream. A decoder is built with it or without, and the flags byte marks which a payload needs. | SPEC.md 2.3 |
 | cursor | What advances to a next row and has its own place in the table. | terminology.md, tables, rows and columns |
 | data set | One column of a DTX2 payload, packed with ST4: its own ST4 header, and the length of what it unpacks to. | SPEC.md 2.3 |
 | decoder state | The eight longs a column's decoder is saved in between refills, 32 bytes of a packaged DTX2 reader's state block. | abi.md 3 |
 | DTX | This format: a table of `R` rows and `C` columns. The table is data, and a reader of it is code. | README.md |
-| format block | The 24 bytes at +24 of an image: the variant, the state block's bytes, where the table and the column table stand, the row's bytes, `P`, `N`, `k` and `W`. | abi.md 1 |
+| format block | The 28 bytes at +16 of an image: the variant, the state block's bytes, where the table and the column table stand, the row's bytes, `P`, `N`, `k`, `W` and the stride. | abi.md 1 |
 | header | The 16 bytes before a payload: `DTX`, the variant, and the metadata. | SPEC.md 1 |
 | image | A table packaged for the 68000: the code, under DTX2 the column table, and the table's bytes in one file, read through four calls. | abi.md 1 |
 | `k` | The third byte of a DTX2 payload: the unit its data sets are packed at. | SPEC.md 2.3 |
+| literal stream | ST4's run of bytes packed as they are, which a match beyond the ring copies from. | SPEC.md 2.3 |
 | long | Four bytes. An offset is on a long where it divides by 4. | SPEC.md |
 | metadata | What describes a table without containing it: `R`, `C`, `RR` and `W`. | terminology.md, tables, rows and columns |
 | `N` | The first two bytes of a DTX2 payload: how big a ring is. | SPEC.md 2.3 |
-| payload | What follows the header: a table's rows in bytes, and in DTX2 the `N`, `k` and offsets that reach them. | SPEC.md 2 |
+| payload | What follows the header: a table's rows in bytes, and in DTX2 the `N`, `k`, the flags and the offsets that reach them. | SPEC.md 2 |
 | period | `P`, the rows between one column's refills in a packaged DTX2 reader. | abi.md 4 |
 | pointer | The address, in a ring or in a payload, of the row a packaged reader's cursor stands on. | abi.md 3 |
 | `R` | The table's row count, of the rows in it. | terminology.md, tables, rows and columns |
@@ -28,10 +30,11 @@ same change (requirements.md, R0.6 to R0.9).
 | ring | The bytes of a column a reader has at a time, `N` of them, in place of the unpacked column. | SPEC.md 2.3 |
 | row | One step of a table: `C` values, with nothing in it about what any of them is for. | terminology.md, tables, rows and columns |
 | `RR` | The row a table repeats to once the last row is done. | terminology.md, tables, rows and columns |
+| signature | The first long of an ST4 data set, `$53 $34 $07 k`. | SPEC.md 2.3 |
 | ST4 | The packer a DTX2 column is packed with, specified in its own repository. | requirements.md R5, SPEC.md 2.3 |
 | ST4 header | The twenty-eight bytes an ST4 data set opens with, its first long `$53 $34 $07 k`. | SPEC.md 2.3 |
 | state block | What a caller of a packaged reader supplies, and passes back on every call but one. | abi.md 3 |
-| stride | The bytes from one column, ring or decoder state to the next. | terminology.md, the variants |
+| stride | The bytes from one column, ring or decoder state to the next. | abi.md 1 and 3, terminology.md, the variants |
 | table | What yields rows: `R` of them, `C` columns wide, every value `W` bytes, repeating at `RR`. | terminology.md, tables, rows and columns |
 | turn | The column a row refills in a packaged DTX2 reader: the row number modulo `P`. | abi.md 4 |
 | unit | The width ST4 packs whole numbers of: 1, 2 or 4 bytes. | SPEC.md 2.3 |

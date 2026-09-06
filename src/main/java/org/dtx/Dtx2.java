@@ -14,7 +14,8 @@ import org.st4.St4Format;
  */
 public final class Dtx2 {
 
-    /** The largest ring a payload can define, in bytes: `N` is two bytes. */
+    /** The largest ring a payload can define, in bytes: {@code N} is two
+     * bytes. */
     public static final int MAX_RING = 65535;
 
     /**

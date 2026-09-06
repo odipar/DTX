@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 // Beside is a Packer that runs the ST4 executable at Path.
@@ -45,7 +46,13 @@ func (p Beside) Pack(column []byte, unit, ring int) ([]byte, error) {
 	argv = append(argv, in, out)
 	said, err := exec.Command(p.Path, argv...).CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("%s gave %s", p.Path, said)
+		// Where the executable is not there its output is empty and the
+		// message would end at "gave ", so the error from the run is
+		// wrapped into it.
+		if trimmed := strings.TrimSpace(string(said)); trimmed != "" {
+			return nil, fmt.Errorf("%s gave %s: %w", p.Path, trimmed, err)
+		}
+		return nil, err
 	}
 	packed, err := os.ReadFile(out)
 	if err != nil {

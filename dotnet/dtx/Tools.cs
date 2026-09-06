@@ -160,7 +160,12 @@ public static class Tools
         bool defines = false;
         foreach (string arg in args[2..])
         {
-            if (arg.StartsWith("-a", StringComparison.Ordinal)) rmac = arg[2..];
+            // -aRMAC names the rmac to assemble with. A bare -a does not name
+            // one, so it is a flag the tool does not read.
+            if (arg.StartsWith("-a", StringComparison.Ordinal) && arg.Length > 2)
+            {
+                rmac = arg[2..];
+            }
             else if (arg == "-s") defines = true;
             else
             {

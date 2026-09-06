@@ -74,8 +74,9 @@ before what it describes, and what things are called comes before both.
 - **R4.2** The rows as they stand and found by arithmetic, as R3.2 and
   R3.3 have DTX0's.
 - **R4.3** A column begins on a word, so every value sits where a 68000
-  reads it as one. DTX1 has this over DTX0, at a byte a column where the
-  width is 1 and `R` odd, and at nothing where the width is 2 or 4.
+  reads it as one. DTX1 has this over DTX0, at a byte between one column
+  and the next where the width is 1 and `R` odd, and at nothing where the
+  width is 2 or 4.
 - **R4.4** A column's values together, so a reader takes one column
   without touching the others. That is what DTX1 is for.
 
@@ -117,7 +118,9 @@ before what it describes, and what things are called comes before both.
 What a table may contain, and what a reader does where it contains
 otherwise.
 
-- **R6.1** `R` is 1 upward.
+- **R6.1** `R` is 1 to 2147483647. The field is four bytes, and a reader
+  takes it as a signed long, so a count above that is out of bounds and no
+  row number reads as the $FFFFFFFF an advance ends on (abi.md 2).
 - **R6.2** `C` is 1 to 256.
 - **R6.3** One width a table: every value of it takes 1, 2 or 4 bytes, and
   a column of another width is another table. A reader built for one width

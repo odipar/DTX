@@ -242,7 +242,7 @@ public static class Csv
             bool number = true;
             foreach (char c in digits)
             {
-                if (hex ? !Uri.IsHexDigit(c) : c < '0' || c > '9')
+                if (Digit(c, hex ? 16 : 10) < 0)
                 {
                     number = false;
                 }
@@ -285,15 +285,13 @@ public static class Csv
         {
             if (cell.StartsWith('$'))
             {
-                return long.Parse(cell[1..], NumberStyles.HexNumber,
-                        CultureInfo.InvariantCulture);
+                return Number(cell[1..], 16);
             }
             if (cell.StartsWith("-$", StringComparison.Ordinal))
             {
-                return -long.Parse(cell[2..], NumberStyles.HexNumber,
-                        CultureInfo.InvariantCulture);
+                return -Number(cell[2..], 16);
             }
-            return long.Parse(cell, CultureInfo.InvariantCulture);
+            return Number(cell, 10);
         }
         catch (Exception failed) when (failed is FormatException
                 || failed is OverflowException)
@@ -301,6 +299,53 @@ public static class Csv
             throw new ArgumentException(
                     $"{where} gives \"{cell}\", which is not a number");
         }
+    }
+
+    /// <summary>
+    /// The number digits gives at this radix: a leading - or +, then the
+    /// digits, and a value that fits eight bytes. One text is one table in
+    /// every tree, so this reads what Java's Long.parseLong reads and
+    /// nothing else.
+    /// </summary>
+    /// <exception cref="FormatException">where digits is empty, or a
+    /// character of it is not a digit at this radix</exception>
+    /// <exception cref="OverflowException">where the value lies outside a
+    /// signed eight byte number</exception>
+    private static long Number(string digits, int radix)
+    {
+        int at = digits.Length != 0 && (digits[0] == '-' || digits[0] == '+')
+                ? 1 : 0;
+        if (at == digits.Length)
+        {
+            throw new FormatException(digits);
+        }
+        // counted downward, so -2^63 is as much a number as 2^63-1
+        long value = 0;
+        for (; at < digits.Length; at++)
+        {
+            int digit = Digit(digits[at], radix);
+            if (digit < 0)
+            {
+                throw new FormatException(digits);
+            }
+            value = checked(value * radix - digit);
+        }
+        return digits[0] == '-' ? value : checked(-value);
+    }
+
+    /// <summary>
+    /// The value of c as a digit at this radix, or -1 where it is not one:
+    /// the ASCII digits and letters, and the decimal digit of any script, as
+    /// Java's Character.digit takes them.
+    /// </summary>
+    private static int Digit(char c, int radix)
+    {
+        int value = c >= '0' && c <= '9' ? c - '0'
+                : c >= 'a' && c <= 'z' ? c - 'a' + 10
+                : c >= 'A' && c <= 'Z' ? c - 'A' + 10
+                : char.IsDigit(c) ? CharUnicodeInfo.GetDecimalDigitValue(c)
+                : -1;
+        return value < radix ? value : -1;
     }
 
     /// <summary>Whether value lies from -2^(8W-1) to 2^(8W)-1.</summary>

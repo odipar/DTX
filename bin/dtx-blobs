@@ -1,3 +1,4 @@
 #!/bin/sh
-# The code the packager carries, one file a build. doc/tools.md, Blobs.
+# The images the packager combines from, one file a build. doc/tools.md,
+# Build the images.
 exec "$(dirname -- "$0")/dtx-run" org.dtx.Blobs "$@"

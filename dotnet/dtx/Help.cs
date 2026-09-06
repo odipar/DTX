@@ -3,9 +3,12 @@ namespace Dtx;
 /// <summary>
 /// What each tool prints on -help: its synopsis, a line a flag with the
 /// default in parentheses, examples, and the section of doc/tools.md that
-/// describes it. The Java and Go trees print the same text, and ParityTest compares
-/// the three. A tool given no file to work on prints the same text to
-/// standard error and exits with 2.
+/// describes it. The Java tree prints the same text, and the Go tree the
+/// same but for dtx-package, which combines and does not assemble, so its
+/// help lists neither -a nor -s; ParityTest compares them.
+///
+/// <para>A tool given no file to work on prints the same text to standard
+/// error and exits with 2.</para>
 /// </summary>
 public static class Help
 {
@@ -62,11 +65,13 @@ public static class Help
     public const string Package =
               "dtx-package in.dtx out.bin [-aRMAC] [-s]\n"
             + "\n"
-            + "Packages a DTX file as a 68000 image: the code for its variant, the column\n"
-            + "table and the file. doc/abi.md gives the four calls into the image.\n"
+            + "Packages a DTX file as a 68000 image: the code for its variant and,\n"
+            + "under DTX1 and DTX2, its width, the column table and the file.\n"
+            + "doc/abi.md gives the four calls into the image.\n"
             + "\n"
-            + "  -aRMAC       assembles the code from the 68k/ templates with the rmac at\n"
-            + "               RMAC, in place of the image the build made\n"
+            + "  -aRMAC       assembles the code with the rmac at RMAC, in place of the\n"
+            + "               image the build made. The templates are read from 68k\n"
+            + "               beside the caller, or from what DTX_68K names\n"
             + "  -s           writes the table's figures as assembler equates, in place of\n"
             + "               an image\n"
             + "  -help        this text\n"

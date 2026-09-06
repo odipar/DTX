@@ -1,13 +1,16 @@
 # experiments
 
-What was measured against real tables, and what came out. Every figure
-here is one a test reads back: `ExperimentsTest` checks the two tables of
-bytes against the writer and the packager, `StabilityTest` checks the
-decoder's bytes against rmac, and the rig `68k/test/emu/test_dtx.py`
-counts the cycles.
+What was measured against real tables, and what came out. A test reads the
+three tables of figures back: `ExperimentsTest` checks the two of bytes
+against the writer and the packager, and `StabilityTest` checks the
+decoder's against rmac. Every other figure here was measured once, at the
+change that wrote the sentence it stands in: ST4_ring's bytes, out of a
+repository this one does not contain; the code sizes before and after the
+read tested every value; the row a wrong flag read wrong; and the cycles,
+which performance.md records and the rig `68k/test/emu/test_dtx.py` counts.
 
-The numbers table is the rig's: row `r`, column `i` is `r` times `i` plus
-one, modulo 251, at the width given. Every value of a table takes one
+The numbers table is the rig's: row `r`, column `i` is `r` times (`i` plus
+one), modulo 251, at the width given. Every value of a table takes one
 width (R6.3), so the width is a figure of the table like `R` and `C`.
 
 ## Where DTX2 becomes the smaller of the two
@@ -44,10 +47,10 @@ back than a ring of 64:
 
 | written as | file bytes | image bytes |
 |---|---|---|
-| DTX1 | 2064 | 2284 |
-| DTX2, N=64 | 2140 | 3140 |
-| DTX2, N=64, copies | 356 | 1388 |
-| DTX2, N=128, copies | 252 | 1284 |
+| DTX1 | 2064 | 2268 |
+| DTX2, N=64 | 2140 | 3100 |
+| DTX2, N=64, copies | 356 | 1348 |
+| DTX2, N=128, copies | 252 | 1244 |
 
 Without copies the ring is too short for the pattern and DTX2 packs to
 more than DTX1. With them a match beyond the ring copies from the column's
@@ -66,10 +69,10 @@ ST4_wrap.S assembled alone, without the copy code and with it:
 
 In an image the difference is 32, 32 and 36 bytes: the decoder stands on a
 long, and the 30 rounds up to one. In cycles, on a column without copies,
-the copy code costs what performance.md's last table gives, 0.1 percent,
-at every `k`: the two decoders differ at init, where the one with the copy
-code writes the ring's size into two of its own instructions, and not in a
-row.
+the copy code costs what performance.md's last table gives, about 0.2
+percent, at every `k`: the two decoders differ at init, where the one with
+the copy code writes the ring's size into two of its own instructions, and
+not in a row.
 
 ## ST4_wrap against ST4_ring
 
@@ -96,7 +99,7 @@ bytes to 716 and DTX2's from 1352 to 1476.
 One width a table (R6.3) took the test out again, and the ABI took the
 move with it: an advance gives the pointer at the row's first value and
 the caller reads where the values stand (abi.md 2), so nothing in an image
-moves one. DTX1's code is 176 bytes now and DTX2's 924, and the rig's
+moves one. DTX1's code is 160 bytes now and DTX2's 884, and the rig's
 alignment hook passes every table it runs.
 
 ## A column packed with copies, read without them

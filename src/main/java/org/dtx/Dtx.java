@@ -25,6 +25,15 @@ public final class Dtx {
     /** What a header runs to, under every variant and every {@code C}. */
     public static final int HEADER = 16;
 
+    /**
+     * The largest {@code R} a header defines (R6.1). The field is four
+     * bytes, and a reader takes it as a signed long, so a count above this
+     * is out of bounds; the error gives the count the field defines rather
+     * than the negative it reads as. {@code RR} is 0 to {@code R}, so the
+     * one bound covers both.
+     */
+    public static final int MAX_ROWS = Integer.MAX_VALUE;
+
     private Dtx() {
     }
 
@@ -86,24 +95,26 @@ public final class Dtx {
                         + " with DTX");
             }
         }
-        int rows = getLong(file, 4);
+        long rows = getLong(file, 4) & 0xFFFFFFFFL;
         int columns = getWord(file, 8);
-        int repeat = getLong(file, 10);
+        long repeat = getLong(file, 10) & 0xFFFFFFFFL;
         int width = file[14] & 0xFF;
-        if (rows < 1) {
-            throw new IllegalArgumentException("R is 1 upward, not " + rows);
+        if (rows < 1 || rows > MAX_ROWS) {
+            throw new IllegalArgumentException(
+                    "R is 1 to " + MAX_ROWS + ", not " + rows);
         }
         if (columns < 1 || columns > 256) {
             throw new IllegalArgumentException("C is 1 to 256, not " + columns);
         }
-        if (repeat < 0 || repeat > rows) {
+        if (repeat > rows) {
             throw new IllegalArgumentException("RR is 0 to R, not " + repeat);
         }
         if (width != 1 && width != 2 && width != 4) {
             throw new IllegalArgumentException("the width is 1, 2 or 4 bytes,"
                     + " not " + width);
         }
-        return new Header(file[3] & 0xFF, rows, columns, repeat, width);
+        return new Header(file[3] & 0xFF, (int) rows, columns,
+                (int) repeat, width);
     }
 
     /**

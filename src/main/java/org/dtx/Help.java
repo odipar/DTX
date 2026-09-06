@@ -3,8 +3,9 @@ package org.dtx;
 /**
  * What each tool prints on {@code -help}: its synopsis, a line a flag with
  * the default in parentheses, examples, and the section of doc/tools.md that
- * describes it. The Go and C# trees print the same text, and
- * {@code ParityTest} compares the three.
+ * describes it. The C# tree prints the same text, and the Go tree the same
+ * but for dtx-package, which combines and does not assemble, so its help
+ * lists neither -a nor -s; {@code ParityTest} compares them.
  *
  * <p>A tool given no file to work on prints the same text to standard error
  * and exits with 2.
@@ -12,6 +13,19 @@ package org.dtx;
 final class Help {
 
     private Help() {}
+
+    /**
+     * Prints why a tool stopped, and exits with 1. A file it cannot read, a
+     * header outside the bounds R6 sets, a value no width takes: the caller
+     * is given the one line the Go and C# trees give, and not a stack trace.
+     * A misuse of the command line exits with 2 instead.
+     */
+    static void stopped(Exception failed) {
+        String why = failed.getMessage();
+        System.err.println(failed instanceof java.io.IOException && why != null
+                && !why.contains(" ") ? "cannot read " + why : why);
+        System.exit(1);
+    }
 
     /** Whether {@code -help} or {@code -h} is among the arguments. */
     static boolean among(String[] args) {
@@ -67,11 +81,13 @@ final class Help {
     static final String PACKAGE = """
             dtx-package in.dtx out.bin [-aRMAC] [-s]
 
-            Packages a DTX file as a 68000 image: the code for its variant, the column
-            table and the file. doc/abi.md gives the four calls into the image.
+            Packages a DTX file as a 68000 image: the code for its variant and,
+            under DTX1 and DTX2, its width, the column table and the file.
+            doc/abi.md gives the four calls into the image.
 
-              -aRMAC       assembles the code from the 68k/ templates with the rmac at
-                           RMAC, in place of the image the build made
+              -aRMAC       assembles the code with the rmac at RMAC, in place of the
+                           image the build made. The templates are read from 68k
+                           beside the caller, or from what DTX_68K names
               -s           writes the table's figures as assembler equates, in place of
                            an image
               -help        this text

@@ -6,31 +6,33 @@
 ; documentation says you used DTX (see LICENSE).
 ;
 ; Included by DTX0.S, DTX1.S and DTX2.S, never assembled on its own. It contains
-; what doc/abi.md 1 defines for every image and what no variant changes: the
-; four slots, the format block, and the one call that reads neither the state
-; block nor the table's layout.
+; the four slots, the format block, DTX_metadata and DTX_payload, which
+; doc/abi.md 1 defines for every image and no variant changes, and the macro
+; DTX0 and DTX1 install a long with.
 ;
 ; A template includes this after DTX_table.i, invokes DTX_IMAGE where the
 ; image begins, and DTX_TABLE_FOLLOWS where its code ends.
 ; -----------------------------------------------------------------------------
 
-; A value times the width, in one instruction: add.l dn,dn is the cheapest
-; double a 68000 has, so a width of 2 takes that and a width of 4 a shift.
-; At a width of 1 the value stands as it is and this macro is empty.
-        .macro  DTX_SCALE value
-        .if     DTX_WIDTH=2
-        add.l   \value,\value
-        .endif
-        .if     DTX_WIDTH=4
-        lsl.l   #2,\value
-        .endif
+; What a value is installed with. A 68000 reaches PC relative for a source
+; and never for a destination, so a site is lea'd into a4 and written
+; through it. The assembler works out where each site stands: nothing here
+; counts an offset, and every reach into the image is PC relative.
+;
+; The operand of an instruction whose opcode is one word stands at +2 of it,
+; and the L form adds that.
+        .macro  DTX_INSTALL_L   value,site
+        lea     \site+2(pc),a4
+        move.l  \value,(a4)
         .endm
 
-; The four slots, the format block and DTX_metadata. The four figures a
-; variant defines for itself reach it as arguments: P, N and k stand at 1, 0
-; and 0 where nothing is packed, and the width at 0 where the code does not
-; move with it.
-        .macro  DTX_IMAGE variant,period,ring,unit,width
+; The four slots, the format block, DTX_metadata and DTX_payload. Six fields
+; of the block stand at zero here and the packager writes them at a combine
+; (doc/abi.md 5): the assembler does not read the table they describe. The
+; two figures a variant defines for itself reach this macro as arguments: k
+; stands at 0 where nothing is packed, and the width at 0 where the code does
+; not move with it.
+        .macro  DTX_IMAGE variant,unit,width
 _base:
         bra.w   DTX_init
         bra.w   DTX_metadata
@@ -39,17 +41,15 @@ _base:
 
 _fmt:
         dc.b    'D','T','X',\variant
-        dc.l    DTX_STATE
-        dc.l    0                       ; the packager writes it: the table
-                                        ; stands behind the column table,
-                                        ; whose size moves with C
-        dc.w    DTX_ROWBYTES
-        dc.w    \period
-        dc.w    \ring
+        dc.l    0                       ; the state block's bytes
+        dc.l    0                       ; where the table stands
+        dc.w    0                       ; a row's bytes
+        dc.w    0                       ; P
+        dc.w    0                       ; N
         dc.b    \unit,\width
         dc.l    _columns-_base          ; where the column table begins
-        dc.l    0                       ; the packager writes it: the stride
-                                        ; from one column's value to the next
+        dc.l    0                       ; the stride from one column's value
+                                        ; to the next
 
 ; DTX_metadata. The format block is at a fixed place in the image, so one
 ; lea reaches it; the table's own header is behind a column table whose size
@@ -59,13 +59,23 @@ _fmt:
 ; SPEC.md 1 lays it out: R at +4, C at +8 and RR at +10.
 DTX_metadata:
         lea     _fmt(pc),a0
-        movea.l a0,a1
-        suba.w  #_fmt-_base,a1          ; the image's first byte
+        lea     _base(pc),a1            ; the image's first byte
         adda.l  8(a0),a1                ; the table's header
         move.l  4(a1),d0                ; R
         move.w  8(a1),d1                ; C
         move.l  10(a1),d2               ; RR
         move.l  24(a0),d3               ; the stride
+        rts
+
+; DTX_payload. The payload's first byte in a1 and the table's header in a2.
+; Where the table stands is read out of the format block; the header is 16
+; bytes under every variant and every C (SPEC.md 1), so the payload is 16
+; past it.
+DTX_payload:
+        lea     _base(pc),a1
+        adda.l  _fmt-_base+8(a1),a1     ; where the table's header stands
+        movea.l a1,a2                   ; the header
+        adda.w  #16,a1                  ; the payload
         rts
         .endm
 
@@ -73,9 +83,10 @@ DTX_metadata:
 ; appends the column table and then the .dtx file to what rmac writes, so
 ; _columns is where the first of them lands and the code ends on a long to
 ; put it there. DTX0 and DTX1 do not have a column table, so under those two
-; the table's own header is the first byte there. The format block defines
-; where each begins, and no instruction reaches either by a displacement the
-; assembler works out: both move with C, and the code does not.
+; the table's own header is the first byte there. Where _columns stands is
+; assembled in and the format block repeats it; the table's header stands
+; behind a column table of 16C bytes, so it moves with C and no instruction
+; reaches it by a displacement the assembler works out.
         .macro  DTX_TABLE_FOLLOWS
         .align  4
 _columns:

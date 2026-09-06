@@ -11,23 +11,21 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.dtx.style.HouseStyle;
 import org.junit.jupiter.api.Test;
 
 /**
  * The documents against themselves: every reference that can be followed,
  * every figure that can be recomputed.
  *
- * <p>Ported from YMXR, which has the same three tests. Two of its checks
- * read documents this repository has not written - a column table, and the
- * figures of an experiment - and they come back with those documents.
+ * <p>The checks came from YMXR, and each of them reads a document of this
+ * repository.
  *
  * <p>{@code HouseStyleTest} checks the prose against {@code AGENTS.md} and
  * {@code GlossaryTest} checks the terms against the glossary. This checks the
  * numbers and the pointers, which drift on their own as a document is
  * edited: a requirement renumbered, a section renamed, a column added, a
  * ratio left over from the figures before it.
- *
- * <p>Every check here found something on the day it was written.
  */
 final class ConsistencyTest {
 
@@ -41,9 +39,14 @@ final class ConsistencyTest {
 
     private static final Path ABI = Path.of("doc/abi.md");
 
-    private static final List<Path> DOCUMENTS =
-            List.of(Path.of("README.md"), SPEC, REQ, GLO, TERM, EXP, TOOLS,
-                    ABI);
+    /**
+     * The documents these checks read: every one the tree writes, found the
+     * way the style check finds them, so a document written under doc/ is
+     * read here without a list to add it to.
+     */
+    private static List<Path> documents() throws IOException {
+        return HouseStyle.documents(Path.of("."));
+    }
 
     private static String read(Path p) throws IOException {
         return Files.readString(p);
@@ -58,7 +61,7 @@ final class ConsistencyTest {
             defined.add(d.group(1));
         }
         List<String> dangling = new ArrayList<>();
-        for (Path p : DOCUMENTS) {
+        for (Path p : documents()) {
             Matcher c = Pattern.compile("\\bR\\d+\\.\\d+\\b").matcher(read(p));
             while (c.find()) {
                 if (!defined.contains(c.group())) {
@@ -283,7 +286,7 @@ final class ConsistencyTest {
     @Test
     void everyLinkResolves() throws IOException {
         List<String> broken = new ArrayList<>();
-        for (Path p : DOCUMENTS) {
+        for (Path p : documents()) {
             Matcher m = Pattern.compile("\\[([^\\]]+)\\]\\(([^)]+)\\)")
                     .matcher(read(p));
             while (m.find()) {
@@ -307,7 +310,7 @@ final class ConsistencyTest {
      * that is not executable, fails here rather than at the reader's shell.
      */
     @Test
-    void everyScriptToolsMdGivesIsThereAndRuns() throws IOException {
+    void everyScriptToolsMdGivesIsThereAndExecutable() throws IOException {
         Matcher m = Pattern.compile("^(bin/[A-Za-z0-9._-]+)", Pattern.MULTILINE)
                 .matcher(read(TOOLS));
         List<String> named = new ArrayList<>();
@@ -329,7 +332,7 @@ final class ConsistencyTest {
     @Test
     void everyDocumentKeepsOneWrapWidth() throws IOException {
         List<String> wide = new ArrayList<>();
-        for (Path p : DOCUMENTS) {
+        for (Path p : documents()) {
             List<String> lines = Files.readAllLines(p);
             for (int at = 0; at < lines.size(); at++) {
                 String line = lines.get(at);

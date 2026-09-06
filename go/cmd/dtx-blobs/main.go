@@ -4,8 +4,8 @@
 // Twenty-two of them. DTX0 reads a row as one run of bytes, so its code does
 // not move with the width and one file is every DTX0 table's. DTX1 moves a
 // value a column, so it has one a width. DTX2 has one a width and a build of
-// the decoder built into it, which is a unit of 1, 2 or 4 with the copy code
-// and without. This is the one step an assembler is needed for.
+// the decoder built into it: a unit of 1, 2 or 4, with the copy code and
+// without. This is the one step an assembler is needed for.
 //
 // The table each is assembled from is made here rather than read: the code
 // does not move with a table's shape, and pack.Blank zeroes the six fields
@@ -55,6 +55,12 @@ doc/tools.md, Build the images.
 // standard error and exits with 2.
 var errUsage = errors.New("usage")
 
+// A misuse is a flag the tool does not read: the message goes to standard
+// error and the exit is 2, as the Java tree exits.
+type misuse string
+
+func (m misuse) Error() string { return string(m) }
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		if errors.Is(err, errUsage) {
@@ -62,6 +68,10 @@ func main() {
 			os.Exit(2)
 		}
 		fmt.Fprintln(os.Stderr, err)
+		var m misuse
+		if errors.As(err, &m) {
+			os.Exit(2)
+		}
 		os.Exit(1)
 	}
 }
@@ -130,7 +140,7 @@ func run(args []string) error {
 		case strings.HasPrefix(arg, "-t"):
 			templates = arg[2:]
 		case strings.HasPrefix(arg, "-"):
-			return fmt.Errorf("dtx-blobs does not read %s", arg)
+			return misuse("dtx-blobs does not read " + arg)
 		default:
 			into = append(into, arg)
 		}
