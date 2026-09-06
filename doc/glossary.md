@@ -12,7 +12,7 @@ same change (requirements.md, R0.6 to R0.9).
 | copy code | The part of an ST4 decoder that copies from a column's own literal stream. A decoder is built with it or without, and the flags byte marks which a payload needs. | SPEC.md 2.3 |
 | cursor | What advances to a next row and has its own place in the table. | terminology.md, tables, rows and columns |
 | data set | One column of a DTX2 payload, packed with ST4: its own ST4 header, and the length of what it unpacks to. | SPEC.md 2.3 |
-| decoder state | The eight longs a column's decoder is saved in between refills, with its ring's end, where its registers go at a loop and its budget: 48 bytes of a packaged DTX2 reader's state block, one a turn. | abi.md 3 |
+| decoder state | The eight longs a column's decoder is saved in between refills, with its ring's end, where its registers go at a loop, its budget, its phase and its mark: 48 bytes of a packaged DTX2 reader's state block, one a turn. | abi.md 3 |
 | DTX | This format: a table of `R` rows and `C` columns. The table is data, and a reader of it is code. | README.md |
 | format block | The 28 bytes at +16 of an image: the variant, the state block's bytes, where the table and the column table stand, the row's bytes, `P`, `N`, `k`, `W` and the stride. | abi.md 1 |
 | header | The 16 bytes before a payload: `DTX`, the variant, and the metadata. | SPEC.md 1 |

@@ -154,12 +154,11 @@ public static class Pack
             throw new ArgumentException($"a column is {rows} times {width}"
                     + $" bytes, which does not divide by k of {k}");
         }
-        // A replayed set puts the decoder's registers away where its loop
-        // begins and back at the column's end, and a refill takes a whole
-        // period, so both rows fall on a period (abi.md 4).
-        int repeat = header.Repeat;
-        bool lands = !given.Replayed;
-        for (int p = columns; p <= rows; p++)
+        // A table shorter than a period takes the period all the same: where
+        // its sets end the reader seeds its rows and the first period's budget
+        // is 0, and where they loop it seeds a period's rows round the loop
+        // (abi.md 4).
+        for (int p = columns; ; p++)
         {
             long budget = (long)p * width / k;
             if (n < 2 * p * width)
@@ -167,19 +166,22 @@ public static class Pack
                 break;
             }
             if (n % (p * width) == 0 && (long)p * width % k == 0
-                    && budget >= 1 && budget <= 65535
-                    && (lands || (repeat % p == 0 && (rows - repeat) % p == 0)))
+                    && budget >= 1 && budget <= 65535)
             {
+                // A refill meets one mark at most, so a replayed loop is a
+                // period long at least (abi.md 4).
+                int loop = rows - header.Repeat;
+                if (given.Replayed && loop < p)
+                {
+                    throw new ArgumentException($"a replayed loop of {loop} rows is under"
+                            + $" the period of {p}: a refill meets one mark at most");
+                }
                 return p;
             }
         }
-        throw new ArgumentException($"no period from C of {columns} to R of"
-                + $" {rows} meets N of {n} and k of {k}: N divides by P times"
-                + " the width, is at least twice that, the budget is a whole"
-                + " number of units"
-                + (lands ? "" : $", and RR of {repeat} and the rows from it"
-                        + " to R divide by P, since these data sets are"
-                        + " replayed"));
+        throw new ArgumentException($"no period from C of {columns} up meets N of"
+                + $" {n} and k of {k}: N divides by P times the width, is at least"
+                + " twice that, and the budget is a whole number of units");
     }
 
     /// <summary>

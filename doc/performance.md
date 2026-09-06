@@ -30,21 +30,21 @@ plus one), modulo 251, so the first rows of the three column table are:
 
 | call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
 |---|---|---|---|---|---|
-| init | 210 | 138 | 7580 | 6104 | 6132 |
-| advance | 70 | 66 | 658-1002 | 622-966 | 568-626 |
-| jump to row 0 | 246 | 138 | 7612 | 6100 | 6132 |
-| jump to row 63 | 246 | 138 | 56280 | 52664 | 43652 |
-| code, bytes | 132 | 84 | 1244 | 1244 | 1252 |
+| init | 210 | 138 | 7894 | 6442 | 6440 |
+| advance | 70 | 66 | 676-928 | 640-892 | 466-644 |
+| jump to row 0 | 246 | 138 | 8020 | 6532 | 6534 |
+| jump to row 63 | 246 | 138 | 55862 | 52270 | 43276 |
+| code, bytes | 132 | 84 | 1448 | 1444 | 1456 |
 
 ### Twenty columns
 
 | call | DTX0 | DTX1 | DTX2 k=1 | DTX2 k=2 | DTX2 k=4 |
 |---|---|---|---|---|---|
-| init | 210 | 138 | 52442 | 38242 | 37002 |
-| advance | 70 | 66 | 1094 | 840 | 786 |
-| jump to row 0 | 246 | 138 | 52910 | 38456 | 37162 |
-| jump to row 63 | 246 | 138 | 113752 | 88896 | 84876 |
-| code, bytes | 132 | 84 | 1244 | 1244 | 1252 |
+| init | 210 | 138 | 55374 | 41334 | 39894 |
+| advance | 70 | 66 | 1112 | 858 | 804 |
+| jump to row 0 | 246 | 138 | 55936 | 41642 | 40148 |
+| jump to row 63 | 246 | 138 | 117524 | 92828 | 88608 |
+| code, bytes | 132 | 84 | 1448 | 1444 | 1456 |
 
 There are four calls (abi.md 2), and none of them moves a value: an advance
 gives the pointer at the row's first value and the caller reads from there.
@@ -60,8 +60,8 @@ of `P` rows, and a turn past the last column does not refill.
 refill, and a jump is not flat: it runs the advance's body once a row up to
 the target, so a jump to row 63 costs the 63 rows. A backward jump seeds
 every ring again first, so a jump to row 0 costs an init and one row's
-step. A table that repeats costs that at every repeat, since the advance
-from row `R` minus one to `RR` is a jump.
+step. A table that repeats is advanced out of its last row as out of
+any other, since its data sets loop.
 
 **Init under DTX2** is `C` decoder seeds and `C` refills of `P` rows, so it
 grows with `C` and with `P`: the init rows of the two tables.
@@ -91,9 +91,9 @@ three column table at each unit.
 
 | k | without | with | more |
 |---|---|---|---|
-| 1 | 56780 | 56984 | 204 |
-| 2 | 53164 | 53320 | 156 |
-| 4 | 44152 | 44308 | 156 |
+| 1 | 56286 | 56490 | 204 |
+| 2 | 52694 | 52850 | 156 |
+| 4 | 43700 | 43856 | 156 |
 
 The two decoders differ at init, where the one with the copy code writes
 the ring's size into two of its own instructions, and not in a row.

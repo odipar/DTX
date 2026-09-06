@@ -152,11 +152,19 @@ final class PackagerTest {
     /** The same, whose payload defines what the packer packed. */
     private static byte[] packed(int rows, int columns, int width, int unit,
             int ring, boolean copies) {
+        return packed(rows, rows, columns, width, unit, ring, copies, -1);
+    }
+
+    /** A table repeating at {@code repeat}, whose data sets record a loop
+     *  at {@code loop}, a unit, so the reader replays the pass; -1 where the
+     *  sets loop by their end marker. */
+    private static byte[] packed(int rows, int repeat, int columns, int width, int unit,
+            int ring, boolean copies, int loop) {
         byte[][] column = new byte[columns][];
         for (int i = 0; i < columns; i++) {
             column[i] = new byte[rows * width];
         }
-        Table table = Table.of(rows, rows, width, column);
+        Table table = Table.of(rows, repeat, width, column);
         return Dtx2.write(table, new Packer() {
 
             @Override
@@ -176,8 +184,9 @@ final class PackagerTest {
                 Dtx.putLong(set, 8, 28 + bytes.length / 4);
                 Dtx.putLong(set, 12, 28 + bytes.length / 2);
                 Dtx.putLong(set, 16, 28 + bytes.length);
-                // the set loops by its end marker, so no pass is replayed
-                Dtx.putLong(set, 20, -1);
+                // the set loops by its end marker where the loop is -1, and
+                // records the unit its loop begins at where a pass is replayed
+                Dtx.putLong(set, 20, loop);
                 System.arraycopy(bytes, 0, set, 28, bytes.length);
                 return set;
             }
@@ -203,6 +212,43 @@ final class PackagerTest {
     }
 
     @Test
+    void aReplayedPassTakesThePeriodForEveryRepeat() {
+        // Three columns of two byte values at a ring of 960: P is C, and the
+        // reader turns a replayed pass at its exact rows, so a repeat at row
+        // 16 of 64, which 3 does not divide, takes the same period.
+        byte[] file = packed(64, 16, 3, 2, 1, 960, false, 32);
+        Dtx.Header header = Dtx.header(file);
+        Packager.Packed given = Packager.packed(file, header);
+        assertTrue(given.replayed(), "a payload whose sets record a loop is replayed");
+        assertEquals(3, Packager.period(header, given),
+                "P is C where the pass is replayed from a row it does not divide");
+    }
+
+    @Test
+    void aTableShorterThanAPeriodTakesIt() {
+        // Two rows of three columns: P is C of 3, above R, and the reader
+        // seeds the two rows.
+        byte[] file = packed(2, 3, 1, 1, 960);
+        Dtx.Header header = Dtx.header(file);
+        assertEquals(3, Packager.period(header, Packager.packed(file, header)),
+                "P is C above R");
+    }
+
+    @Test
+    void aReplayedLoopUnderThePeriodIsRefused() {
+        // A refill meets one mark at most, so a replayed loop is a period
+        // long at least: thirty columns give P of 30, and a loop of 20 rows
+        // from row 20 of 40 fails the package.
+        byte[] file = packed(40, 20, 30, 1, 1, 960, false, 20);
+        Dtx.Header header = Dtx.header(file);
+        String said = assertThrows(IllegalArgumentException.class,
+                () -> Packager.period(header, Packager.packed(file, header)))
+                .getMessage();
+        assertTrue(said != null && said.startsWith("a replayed loop of 20 rows is under"),
+                "a replayed loop under the period: " + said);
+    }
+
+    @Test
     void aRingTheWidthDoesNotDivideIsRefused() {
         // A ring of six bytes: a period needs a ring of 2P times the width,
         // so at a width of four the smallest period needs eight bytes, and
@@ -213,7 +259,7 @@ final class PackagerTest {
                 () -> Packager.period(header, Packager.packed(file, header)))
                 .getMessage();
         assertTrue(said != null && said.startsWith(
-                "no period from C of 2 to R of 64"),
+                "no period from C of 2 up"),
                 "a ring that no period divides");
     }
 
@@ -240,7 +286,7 @@ final class PackagerTest {
                 "the decoder states follow the pointer, the payload, the"
                         + " records, the fill, C, the rings, P, N, the count,"
                         + " the state whose turn is next, column 0's ring"
-                        + " and the mode");
+                        + " and column 0's ring");
         // The template reads its own copy of the figure, so the two are
         // compared rather than each pinned to 72 on its own.
         assertEquals(templateDecoders(), Packager.decoders(),

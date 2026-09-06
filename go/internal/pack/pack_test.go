@@ -421,7 +421,7 @@ func TestARingTheWidthDoesNotDivideIsRefused(t *testing.T) {
 	if err == nil {
 		t.Fatal("a ring of six bytes took a period")
 	}
-	if !strings.HasPrefix(err.Error(), "no period from C of 2 to R of 64") {
+	if !strings.HasPrefix(err.Error(), "no period from C of 2 up") {
 		t.Fatalf("the error is %q", err)
 	}
 }
@@ -473,13 +473,10 @@ func TestAReplayedPayloadTakesASecondDecoderStateAColumn(t *testing.T) {
 	}
 }
 
-// A refill takes a whole period and a replayed set puts the registers away at
-// RR and back at R, so both rows fall on a period: P divides RR and the rows
-// from RR to R, doc/abi.md 4.
-func TestAReplayedPayloadTakesAPeriodThatDividesTheRepeat(t *testing.T) {
-	// Three columns of two byte values at a ring of 960: P of 3 divides N by
-	// the width, and a replayed payload repeating at row 16 of 64 takes 4,
-	// the first period from C that divides 16 and the 48 rows to R.
+// The reader puts a replayed set's registers away and takes them back at
+// the exact row, splitting the refill the row falls inside, so the period
+// is the same for every RR and R, doc/abi.md 4.
+func TestAReplayedPayloadTakesThePeriodForEveryRepeat(t *testing.T) {
 	for _, one := range []struct {
 		name   string
 		file   []byte
@@ -487,8 +484,10 @@ func TestAReplayedPayloadTakesAPeriodThatDividesTheRepeat(t *testing.T) {
 	}{
 		{"P is C where the sets loop by their end marker",
 			sets(64, 16, 3, 2, 1, 960, false, -1), 3},
-		{"P divides RR and the rows from it where the pass is replayed",
-			sets(64, 16, 3, 2, 1, 960, false, 32), 4},
+		{"P is C where the pass is replayed from a row it does not divide",
+			sets(64, 16, 3, 2, 1, 960, false, 32), 3},
+		{"P is C where the pass is replayed from row 3 of 64",
+			sets(64, 3, 2, 2, 1, 960, false, 6), 2},
 	} {
 		head, err := dtx.ReadHeader(one.file)
 		if err != nil {
@@ -506,9 +505,13 @@ func TestAReplayedPayloadTakesAPeriodThatDividesTheRepeat(t *testing.T) {
 			t.Fatalf("%s: P is %d, not %d", one.name, period, one.period)
 		}
 	}
-	// A repeat of 3 leaves 61 rows to R, and no period from C of 2 divides
-	// both, so the package fails and the message names the rule.
-	file := sets(64, 3, 2, 2, 1, 960, false, 6)
+}
+
+// A refill meets one mark at most, so a replayed loop is a period long at
+// least, doc/abi.md 4: thirty columns give P of 30, and a loop of 20 rows
+// from row 20 of 40 fails the package.
+func TestAReplayedLoopUnderThePeriodIsRefused(t *testing.T) {
+	file := sets(40, 20, 30, 1, 1, 960, false, 20)
 	head, err := dtx.ReadHeader(file)
 	if err != nil {
 		t.Fatal(err)
@@ -518,10 +521,9 @@ func TestAReplayedPayloadTakesAPeriodThatDividesTheRepeat(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = Period(head, given); err == nil {
-		t.Fatal("a replayed payload repeating at row 3 took a period")
+		t.Fatal("a replayed loop of 20 rows under a period of 30 took a period")
 	}
-	if !strings.HasSuffix(err.Error(), ", and RR of 3 and the rows from it"+
-		" to R divide by P, since these data sets are replayed") {
+	if !strings.HasPrefix(err.Error(), "a replayed loop of 20 rows is under the period of 30") {
 		t.Fatalf("the error is %q", err)
 	}
 }
