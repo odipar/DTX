@@ -252,8 +252,8 @@ seed_column:
 ; The seed gave every column a period's rows, which the count starts from;
 ; the first turn is column 0's, and a period of turns is to come. The
 ; pointer stands a row below column 0's first row, so the advance into row
-; 0 steps like any other advance. Then the first period's budget, which is
-; short where R is under 2P, and the marks a loop puts on the period.
+; 0 steps like any other advance. Then the marks a loop puts on the first
+; period, and its budget, which is short where R is under 2P.
         move.l  DTX_PERIODFIG(a6),DTX_DONE(a6)
         move.w  DTX_PERIODFIG+2(a6),DTX_TURN(a6)
         lea     DTX_DECODERS(a6),a3
@@ -305,7 +305,8 @@ DTX_init:
 ; round there, and R plus P is a figure no period reaches, so every refill
 ; takes a whole period. Where the table does not repeat the sets end at R:
 ; the count stops there, the last period of refills is short and the one
-; after it gets a budget of 0, and neither row is ever reached.
+; after it gets a budget of 0, and neither row is reached, since the count
+; never stands on -1 and never passes $7FFFFFFF.
         move.l  4(a2),d3                ; R
         move.l  10(a2),d4               ; RR
         move.l  d4,DTX_SAVEAT(a6)
@@ -314,8 +315,8 @@ DTX_init:
         bcs.s   .loops
         move.l  d3,DTX_LEFTFIG(a6)      ; the sets end at R
         moveq   #-1,d3
-        move.l  d3,DTX_SAVEAT(a6)       ; a row the count never stands on
-        move.l  d3,DTX_ENDAT(a6)
+        move.l  d3,DTX_SAVEAT(a6)
+        move.l  #$7FFFFFFF,DTX_ENDAT(a6)
         bra.s   .counted
 .loops:
         add.l   DTX_PERIODFIG(a6),d3
@@ -425,8 +426,8 @@ DTX_marked:
 ; The next turn is column 0's, and the rows the period decoded go onto the
 ; count. Where the sets end the count stops at R, so the last period is
 ; short and the one after it is empty; where they loop the count comes
-; round at the row a pass ends on, and the two rows a replayed pass turns
-; on fall on a period (abi.md 4), so DTX_next's compares find them exactly.
+; round at the row a pass ends on, or the first period end past it
+; (DTX_next).
 
 DTX_period:
         lea     DTX_DECODERS(a6),a3
@@ -444,15 +445,43 @@ DTX_period:
 .over:
         rts
 
-; The period to come: its budget, where it is short or 0, and its
-; marks. A whole period keeps the budget the seed wrote, and a pass that
-; is replayed never has a short one, so a budget is written only where the
-; sets end.
+; The period to come: its marks, and then its budget.
+;
+; The marks. A marked period just ended where the budgets stand negative,
+; and they go back first. Then the count against the two rows: the row a
+; loop begins at marks the period to put the registers away, and the row
+; a pass ends at marks it to take them back and puts the count back to
+; the loop's row. A pass that is replayed ends on a period, so the count
+; stands on that row; a pass that loops by its set's end marker ends
+; where it ends, R dividing by P or not, so the count comes round at the
+; first period end at or past it, and nothing is put away or marked.
+;
+; The budget. A whole period keeps the budget the seed wrote, and a pass
+; that loops never has a short one, so a budget is written only where the
+; sets end, short or 0.
+
 DTX_next:
+        tst.w   DTX_DECODERS+DTX_D_BUDGET(a6)
+        bpl.s   .plain
+        bsr.s   DTX_flip
+.plain:
+        move.l  DTX_DONE(a6),d3
+        cmp.l   DTX_SAVEAT(a6),d3
+        beq.s   .away
+        cmp.l   DTX_ENDAT(a6),d3
+        blt.s   .budget
+        move.l  DTX_SAVEAT(a6),DTX_DONE(a6)
+        move.w  #1,DTX_MODE(a6)
+        bsr.s   DTX_flip
+        bra.s   .budget
+.away:
+        clr.w   DTX_MODE(a6)
+        bsr.s   DTX_flip
+.budget:
         move.l  DTX_LEFTFIG(a6),d3
         sub.l   DTX_DONE(a6),d3
         cmp.l   DTX_PERIODFIG(a6),d3
-        bge.s   DTX_marks
+        bge.s   .kept
         tst.l   d3
         bge.s   .some
         moveq   #0,d3
@@ -465,32 +494,7 @@ DTX_next:
         move.w  d3,(a3)
         lea     DTX_D_SIZE(a3),a3
         dbra    d4,.column
-        rts
-
-; The marks. A marked period just ended where the budgets stand negative,
-; and they go back first. Then the count against the two rows: the row a
-; loop begins at marks the period to put the registers away, and the row a
-; pass ends at marks it to take them back and puts the count back to the
-; loop's row. Where nothing is put away the count still comes round, and no
-; state is marked.
-
-DTX_marks:
-        tst.w   DTX_DECODERS+DTX_D_BUDGET(a6)
-        bpl.s   .plain
-        bsr.s   DTX_flip
-.plain:
-        move.l  DTX_DONE(a6),d3
-        cmp.l   DTX_SAVEAT(a6),d3
-        beq.s   .away
-        cmp.l   DTX_ENDAT(a6),d3
-        bne.s   .none
-        move.l  DTX_SAVEAT(a6),DTX_DONE(a6)
-        move.w  #1,DTX_MODE(a6)
-        bra.s   DTX_flip
-.away:
-        clr.w   DTX_MODE(a6)
-        bra.s   DTX_flip
-.none:
+.kept:
         rts
 
 ; Every column's budget negated: onto a marked period, and off it.

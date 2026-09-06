@@ -47,7 +47,12 @@ before, and no tool's output changes but the state block's size.
   where a pass is replayed, where it was 56 plus 32`C` plus `NC` and 32`C`
   more. The decoder state is 48 bytes, one a turn, and the word at +0 is
   the turns left in the period rather than the turn.
-- DTX2's code is 1240 bytes where it was 1056.
+- A DTX2 table that repeats, whose loop a back reference reaches and
+  whose `R` does not divide by `P`, read wrong past its first pass: the
+  reader's count never came round, so its refills stopped. The count
+  comes round at the first period end at or past `R`.
+- DTX2's code is 1244 bytes at `k` of 1 and 2, and 1252 at 4, where it
+  was 1056 and 1064.
 
 ### 0.4.0, 2026-09-06
 

@@ -308,7 +308,7 @@ that `a6` reaches:
 | +36 | 4 | the rows every column has produced |
 | +40 | 4 | what a period's budget counts those rows against: `R` where the sets end, `R` plus `P` where they loop |
 | +44 | 4 | `RR`, the row a loop begins at, or -1 where the sets end |
-| +48 | 4 | `R`, the row a pass ends at, or -1 where the sets end |
+| +48 | 4 | `R`, the row a pass ends at, or $7FFFFFFF where the sets end |
 | +52 | 4 | where the decoders' registers go at the loop's row, or 0 where none go anywhere |
 | +56 | 4 | the decoder state whose turn the next row is |
 | +60 | 4 | column 0's ring, the pointer's own |
@@ -321,11 +321,12 @@ by what is left to `R`, and are compared there with the two rows: once a
 period rather than once a row. Where the sets end, the last period's
 budget is short and the one after it is 0. Where a back reference reaches
 the loop's first unit, the set loops by its end marker and +52 reads
-zero: the count comes round at `R` and no register goes anywhere. Where
-the pass is replayed, the period after the loop's row puts every column's
-registers away, each at its own refill, and the period after the pass's
-row takes them back the same way: the budgets of such a period stand
-negated, and the word at +68 says which of the two a refill does first.
+zero: the count comes round to `RR` at the first period end at or past
+`R`, and no register goes anywhere. Where the pass is replayed, the
+period after the loop's row puts every column's registers away, each at
+its own refill, and the period after the pass's row takes them back the
+same way: the budgets of such a period stand negated, and the word at
++68 says which of the two a refill does first.
 
 Then, under DTX2 only, at +72, one **decoder state** a turn, 48 bytes at
 a stride of 48: the eight longs a column's decoder is saved in between
@@ -424,7 +425,8 @@ begins at, the reader puts every column's registers but the write pointer
 away at the loop's row and takes them back at the pass's end, each column
 at its own refill, and the rows from `RR` to `R` minus one decode again
 each pass. Both rows fall on a period, so the packager asks of such a
-table that `RR` and `R` minus `RR` divide by `P`.
+table that `RR` and `R` minus `RR` divide by `P`; a table whose loop a
+back reference reaches is under no such rule.
 
 ---
 
