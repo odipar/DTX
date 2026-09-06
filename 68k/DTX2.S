@@ -74,7 +74,16 @@ DTX_CFIG            equ     22              ; C, a word
 DTX_RINGS           equ     24              ; where the rings begin, in the block
 DTX_PERIODFIG       equ     28              ; P
 DTX_NFIG            equ     32              ; N
-DTX_DECODERS        equ     36
+DTX_ROWSDONE        equ     36              ; the rows every column has
+                                            ; produced, kept only where the
+                                            ; sets are replayed
+DTX_SAVEAT          equ     40              ; RR, the row a loop begins at
+DTX_ENDAT           equ     44              ; R, the rows a column gives
+DTX_SAVED           equ     48              ; where the decoders' registers
+                                            ; go, in the block, or 0 where
+                                            ; the sets loop by their end
+                                            ; marker and nothing is put away
+DTX_DECODERS        equ     52
 
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
@@ -195,6 +204,7 @@ seed_column:
         bsr.s   DTX_ring                ; a1 the ring's first byte
         move.w  DTX_NFIG+2(a6),d3       ; N, a ring's bytes, in a word
         bsr     ST4_init
+        bsr     DTX_first
         move.l  DTX_PERIODFIG(a6),d3
         DTX_BUDGET
         bsr     ST4_resume
@@ -205,8 +215,20 @@ seed_column:
         cmp.w   DTX_CFIG(a6),d4
         bcs.s   seed_column
 
+; The seed gave every column a period's rows, which the count starts from.
+; A loop that begins there is put away now, as one that begins at row 0 was
+; put away by DTX_first.
+        move.l  DTX_PERIODFIG(a6),DTX_ROWSDONE(a6)
+        tst.l   DTX_SAVED(a6)
+        beq.s   .pointer
+        move.l  DTX_ROWSDONE(a6),d3
+        cmp.l   DTX_SAVEAT(a6),d3
+        bne.s   .pointer
+        bsr     DTX_away
+
 ; The pointer a row below column 0's first row, so the advance into row 0
 ; steps like any other advance.
+.pointer:
         move.l  a6,d0
         add.l   DTX_RINGS(a6),d0
         subq.l  #DTX_WIDTH,d0
@@ -225,6 +247,9 @@ DTX_init:
         move.l  a1,DTX_PAYLOAD(a6)
         bsr     DTX_columns
         move.l  a3,DTX_RECORDS(a6)
+        move.l  10(a2),DTX_SAVEAT(a6)   ; RR, the row a loop begins at
+        move.l  4(a2),DTX_ENDAT(a6)     ; R
+        clr.l   DTX_ROWSDONE(a6)
         move.w  8(a2),d1                ; C
         move.w  d1,DTX_CFIG(a6)
 
@@ -243,6 +268,25 @@ DTX_init:
         lsl.l   #5,d2
         addi.w  #DTX_DECODERS,d2
         move.l  d2,DTX_RINGS(a6)
+
+; Where the decoders' registers go, behind the rings, and 0 where nothing is
+; put away. Byte 20 of a data set gives the unit its loop begins at, or
+; $FFFFFFFF where the set's end marker loops it and no pass is replayed;
+; every set of a payload takes the same form, so column 0 defines it.
+        clr.l   DTX_SAVED(a6)
+        movea.l DTX_PAYLOAD(a6),a3
+        movea.l a3,a4
+        adda.l  4(a3),a4                ; column 0's data set
+        move.l  20(a4),d3
+        addq.l  #1,d3                   ; $FFFFFFFF and nothing else gives 0
+        beq.s   .marker
+        move.l  DTX_NFIG(a6),d3
+        moveq   #0,d4
+        move.w  d1,d4
+        mulu.w  d3,d4                   ; the rings, N a column
+        add.l   DTX_RINGS(a6),d4
+        move.l  d4,DTX_SAVED(a6)
+.marker:
 
         bsr     DTX_seed
         movea.l DTX_PARK(a6),a6
@@ -288,8 +332,89 @@ DTX_turn:
         cmp.w   DTX_PERIODFIG+2(a6),d1
         bcs.s   .stored
         clr.w   d1
+        move.w  d1,DTX_TURN(a6)
+
+; A period ended, so every column has a period's rows more. Where the sets
+; are replayed the two rows the pass turns on fall on a period (abi.md 4),
+; so this compare finds them exactly: at the row the loop begins the
+; decoders' registers go away, and at the column's rows they come back.
+        tst.l   DTX_SAVED(a6)
+        beq.s   .marker                 ; the sets loop by their end marker
+        move.l  DTX_ROWSDONE(a6),d3
+        add.l   DTX_PERIODFIG(a6),d3
+        move.l  d3,DTX_ROWSDONE(a6)
+        cmp.l   DTX_SAVEAT(a6),d3
+        beq.s   DTX_away
+        cmp.l   DTX_ENDAT(a6),d3
+        beq.s   DTX_back
+.marker:
+        rts
 .stored:
         move.w  d1,DTX_TURN(a6)
+        rts
+
+; -----------------------------------------------------------------------------
+; A replayed pass whose loop begins at row 0 begins where ST4_init leaves
+; the decoder, so those are the registers to put away. Every other loop
+; begins at a period, and the turn above finds it.
+
+DTX_first:
+        tst.l   DTX_SAVED(a6)
+        beq.s   .none
+        tst.l   DTX_SAVEAT(a6)
+        bne.s   .none
+        movea.l a6,a3
+        adda.l  DTX_SAVED(a6),a3
+        moveq   #0,d4
+        move.w  DTX_FILL(a6),d4
+        lsl.l   #5,d4
+        adda.l  d4,a3
+        movem.l d0-d2/a0-a2/a4-a5,(a3)
+.none:
+        rts
+
+; -----------------------------------------------------------------------------
+; The decoders' registers away and back, one column of eight longs at a time.
+; ST4 leaves a1, the write pointer, out of a replay: it walks the ring on and
+; the pass it belongs to is the caller's, not the stream's. So the copy back
+; steps over a1's long and the ring stands where the last refill left it.
+
+DTX_away:
+        lea     DTX_DECODERS(a6),a3
+        movea.l a6,a4
+        adda.l  DTX_SAVED(a6),a4
+        move.w  DTX_CFIG(a6),d3
+        subq.w  #1,d3
+.column:
+        move.l  (a3)+,(a4)+
+        move.l  (a3)+,(a4)+
+        move.l  (a3)+,(a4)+
+        move.l  (a3)+,(a4)+
+        move.l  (a3)+,(a4)+
+        move.l  (a3)+,(a4)+
+        move.l  (a3)+,(a4)+
+        move.l  (a3)+,(a4)+
+        dbra    d3,.column
+        rts
+
+DTX_back:
+        move.l  DTX_SAVEAT(a6),DTX_ROWSDONE(a6)
+        lea     DTX_DECODERS(a6),a3
+        movea.l a6,a4
+        adda.l  DTX_SAVED(a6),a4
+        move.w  DTX_CFIG(a6),d3
+        subq.w  #1,d3
+.column:
+        move.l  (a4)+,(a3)+
+        move.l  (a4)+,(a3)+
+        move.l  (a4)+,(a3)+
+        move.l  (a4)+,(a3)+
+        addq.l  #4,a4                   ; a1, the write pointer, stands
+        addq.l  #4,a3
+        move.l  (a4)+,(a3)+
+        move.l  (a4)+,(a3)+
+        move.l  (a4)+,(a3)+
+        dbra    d3,.column
         rts
 
 ; -----------------------------------------------------------------------------

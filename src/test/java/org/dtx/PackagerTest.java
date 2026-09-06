@@ -176,6 +176,8 @@ final class PackagerTest {
                 Dtx.putLong(set, 8, 28 + bytes.length / 4);
                 Dtx.putLong(set, 12, 28 + bytes.length / 2);
                 Dtx.putLong(set, 16, 28 + bytes.length);
+                // the set loops by its end marker, so no pass is replayed
+                Dtx.putLong(set, 20, -1);
                 System.arraycopy(bytes, 0, set, 28, bytes.length);
                 return set;
             }
@@ -234,16 +236,16 @@ final class PackagerTest {
         byte[] file = packed(64, 2, 2, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
-        assertEquals(36, Packager.decoders(),
+        assertEquals(52, Packager.decoders(),
                 "the decoder states follow the pointer, the payload, the"
                         + " records, the fill, C, the rings, P and N");
         // The template reads its own copy of the figure, so the two are
         // compared rather than each pinned to 52 on its own.
         assertEquals(templateDecoders(), Packager.decoders(),
                 "68k/DTX2.S equates DTX_DECODERS to another offset");
-        assertEquals(36 + 32 * 2, Packager.ring(header),
+        assertEquals(52 + 32 * 2, Packager.ring(header),
                 "the rings follow two decoder states of 32 bytes");
-        assertEquals(36 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
+        assertEquals(52 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
                 "a ring a column");
     }
 

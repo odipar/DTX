@@ -429,6 +429,15 @@ TABLES = [
      + ",".join(str(i * 70001) for i in range(20)) + "\n", 4, None),
     ("a long table", "\n".join("%d,%d" % (i % 251, i % 65521)
                               for i in range(300)) + "\n", 2, None),
+    # A loop longer than a back reference reaches: 512 rows of two byte
+    # values repeating at row 0 is 1024 bytes against a ring of 960, so ST4
+    # packs the pass to be replayed and the reader puts the decoders'
+    # registers away and back (abi.md 4).
+    ("a replayed pass", "\n".join("%d,%d" % (i % 251, (i * 7) % 65521)
+                                  for i in range(512)) + "\n", 2, 0),
+    ("a replayed pass from row 128",
+     "\n".join("%d,%d" % (i % 251, (i * 7) % 65521)
+               for i in range(512)) + "\n", 2, 128),
 ]
 
 
@@ -553,6 +562,12 @@ PACKED = [
     ("a small ring", numbers(64, 2), 1, None, 1, 64),
     ("twenty columns", numbers(64, 20), 2, None, 1, 960),
     ("a long table", numbers(600, 2), 2, None, 1, 960),
+    # A loop longer than a back reference reaches: the rows from the loop to
+    # the end are 1024 bytes against a ring of 960, so ST4 packs the pass to
+    # be replayed and the reader puts the decoders' registers away at the
+    # loop's row and back at the column's end (abi.md 4).
+    ("a replayed pass", numbers(512, 2), 2, 0, 1, 960),
+    ("a replayed pass from row 128", numbers(512, 2), 2, 128, 1, 960),
 ]
 
 
