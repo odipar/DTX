@@ -236,16 +236,16 @@ final class PackagerTest {
         byte[] file = packed(64, 2, 2, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
-        assertEquals(52, Packager.decoders(),
+        assertEquals(56, Packager.decoders(),
                 "the decoder states follow the pointer, the payload, the"
                         + " records, the fill, C, the rings, P and N");
         // The template reads its own copy of the figure, so the two are
         // compared rather than each pinned to 52 on its own.
         assertEquals(templateDecoders(), Packager.decoders(),
                 "68k/DTX2.S equates DTX_DECODERS to another offset");
-        assertEquals(52 + 32 * 2, Packager.ring(header),
+        assertEquals(56 + 32 * 2, Packager.ring(header),
                 "the rings follow two decoder states of 32 bytes");
-        assertEquals(52 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
+        assertEquals(56 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
                 "a ring a column");
     }
 

@@ -83,20 +83,18 @@ public final class Dtx2 {
     }
 
     /**
-     * The unit every data set loops at (R5.11). Every set of a DTX2 payload
-     * loops, so no set ends and a reader decodes one row after another
-     * without a figure to count against: where {@code RR} is below
-     * {@code R} the set loops at that row, and where the table does not
-     * repeat it loops at its last unit, which gives row {@code R} minus one
-     * again for as long as a caller advances.
+     * The unit every data set of a table that repeats loops at, or -1 where
+     * the table does not repeat (R5.11). A set that loops never ends, so a
+     * reader takes the repeat as one more row; a set of a table that does
+     * not repeat ends where the rows do, and its reader shortens the last
+     * refill of a column against the rows it has left.
      *
      * @throws IllegalArgumentException where row {@code RR} does not begin a
      *     unit of the column
      */
     static int loop(Table table, int unit) {
-        int units = table.rows() * table.width() / unit;
         if (table.repeat() >= table.rows()) {
-            return units - 1;
+            return -1;
         }
         int at = table.repeat() * table.width();
         if (at % unit != 0) {

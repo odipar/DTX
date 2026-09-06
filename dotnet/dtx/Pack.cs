@@ -43,7 +43,7 @@ public static class Pack
 
     /// <summary>What a packed reader's state block contains before its
     /// decoder states.</summary>
-    public const int PackedHead = 52;
+    public const int PackedHead = 56;
 
     /// <summary>The state block DTX0 and DTX1 take: the head, and one pointer.</summary>
     public const int Plain = Pointer + 4;

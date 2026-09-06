@@ -211,17 +211,16 @@ func WriteDtx2(t *Table, packer Packer, unit, ring int) ([]byte, error) {
 	return out, nil
 }
 
-// Loop gives the unit every data set loops at (R5.11). Every set of a DTX2
-// payload loops, so no set ends and a reader decodes one row after another
-// without a figure to count against: where RR is below R the set loops at
-// that row, and where the table does not repeat it loops at its last unit,
-// which gives row R minus one again for as long as a caller advances.
+// Loop gives the unit every data set of a table that repeats loops at, or
+// -1 where the table does not repeat (R5.11). A set that loops never ends,
+// so a reader takes the repeat as one more row; a set of a table that does
+// not repeat ends where the rows do, and its reader shortens the last
+// refill of a column against the rows it has left.
 //
 // It is an error where row RR does not begin a unit of the column.
 func Loop(t *Table, unit int) (int, error) {
-	units := t.Rows() * t.Width() / unit
 	if t.Repeat() >= t.Rows() {
-		return units - 1, nil
+		return -1, nil
 	}
 	at := t.Repeat() * t.Width()
 	if at%unit != 0 {

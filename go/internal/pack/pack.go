@@ -50,7 +50,7 @@ const State = 32
 
 // PackedHead is what a packed reader's state block contains before its
 // decoder states.
-const PackedHead = 52
+const PackedHead = 56
 
 // Plain is the state block DTX0 and DTX1 take: the head, and one pointer.
 const Plain = Pointer + 4

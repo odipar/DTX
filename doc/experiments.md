@@ -22,16 +22,16 @@ DTX2:
 
 | R | DTX1 bytes | DTX2 bytes | DTX2 over DTX1 |
 |---|---|---|---|
-| 3 | 27 | 150 | 5.56 |
-| 6 | 34 | 162 | 4.76 |
-| 12 | 52 | 174 | 3.35 |
-| 24 | 88 | 210 | 2.39 |
-| 48 | 160 | 282 | 1.76 |
-| 64 | 208 | 330 | 1.59 |
-| 96 | 304 | 426 | 1.40 |
-| 128 | 400 | 522 | 1.31 |
-| 256 | 784 | 906 | 1.16 |
-| 512 | 1552 | 918 | 0.59 |
+| 3 | 27 | 140 | 5.19 |
+| 6 | 34 | 152 | 4.47 |
+| 12 | 52 | 164 | 3.15 |
+| 24 | 88 | 200 | 2.27 |
+| 48 | 160 | 272 | 1.70 |
+| 64 | 208 | 320 | 1.54 |
+| 96 | 304 | 416 | 1.37 |
+| 128 | 400 | 512 | 1.28 |
+| 256 | 784 | 896 | 1.14 |
+| 512 | 1552 | 908 | 0.59 |
 
 DTX2 is the larger up to 256 rows on this table and the smaller at 512,
 where it is under three fifths of DTX1. What packing costs does not shrink
@@ -48,9 +48,9 @@ back than a ring of 64:
 | written as | file bytes | image bytes |
 |---|---|---|
 | DTX1 | 2064 | 2192 |
-| DTX2, N=64 | 2146 | 3210 |
-| DTX2, N=64, copies | 362 | 1458 |
-| DTX2, N=128, copies | 258 | 1354 |
+| DTX2, N=64 | 2140 | 3272 |
+| DTX2, N=64, copies | 356 | 1520 |
+| DTX2, N=128, copies | 252 | 1416 |
 
 Without copies the ring is too short for the pattern and DTX2 packs to
 more than DTX1. With them a match beyond the ring copies from the column's
@@ -99,7 +99,7 @@ bytes to 716 and DTX2's from 1352 to 1476.
 One width a table (R6.3) took the test out again, and the ABI took the
 move with it: an advance gives the pointer at the row's first value and
 the caller reads where the values stand (abi.md 2), so nothing in an image
-moves one. DTX1's code is 84 bytes now and DTX2's 988, and the rig's
+moves one. DTX1's code is 84 bytes now and DTX2's 1056, and the rig's
 alignment hook passes every table it runs.
 
 ## A column packed with copies, read without them

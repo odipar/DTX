@@ -54,7 +54,7 @@ public final class Packager {
     static final int STATE = 32;
 
     /** What a packed reader's state block contains before its decoder states. */
-    static final int PACKED_HEAD = 52;
+    static final int PACKED_HEAD = 56;
 
     /** The state block DTX0 and DTX1 take: the head, and one pointer. */
     static final int PLAIN = POINTER + 4;

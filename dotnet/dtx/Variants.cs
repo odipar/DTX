@@ -197,21 +197,19 @@ public static class Variants
     }
 
     /// <summary>
-    /// The unit every data set loops at (R5.11). Every set of a DTX2
-    /// payload loops, so no set ends and a reader decodes one row after
-    /// another without a figure to count against: where RR is below R the
-    /// set loops at that row, and where the table does not repeat it loops
-    /// at its last unit, which gives row R minus one again for as long as a
-    /// caller advances.
+    /// The unit every data set of a table that repeats loops at, or -1
+    /// where the table does not repeat (R5.11). A set that loops never
+    /// ends, so a reader takes the repeat as one more row; a set of a table
+    /// that does not repeat ends where the rows do, and its reader shortens
+    /// the last refill of a column against the rows it has left.
     /// </summary>
     /// <exception cref="ArgumentException">where row RR does not begin a
     /// unit of the column</exception>
     public static int Loop(Table table, int unit)
     {
-        int units = table.Rows * table.Width / unit;
         if (table.Repeat >= table.Rows)
         {
-            return units - 1;
+            return -1;
         }
         int at = table.Repeat * table.Width;
         if (at % unit != 0)
