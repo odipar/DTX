@@ -1,6 +1,5 @@
 package org.dtx;
 
-import java.util.Arrays;
 import org.st4.St4Block;
 import org.st4.St4Compressor;
 import org.st4.St4EventOptimizer;
@@ -70,26 +69,30 @@ public final class St4 implements Packer {
             throw new IllegalArgumentException("the loop is unit -1 to "
                     + (units.length - 1) + " of the column, not " + loop);
         }
-        St4Compressor.Result result =
+        // ST4 packs a loop two ways, and this makes the same test its own
+        // packer makes: the end marker's endless match where a back
+        // reference reaches the loop's first unit, and a replayed pass
+        // where it does not.
+        return org.st4.St4.container(
                 loop >= 0 && units.length - loop > offsetLimit
-                        ? rewinding(units, unit, offsetLimit, loop)
+                        ? replayed(units, unit, offsetLimit, loop)
                         : St4Compressor.compress(parse(units, unit,
                                 offsetLimit), units, unit, MAX_OP, loop,
-                                offsetLimit);
-        return org.st4.St4.container(result);
+                                offsetLimit));
     }
 
     /**
-     * A column whose loop is longer than a back reference reaches, packed to
-     * be replayed: the run before the loop and the loop are parsed apart, so
-     * no match in the loop reaches before the loop's first unit and every
-     * pass reads the same history. A reader puts the decoder's state away at
-     * that unit and back at the column's end, every pass (abi.md 4).
+     * A column whose loop is longer than a back reference reaches. The run
+     * before the loop and the loop are parsed apart, so nothing in the loop
+     * reaches before the loop's first unit and every pass reads the same
+     * history. The data set records that unit, and a reader puts the
+     * decoder's registers away there and back at the column's end, every
+     * pass, which ST4's decoders leave to the caller (abi.md 4).
      */
-    private St4Compressor.Result rewinding(int[] units, int unit, int limit,
+    private St4Compressor.Result replayed(int[] units, int unit, int limit,
             int loop) {
-        int[] before = Arrays.copyOfRange(units, 0, loop);
-        int[] over = Arrays.copyOfRange(units, loop, units.length);
+        int[] before = java.util.Arrays.copyOfRange(units, 0, loop);
+        int[] over = java.util.Arrays.copyOfRange(units, loop, units.length);
         return St4Compressor.compressRewinding(
                 before.length == 0 ? null : parse(before, unit, limit),
                 parse(over, unit, limit), units, unit, MAX_OP, loop, limit);

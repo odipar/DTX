@@ -33,7 +33,7 @@ plus one), modulo 251, so the first rows of the three column table are:
 | init | 350 | 278 | 6592 | 5140 | 5098 |
 | advance | 126 | 122 | 1264-1374 | 1220-1330 | 478-1234 |
 | jump to row 0 | 258 | 150 | 7510 | 6014 | 5986 |
-| jump to row 63 | 258 | 150 | 75856 | 73272 | 58078 |
+| jump to row 63 | 258 | 150 | 75946 | 73362 | 58168 |
 | code, bytes | 208 | 160 | 884 | 884 | 892 |
 
 ### Twenty columns
@@ -43,7 +43,7 @@ plus one), modulo 251, so the first rows of the three column table are:
 | init | 350 | 278 | 49278 | 35238 | 33798 |
 | advance | 126 | 122 | 1700 | 1438 | 1394 |
 | jump to row 0 | 258 | 150 | 50632 | 36330 | 34846 |
-| jump to row 63 | 258 | 150 | 89860 | 79002 | 76846 |
+| jump to row 63 | 258 | 150 | 90460 | 79602 | 77446 |
 | code, bytes | 208 | 160 | 884 | 884 | 892 |
 
 There are four calls (abi.md 2), and none of them moves a value: an advance
@@ -91,9 +91,9 @@ three column table at each unit.
 
 | k | without | with | more |
 |---|---|---|---|
-| 1 | 88948 | 89152 | 204 |
-| 2 | 84868 | 85024 | 156 |
-| 4 | 69646 | 69802 | 156 |
+| 1 | 89038 | 89242 | 204 |
+| 2 | 84958 | 85114 | 156 |
+| 4 | 69736 | 69892 | 156 |
 
 The two decoders differ at init, where the one with the copy code writes
 the ring's size into two of its own instructions, and not in a row.
