@@ -438,16 +438,16 @@ func TestAPackedStateBlockContainsADecoderStateAndARingAColumn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := Decoders(); got != 56 {
-		t.Fatalf("the decoder states stand at %d, not the 56 that 68k/DTX2.S"+
+	if got := Decoders(); got != 72 {
+		t.Fatalf("the decoder states stand at %d, not the 72 that 68k/DTX2.S"+
 			" puts them at", got)
 	}
-	if got := Ring(head); got != 56+32*2 {
-		t.Fatalf("the rings stand at %d, not behind two decoder states of 32"+
-			" bytes", got)
+	if got, err := Ring(head, given); err != nil || got != 72+48*2 {
+		t.Fatalf("the rings stand at %d, not behind two decoder states of 48"+
+			" bytes, one a turn (%v)", got, err)
 	}
-	if got := PackedStateBytes(head, given); got != 56+32*2+2*960 {
-		t.Fatalf("the block is %d bytes, not a ring a column", got)
+	if got, err := PackedStateBytes(head, given); err != nil || got != 72+48*2+2*960 {
+		t.Fatalf("the block is %d bytes, not a ring a column (%v)", got, err)
 	}
 }
 
@@ -467,9 +467,9 @@ func TestAReplayedPayloadTakesASecondDecoderStateAColumn(t *testing.T) {
 	if !given.Replayed {
 		t.Fatal("a payload whose sets record a loop was not replayed")
 	}
-	if got := PackedStateBytes(head, given); got != 56+32*2+2*960+32*2 {
-		t.Fatalf("the block is %d bytes, not a ring and two decoder states"+
-			" a column", got)
+	if got, err := PackedStateBytes(head, given); err != nil || got != 72+48*2+2*960+32*2 {
+		t.Fatalf("the block is %d bytes, not a ring, a decoder state and a"+
+			" copy of the registers a column (%v)", got, err)
 	}
 }
 

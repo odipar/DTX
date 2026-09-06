@@ -50,11 +50,17 @@ public final class Packager {
     /** What one stream record runs to, one a column under DTX2. */
     static final int STREAM = 16;
 
-    /** What one decoder state takes, and the copy of it a replay puts away. */
-    static final int STATE = 32;
+    /**
+     * What one decoder state takes: the eight registers, the ring's end,
+     * where the registers go at a loop, and the budget.
+     */
+    static final int STATE = 48;
+
+    /** What the copy of a decoder's registers takes, where a pass is replayed. */
+    static final int SAVED = 32;
 
     /** What a packed reader's state block contains before its decoder states. */
-    static final int PACKED_HEAD = 56;
+    static final int PACKED_HEAD = 72;
 
     /** The state block DTX0 and DTX1 take: the head, and one pointer. */
     static final int PLAIN = POINTER + 4;
@@ -161,13 +167,12 @@ public final class Packager {
 
     /**
      * The state block a packaged DTX2 reader takes, in bytes. A replayed
-     * payload takes a second decoder state a column behind the rings, where
-     * the reader puts the registers away at the row its loop begins
-     * (abi.md 4).
+     * payload takes a copy of the registers a column behind the rings, where
+     * the reader puts them at the row its loop begins (abi.md 4).
      */
     static int stateBytes(Dtx.Header header, Packed packed) {
-        return ring(header) + packed.ring() * header.columns()
-                + (packed.replayed() ? STATE * header.columns() : 0);
+        return ring(header, packed) + packed.ring() * header.columns()
+                + (packed.replayed() ? SAVED * header.columns() : 0);
     }
 
     /**
@@ -190,9 +195,9 @@ public final class Packager {
         return PACKED_HEAD;
     }
 
-    /** Where the rings stand in the state block. */
-    static int ring(Dtx.Header header) {
-        return decoders() + 32 * header.columns();
+    /** Where the rings stand in the state block: behind a decoder state a turn. */
+    static int ring(Dtx.Header header, Packed packed) {
+        return decoders() + STATE * period(header, packed);
     }
 
     /** log2 of {@code of}, where it is a power of two, or -1. */

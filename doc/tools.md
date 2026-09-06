@@ -247,8 +247,8 @@ where no period meets every rule abi.md 4 defines: what it gives names the
 rule and the figures that break it.
 
 A DTX2 image needs more of the caller than a plain one. Its state block
-contains a decoder state and a ring a column, so it runs to `NC` bytes and
-more; the tool prints the figure and the format block defines it.
+contains a decoder state a turn and a ring a column, so it runs to `NC`
+bytes and more; the tool prints the figure and the format block defines it.
 
 ## Release
 

@@ -28,6 +28,27 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
+### Not yet cut
+
+**A caller written against 0.4.0's state block has to take its size out
+of the format block, as abi.md 3 has always said.** Every file reads as
+before, and no tool's output changes but the state block's size.
+
+- DTX2's advance walks the decoder states rather than indexing them: a
+  refill reads its state's address out of the block, and the state gives
+  its ring's end, its budget and where its registers go at a loop. On 64
+  rows of three two byte columns an advance is 658 to 1002 cycles where
+  it was 1180 to 1358, and on twenty columns 1094 where it was 1616.
+- A replayed pass puts each column's registers away, and takes them back,
+  at that column's own refill, in the period after the loop's row and the
+  period after the pass's row. It copied every column's in one call, 170
+  cycles a column, on the row before each.
+- The state block is 72 plus 48`P` plus `NC` under DTX2, and 32`C` more
+  where a pass is replayed, where it was 56 plus 32`C` plus `NC` and 32`C`
+  more. The decoder state is 48 bytes, one a turn, and the word at +0 is
+  the turns left in the period rather than the turn.
+- DTX2's code is 1240 bytes where it was 1056.
+
 ### 0.4.0, 2026-09-06
 
 <https://github.com/odipar/DTX/releases/tag/v0.4.0>, built from the commit

@@ -106,10 +106,11 @@ stride of 16, and nothing else:
 | +12 | 4 | stream D |
 
 The ring and the decoder state a record used to give are strides as well:
-every ring is `N` bytes and every decoder state 32, so column `i`'s stand
-`i` strides past column 0's. One fill loop and one refill body reach every
-column: the fill counts the columns up and the refill indexes them by the
-turn, so the decoder ST4 contributes stands in the image once.
+every ring is `N` bytes and every decoder state 48, so column `i`'s stand
+`i` strides past column 0's. One seed loop and one refill body reach every
+column: the seed counts the columns up and the refill walks from one
+decoder state to the next, a turn each, so the decoder ST4 contributes
+stands in the image once.
 
 ---
 
@@ -145,8 +146,9 @@ other advance.
 forms the five pointers ST4_init takes, calls it, and then makes one
 `ST4_resume` of `P` rows into that column's ring, so every ring contains
 `P` rows before any row is read. It stores the decoder's eight longs in
-the column's decoder state, sets the turn to 0, and leaves the pointer a
-row below row 0 of column 0's ring.
+the column's decoder state, with the ring's end and the budget beside
+them, puts the first turn at column 0's state with a period of turns to
+come, and leaves the pointer a row below row 0 of column 0's ring.
 
 After that preload a read alternates between the streams and does not touch a
 decoder: from row 0 onward every value a read takes is already in a ring.
@@ -199,17 +201,18 @@ is a load, an add and a store, with no compare and no figure written.
 It adds the row's bytes to the pointer under DTX0, and the width to it
 under DTX1 and DTX2. A pointer that reaches the ring end goes back to the
 ring start; under DTX0 and DTX1 a ring is absent and nothing wraps.
-**Under DTX2 it then refills the column whose turn it is**, one column
-a row: column `j` on the row where the row number modulo `P` is `j`. A turn
-past `C` minus one does not have a column and does not refill, so a `P` above
-`C` is free for those rows.
+**Under DTX2 it refills the column whose turn it is** before the pointer
+moves, one column a row: column `j` on the row where the row number
+modulo `P` is `j`. A turn past `C` minus one does not have a column and
+does not refill, so a `P` above `C` is free for those rows.
 
 The refill is one `ST4_resume` into that column's ring. Its budget is `P`
 times the width divided by `k` units, which the width and `k` being
-assembly-time constants makes a shift. Every budget is that one: every data
-set of a payload loops (SPEC.md 2.3, R5.11), so no set ends, no refill is
-the last and none is shortened. Nothing here counts the rows a column has
-decoded against the rows it has.
+assembly-time constants makes a shift, and it stands in the column's
+decoder state. Where the data sets loop (SPEC.md 2.3, R5.11) every budget
+is that one. Where they end, the end of a period shortens the budget of
+the last period and clears the one after it, so no refill runs a decoder
+past its end marker.
 
 After the call the write pointer is compared with the column's ring end
 and taken back to the ring start where the two are equal. `N` divides by
@@ -280,7 +283,7 @@ reads it out of the image. The block stands on a long.
 
 | at | bytes | contains |
 |---|---|---|
-| +0 | 2 | the turn, 0 to `P` minus one. Zero under DTX0 and DTX1 |
+| +0 | 2 | the turns left in the period, `P` down to 1. Zero under DTX0 and DTX1 |
 | +2 | 2 | unused |
 | +4 | 4 | the caller's `a6`, parked for a DTX2 refill |
 | +8 | 4 | the pointer, under every variant |
@@ -297,27 +300,37 @@ that `a6` reaches:
 |---|---|---|
 | +12 | 4 | the payload's first byte |
 | +16 | 4 | where the stream records stand |
-| +20 | 2 | the column a fill or a refill stands at |
+| +20 | 2 | the column a seed stands at |
 | +22 | 2 | `C` |
 | +24 | 4 | where the rings begin, from the block's first byte |
 | +28 | 4 | `P` |
 | +32 | 4 | `N` |
-| +36 | 4 | the rows every column has produced, where a pass is replayed |
-| +40 | 4 | `RR`, the row a loop begins at |
-| +44 | 4 | `R`, the rows a column gives |
-| +48 | 4 | where the decoders' registers go, or 0 where none go anywhere |
+| +36 | 4 | the rows every column has produced |
+| +40 | 4 | what a period's budget counts those rows against: `R` where the sets end, `R` plus `P` where they loop |
+| +44 | 4 | `RR`, the row a loop begins at, or -1 where the sets end |
+| +48 | 4 | `R`, the row a pass ends at, or -1 where the sets end |
+| +52 | 4 | where the decoders' registers go at the loop's row, or 0 where none go anywhere |
+| +56 | 4 | the decoder state whose turn the next row is |
+| +60 | 4 | column 0's ring, the pointer's own |
+| +64 | 4 | one past its last byte |
+| +68 | 2 | what a marked state does before its refill: 0 puts its registers away, 1 takes them back |
+| +70 | 2 | unused |
 
-The four fields from +36 are a replayed pass's and no other's. Where a
-back reference reaches the loop's first unit, the set loops by its end
-marker, +48 reads zero and nothing is counted: the write pointer's wrap is
-a compare against the ring end, not a count. Where the pass is replayed,
-the rows every column has produced grow by `P` at each turn's wrap and are
-compared with `RR` and `R` there, once a period rather than once a row.
+The rows every column has produced grow at each period's end, by `P` or
+by what is left to `R`, and are compared there with the two rows: once a
+period rather than once a row. Where the sets end, the last period's
+budget is short and the one after it is 0. Where a back reference reaches
+the loop's first unit, the set loops by its end marker and +52 reads
+zero: the count comes round at `R` and no register goes anywhere. Where
+the pass is replayed, the period after the loop's row puts every column's
+registers away, each at its own refill, and the period after the pass's
+row takes them back the same way: the budgets of such a period stand
+negated, and the word at +68 says which of the two a refill does first.
 
-Then, under DTX2 only, at +52, one **decoder state** a column: the eight
-longs a column's decoder is saved in between refills, 32 bytes at a stride
-of 32, in `movem`'s own order, so that `movem.l (a3)+,d0-d2/a0-a2/a4-a5`
-loads one whole:
+Then, under DTX2 only, at +72, one **decoder state** a turn, 48 bytes at
+a stride of 48: the eight longs a column's decoder is saved in between
+refills, in `movem`'s own order, so that `movem.l (a3)+,d0-d2/a0-a2/a4-a5`
+loads them whole, and three fields the refill reads:
 
 | at in the decoder state | contains |
 |---|---|
@@ -329,6 +342,13 @@ loads one whole:
 | +20 | `a2`, the position in stream B |
 | +24 | `a4`, the position in stream C |
 | +28 | `a5`, the position in stream D |
+| +32 | one past the ring's last byte |
+| +36 | where the registers go at the loop's row |
+| +40 | the budget, a word: the refill's units, 0 on an idle turn, negated through a marked period |
+| +42 | unused, to +48 |
+
+A turn past `C` minus one has a state whose budget is 0, and nothing else
+in it is read.
 
 `d1` and `d2` are stored and put back as longs: ST4's ring decoders have
 the ring's bounds in their high words, so a decoder state of the low words
@@ -339,8 +359,10 @@ one size and one stride. Column `i`'s ring is the ring area plus `i` times
 `N`, and its value for the row the cursor stands on is the pointer plus the
 same, so one pointer reaches every column.
 
-Sizes: DTX0 and DTX1 20 bytes, at every width and every `C`. DTX2 52 plus
-32`C` plus `NC`: a decoder state and a ring a column.
+Sizes: DTX0 and DTX1 12 bytes, at every width and every `C`. DTX2 72 plus
+48`P` plus `NC`, a decoder state a turn and a ring a column, and 32`C`
+more where a pass is replayed: a copy of the registers a column, behind
+the rings.
 
 Only `a6` is parked, not `d6` and `d7` beside it: ST4 leaves all three
 alone, and no call here touches the other two.
@@ -394,12 +416,15 @@ rows a period with no refill. The packager takes the smallest `P` at least
 `C` that meets every rule above, and it fails the package where no such
 `P` stands below `R`.
 
-**The repeat.** An advance from row `R` minus one to an `RR` below it is a
-jump backward, so it seeds every ring again and runs forward from row 0: a
-table that repeats costs `RR` rows of decoding once a pass. ST4 can pack a
-data set to loop where the table does, with `st4 -r`, and YMX packs its
-streams that way so that a repeat costs one pointer reload; the packager does
-not yet, and under it a repeat is a jump.
+**The repeat.** A data set of a table that repeats loops at `RR` (R5.11),
+so the rows come round because the sets do, and the advance out of row `R`
+minus one is the advance into row `RR`. A loop longer than a back
+reference reaches is replayed instead: the set records the unit its loop
+begins at, the reader puts every column's registers but the write pointer
+away at the loop's row and takes them back at the pass's end, each column
+at its own refill, and the rows from `RR` to `R` minus one decode again
+each pass. Both rows fall on a period, so the packager asks of such a
+table that `RR` and `R` minus `RR` divide by `P`.
 
 ---
 
