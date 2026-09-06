@@ -32,65 +32,44 @@ class ConformanceTest {
             @Nullable Integer repeat, int unit, int ring, boolean copies,
             String exercises) {}
 
-    /** The rig's numbers table: row r, column i is r(i+1) modulo 251. */
-    private static String numbers(int rows, int columns) {
-        StringBuilder out = new StringBuilder();
-        for (int r = 0; r < rows; r++) {
-            for (int i = 0; i < columns; i++) {
-                out.append(i == 0 ? "" : ",").append(r * (i + 1) % 251);
-            }
-            out.append('\n');
-        }
-        return out.toString();
-    }
-
-    /** A table repeating a pattern 37 rows long, 512 rows. */
-    private static String repeating() {
-        StringBuilder out = new StringBuilder();
-        for (int r = 0; r < 512; r++) {
-            out.append(r % 37).append(',').append(r % 37 * 7).append('\n');
-        }
-        return out.toString();
-    }
-
     private static final List<Source> KIT = List.of(
-            new Source("dtx0-w1", numbers(8, 3), 0, 1, null, 1, 960, false,
+            new Source("dtx0-w1", Rig.numbers(8, 3, 251), 0, 1, null, 1, 960, false,
                     "DTX0 at a width of 1: an odd row, so a row begins on an odd offset"),
-            new Source("dtx0-w2", numbers(8, 3), 0, 2, null, 1, 960, false,
+            new Source("dtx0-w2", Rig.numbers(8, 3, 251), 0, 2, null, 1, 960, false,
                     "DTX0 at a width of 2"),
-            new Source("dtx0-w4", numbers(6, 3), 0, 4, null, 1, 960, false,
+            new Source("dtx0-w4", Rig.numbers(6, 3, 251), 0, 4, null, 1, 960, false,
                     "DTX0 at a width of 4"),
-            new Source("dtx0-one-column", numbers(5, 1), 0, 1, null, 1, 960, false,
+            new Source("dtx0-one-column", Rig.numbers(5, 1, 251), 0, 1, null, 1, 960, false,
                     "DTX0: one column, one byte, five rows"),
-            new Source("dtx0-repeat", numbers(8, 2), 0, 1, 3, 1, 960, false,
+            new Source("dtx0-repeat", Rig.numbers(8, 2, 251), 0, 1, 3, 1, 960, false,
                     "DTX0: a table that repeats at row 3"),
-            new Source("dtx1-w1-odd-rows", numbers(7, 3), 1, 1, null, 1, 960, false,
+            new Source("dtx1-w1-odd-rows", Rig.numbers(7, 3, 251), 1, 1, null, 1, 960, false,
                     "DTX1 at a width of 1 and an odd R, so a pad byte stands between columns"),
-            new Source("dtx1-w2", numbers(8, 3), 1, 2, null, 1, 960, false,
+            new Source("dtx1-w2", Rig.numbers(8, 3, 251), 1, 2, null, 1, 960, false,
                     "DTX1 at a width of 2, where a column is a whole number of words"),
-            new Source("dtx1-w4", numbers(6, 3), 1, 4, null, 1, 960, false,
+            new Source("dtx1-w4", Rig.numbers(6, 3, 251), 1, 4, null, 1, 960, false,
                     "DTX1 at a width of 4"),
-            new Source("dtx1-one-row", numbers(1, 2), 1, 4, null, 1, 960, false,
+            new Source("dtx1-one-row", Rig.numbers(1, 2, 251), 1, 4, null, 1, 960, false,
                     "DTX1: one row, R of 1"),
-            new Source("dtx1-repeat-at-0", numbers(4, 2), 1, 2, 0, 1, 960, false,
+            new Source("dtx1-repeat-at-0", Rig.numbers(4, 2, 251), 1, 2, 0, 1, 960, false,
                     "DTX1: RR of 0, the table repeats from its first row"),
-            new Source("dtx2-w1-k1", numbers(64, 3), 2, 1, null, 1, 960, false,
+            new Source("dtx2-w1-k1", Rig.numbers(64, 3, 251), 2, 1, null, 1, 960, false,
                     "DTX2 at a width of 1 and k of 1: N of 960, P of 3"),
-            new Source("dtx2-w2-k2", numbers(64, 2), 2, 2, null, 2, 960, false,
+            new Source("dtx2-w2-k2", Rig.numbers(64, 2, 251), 2, 2, null, 2, 960, false,
                     "DTX2 at a width of 2 and k of 2, a unit a value"),
-            new Source("dtx2-w4-k4", numbers(64, 2), 2, 4, null, 4, 960, false,
+            new Source("dtx2-w4-k4", Rig.numbers(64, 2, 251), 2, 4, null, 4, 960, false,
                     "DTX2 at a width of 4 and k of 4"),
-            new Source("dtx2-w4-k1", numbers(64, 2), 2, 4, null, 1, 960, false,
+            new Source("dtx2-w4-k1", Rig.numbers(64, 2, 251), 2, 4, null, 1, 960, false,
                     "DTX2 at a width of 4 and k of 1, a unit below the width"),
-            new Source("dtx2-w1-k4", numbers(64, 2), 2, 1, null, 4, 960, false,
+            new Source("dtx2-w1-k4", Rig.numbers(64, 2, 251), 2, 1, null, 4, 960, false,
                     "DTX2 at a width of 1 and k of 4, a unit above the width"),
-            new Source("dtx2-repeat", numbers(64, 2), 2, 1, 16, 1, 960, false,
+            new Source("dtx2-repeat", Rig.numbers(64, 2, 251), 2, 1, 16, 1, 960, false,
                     "DTX2: a table that repeats at row 16, a jump backward on a packed reader"),
-            new Source("dtx2-rows-not-a-multiple-of-p", numbers(50, 3), 2, 1, null, 1, 960, false,
+            new Source("dtx2-rows-not-a-multiple-of-p", Rig.numbers(50, 3, 251), 2, 1, null, 1, 960, false,
                     "DTX2: R of 50 at P of 3, so the last refill of a column is short"),
-            new Source("dtx2-twenty-columns", numbers(64, 20), 2, 2, null, 1, 960, false,
+            new Source("dtx2-twenty-columns", Rig.numbers(64, 20, 251), 2, 2, null, 1, 960, false,
                     "DTX2: C of 20, so P is 20 and a read walks twenty rings"),
-            new Source("dtx2-copies", repeating(), 2, 2, null, 1, 64, true,
+            new Source("dtx2-copies", Rig.repeating(), 2, 2, null, 1, 64, true,
                     "DTX2 with copies from the literal stream, at a ring of 64 the pattern does not fit"));
 
     private static Path kit() {
@@ -139,7 +118,7 @@ class ConformanceTest {
                 + (source.repeat() == null ? "" : " -r" + source.repeat())
                 + (source.variant() == Dtx.DTX2 ? " -k" + source.unit() + " -m" + source.ring() : "")
                 + (source.copies() ? " -copies" : "");
-        String text = source.text().equals(repeating()) ? "repeating"
+        String text = source.text().equals(Rig.repeating()) ? "repeating"
                 : "numbers " + source.text().split("\n").length + " "
                         + source.text().split("\n")[0].split(",").length;
         return "| `" + source.name() + "` | " + text + " | `" + options + "` | "

@@ -1,3 +1,4 @@
 #!/bin/sh
-# A DTX0 or DTX1 file into a standalone 68000 image. doc/tools.md, Packager.
+# A DTX file of any variant into a standalone 68000 image. doc/tools.md,
+# Package.
 exec "$(dirname -- "$0")/dtx-run" org.dtx.Packager "$@"

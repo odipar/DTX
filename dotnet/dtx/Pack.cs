@@ -85,10 +85,10 @@ public static class Pack
     }
 
     /// <summary>Where the decoder states stand in the state block, doc/abi.md 3.</summary>
-    public static int Decoders(Header header) => PackedHead;
+    public static int Decoders() => PackedHead;
 
     /// <summary>Where the rings stand in the state block.</summary>
-    public static int Ring(Header header) => Decoders(header) + 32 * header.Columns;
+    public static int Ring(Header header) => Decoders() + 32 * header.Columns;
 
     /// <summary>
     /// The state block a plain reader of this table takes, in bytes.
@@ -204,7 +204,7 @@ public static class Pack
                 || code[FormatAt + 2] != 'X')
         {
             throw new InvalidOperationException(
-                    "the code opens with no format block");
+                    "the code does not contain a format block at +16");
         }
         if (code[FormatAt + 3] != header.Variant)
         {
@@ -309,7 +309,7 @@ public static class Pack
         }
         StringBuilder out_ = new();
         out_.Append("; What org.dtx.Packager writes of one table, for"
-                        + " 68k/DTX.S to read.\n")
+                        + $" 68k/DTX{variant}.S to read.\n")
                 .Append($"; DTX{variant}, R = {header.Rows}, C ="
                         + $" {header.Columns}, W = {header.Width}, RR ="
                         + $" {header.Repeat}\n")
@@ -321,15 +321,23 @@ public static class Pack
                 .Append(Equ("DTX_DECODED", Decoded))
                 .Append(Equ("DTX_PARK", Park))
                 .Append(Equ("DTX_POINTER", Pointer))
-                .Append('\n')
-                .Append(Equ("DTX_WIDTH", header.Width))
+                .Append("\n; What the code takes at assembly time.\n")
+                .Append(Equ("DTX_WIDTH", header.Width));
+        if (variant == Format.Dtx2)
+        {
+            out_.Append(Equ("ST4_UNIT", given.Unit));
+        }
+        out_.Append("\n; The rest of what the table gives. A combine writes"
+                        + " these into the format\n; block and the code reads"
+                        + " them from there (doc/abi.md 1), so they stand\n;"
+                        + " here for a caller reading the figures rather than"
+                        + " for the assembler.\n")
                 .Append(Equ("DTX_ROWBYTES", header.RowBytes))
                 .Append(Equ("DTX_STATE", state));
         if (variant == Format.Dtx2)
         {
             out_.Append(Equ("DTX_PERIOD", period))
-                    .Append(Equ("DTX_N", given.Ring))
-                    .Append(Equ("ST4_UNIT", given.Unit));
+                    .Append(Equ("DTX_N", given.Ring));
             // The payload defines whether its columns contain copies (R5.10), so
             // the decoder built for them is fixed by the file. That build
             // writes the reach into two of its own instructions, and a 68030
@@ -379,8 +387,11 @@ public static class Pack
             }
             using Process run = Process.Start(start)
                     ?? throw new InvalidOperationException($"{rmac} did not start");
-            string given = run.StandardOutput.ReadToEnd()
-                    + run.StandardError.ReadToEnd();
+            // Both pipes are read at once: a child that fills the one the
+            // parent is not reading blocks on it, and the parent blocks on
+            // the other.
+            Task<string> error = run.StandardError.ReadToEndAsync();
+            string given = run.StandardOutput.ReadToEnd() + error.Result;
             run.WaitForExit();
             if (run.ExitCode != 0 || !File.Exists(out_))
             {
@@ -399,9 +410,9 @@ public static class Pack
     ///
     /// <para>Built code does not define a table. The assembler read one to
     /// build it, and what it read stands in the format block: zeroing those
-    /// six is what makes the file a function of the template alone, and what
-    /// makes code shipped without a combine read a state block of zero bytes
-    /// rather than some other table's.</para>
+    /// six makes the file a function of the template alone, and makes code
+    /// shipped without a combine read a state block of zero bytes rather
+    /// than some other table's.</para>
     /// </summary>
     public static void Blank(byte[] code)
     {

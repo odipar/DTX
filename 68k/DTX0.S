@@ -9,21 +9,19 @@
 ; template a variant: this file reads only DTX0, so no call in it tests which
 ; variant it contains.
 ;
-; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR and the row's bytes reach it
-; at run time rather than at assembly time: DTX_init reads them out of the
-; format block and the table's own header and writes them into the
-; instructions that take them. Every DTX0 image contains the same instructions,
-; byte for byte; the table behind them differs.
+; THE CODE DOES NOT MOVE WITH THE TABLE. R, RR and the row's bytes reach it at
+; run time rather than at assembly time: DTX_init reads them out of the format
+; block and the table's own header and writes them into the instructions that
+; take them. Every DTX0 image contains the same instructions, byte for byte;
+; the table behind them differs.
 ;
-; What that costs is a read-only image. The code writes to itself at init, so
-; it stands in RAM rather than ROM, and a 68030 caller flushes the instruction
+; That costs a read-only image. The code writes to itself at init, so it
+; stands in RAM rather than ROM, and a 68030 caller flushes the instruction
 ; cache after DTX_init. A 68000 writes to its own code freely.
 ;
 ; DTX0 lays the rows one after another, so one pointer walks them and a read is
-; one run of bytes. The move that run takes is installed as well: a long where
-; the row's bytes divide by four, a word where they are even, a byte where
-; they are odd. The width every value takes does not reach this file: a row is
-; a run either way, so one build reads a DTX0 table of any width.
+; one run of bytes. The width every value takes does not reach this file: a row
+; is a run either way, so one build reads a DTX0 table of any width.
 ;
 ; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here contains them: _columns is the
 ; last label and the code ends on a long, so the packager appends the .dtx
@@ -42,24 +40,14 @@
         include "DTX_table.i"
 
 ; -----------------------------------------------------------------------------
-; The image, doc/abi.md 1: six slots, the format block, then the bodies.
+; The image, doc/abi.md 1: four slots, the format block, then the bodies.
 
         include "DTX_image.S"
-        DTX_IMAGE 0,1,0,0,0
+        DTX_IMAGE 0,0,0
 
 ; -----------------------------------------------------------------------------
-; What a value is installed with. A 68000 reaches PC relative for a source
-; and never for a destination, so a site is lea'd into a4 and written
-; through it. The assembler works out where each site stands: nothing here
-; counts an offset, and every reach into the image is PC relative.
-;
-; The operand of an instruction whose opcode is one word stands at +2 of it,
-; and the L and W forms add that.
-
-        .macro  DTX_INSTALL_L   value,site
-        lea     \site+2(pc),a4
-        move.l  \value,(a4)
-        .endm
+; The word form of DTX_image.S's DTX_INSTALL_L, which that file's comment
+; lays out. The row's bytes take a word, and only this file installs one.
 
         .macro  DTX_INSTALL_W   value,site
         lea     \site+2(pc),a4
@@ -76,7 +64,7 @@ DTX_init:
         clr.w   DTX_TURN(a0)
         clr.l   DTX_DECODED(a0)
 
-        bsr     DTX_payload             ; a1 the payload, a2 the header
+        bsr.s   DTX_payload             ; a1 the payload, a2 the header
         lea     _fmt(pc),a3
         moveq   #0,d2
         move.w  12(a3),d2               ; the row's bytes
@@ -100,18 +88,6 @@ DTX_init:
         move.l  a1,DTX_POINTER(a0)
         rts
 
-; The payload's first byte in a1 and the header in a2. Where the table stands
-; is read out of the format block; the header is 16 bytes under every variant
-; and every C (SPEC.md 1), so the payload is 16 past it.
-DTX_payload:
-        lea     _fmt(pc),a2
-        movea.l a2,a1
-        suba.w  #_fmt-_base,a1
-        adda.l  8(a2),a1                ; where the table's header stands
-        movea.l a1,a2
-        adda.w  #16,a1                  ; the payload
-        rts
-
 ; -----------------------------------------------------------------------------
 ; DTX_jump. The pointer is the payload plus the row times the row's bytes: two
 ; mulu.w make that 32 by 16 product at any row's bytes.
@@ -125,13 +101,11 @@ jump_high:
         swap    d1
         clr.w   d1
         move.l  d0,d3
-        andi.l  #$FFFF,d3
 jump_low:
         mulu.w  #0,d3                   ; installed: the row's bytes
         add.l   d3,d1
-        move.l  d1,d5
-        bsr     DTX_payload
-        adda.l  d5,a1
+        bsr.s   DTX_payload
+        adda.l  d1,a1
         move.l  a1,DTX_POINTER(a0)
         rts
 
@@ -150,7 +124,7 @@ advance_repeat:
         move.l  #0,d0                   ; installed: RR
 advance_end:
         cmpi.l  #0,d0                   ; installed: R
-        bcs.w   DTX_jump                ; RR below R: the repeat is a jump
+        bcs.s   DTX_jump                ; RR below R: the repeat is a jump
         moveq   #-1,d0                  ; the end, and it is sticky
         movea.l DTX_POINTER(a0),a1      ; the last row stands where it stood
         rts

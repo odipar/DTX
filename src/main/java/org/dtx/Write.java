@@ -20,7 +20,15 @@ public final class Write {
     private Write() {
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
+        try {
+            run(args);
+        } catch (IOException | RuntimeException failed) {
+            Help.stopped(failed);
+        }
+    }
+
+    static void run(String[] args) throws IOException {
         if (Help.among(args)) {
             System.out.print(Help.WRITE);
             return;
@@ -40,15 +48,15 @@ public final class Write {
         for (int i = 2; i < args.length; i++) {
             String arg = args[i];
             if (arg.startsWith("-v")) {
-                variant = Integer.parseInt(arg.substring(2));
+                variant = number(arg);
             } else if (arg.startsWith("-w")) {
-                width = arg.substring(2);
+                width = arg;
             } else if (arg.startsWith("-r")) {
-                repeat = Integer.parseInt(arg.substring(2));
+                repeat = number(arg);
             } else if (arg.startsWith("-k")) {
-                unit = Integer.parseInt(arg.substring(2));
+                unit = number(arg);
             } else if (arg.startsWith("-m")) {
-                ring = Integer.parseInt(arg.substring(2));
+                ring = number(arg);
             } else if (arg.startsWith("-copies")) {
                 // the packer's own: a match beyond the ring copies from the
                 // literal stream, and -copiesS searches S seconds for a
@@ -57,8 +65,7 @@ public final class Write {
             } else if (arg.startsWith("-p")) {
                 packer = arg.substring(2);
             } else {
-                System.err.println("dtx-write does not read " + arg);
-                System.exit(2);
+                notRead(arg);
                 return;
             }
         }
@@ -73,7 +80,7 @@ public final class Write {
         Table table;
         if (isDtx(in)) {
             if (!width.isEmpty()) {
-                System.err.println("-w" + width + " gives text its width,"
+                System.err.println(width + " gives text its width,"
                         + " and " + args[0] + " is a DTX file with its own");
                 System.exit(2);
                 return;
@@ -87,11 +94,9 @@ public final class Write {
             }
         } else {
             String text = new String(in, StandardCharsets.UTF_8);
-            int given = width.isEmpty() ? Csv.width(text)
-                    : Integer.parseInt(width.strip());
-            int at = repeat < 0 ? Csv.repeat(text) : repeat;
-            table = at < 0 ? Csv.table(text, given)
-                    : Csv.table(text, given, at);
+            int given = width.isEmpty() ? Csv.width(text) : number(width);
+            table = repeat < 0 ? Csv.table(text, given)
+                    : Csv.table(text, given, repeat);
             if (variant < 0) {
                 variant = Dtx.DTX0;
             }
@@ -154,7 +159,31 @@ public final class Write {
 
     /** The seconds {@code -copiesS} searches for, or zero. */
     private static double seconds(String copies) {
-        return copies.length() > 2 ? Double.parseDouble(copies.substring(2)) : 0;
+        try {
+            return copies.length() > 2
+                    ? Double.parseDouble(copies.substring(2)) : 0;
+        } catch (NumberFormatException notANumber) {
+            notRead("-copies" + copies.substring(2));
+            return 0;
+        }
     }
 
+    /**
+     * The whole number an argument gives behind its two letter flag, or the
+     * tool's line and exit 2 where what stands there is not one.
+     */
+    private static int number(String arg) {
+        try {
+            return Integer.parseInt(arg.substring(2).strip());
+        } catch (NumberFormatException notANumber) {
+            notRead(arg);
+            return -1;
+        }
+    }
+
+    /** The tool's line for an argument it does not read, and exit 2. */
+    private static void notRead(String arg) {
+        System.err.println("dtx-write does not read " + arg);
+        System.exit(2);
+    }
 }

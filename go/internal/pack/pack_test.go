@@ -45,23 +45,23 @@ func packedCopies(rows, columns, width, unit, ring int, copies bool) []byte {
 	dtx.PutWord(payload, 0, ring)
 	payload[2] = byte(unit)
 	if copies {
-		payload[3] = Copies
+		payload[3] = dtx.CopiesFlag
 	}
 	bytes := rows * width
 	for i := 0; i < columns; i++ {
-		set := len(payload)
-		dtx.PutLong(payload, 4+4*i, set)
-		container := make([]byte, 28+bytes)
-		container[0], container[1], container[2] = 'S', '4', 7
-		container[3] = byte(unit)
-		dtx.PutLong(container, 4, bytes/unit)
+		at := len(payload)
+		dtx.PutLong(payload, 4+4*i, at)
+		set := make([]byte, 28+bytes)
+		set[0], set[1], set[2] = 'S', '4', 7
+		set[3] = byte(unit)
+		dtx.PutLong(set, 4, bytes/unit)
 		// Three offsets apart, so a record that carried B where C stands
 		// fails rather than passing on equal values.
-		dtx.PutLong(container, 8, 28+bytes/4)
-		dtx.PutLong(container, 12, 28+bytes/2)
-		dtx.PutLong(container, 16, 28+bytes)
-		dtx.PutLong(container, 24, ring/unit)
-		payload = append(payload, container...)
+		dtx.PutLong(set, 8, 28+bytes/4)
+		dtx.PutLong(set, 12, 28+bytes/2)
+		dtx.PutLong(set, 16, 28+bytes)
+		dtx.PutLong(set, 24, ring/unit)
+		payload = append(payload, set...)
 	}
 	return append(head, payload...)
 }
@@ -170,52 +170,85 @@ func TestTheStrideReachesTheNextColumnsValue(t *testing.T) {
 	}
 }
 
-// Blank zeroes the six fields a combine writes, so carried code reads zero
-// for each.
+// The six fields a combine writes, as Blank and the tests below read them.
+var fields = []struct {
+	name string
+	at   int
+	long bool
+}{
+	{"the state block's bytes", StateAt, true},
+	{"the table", TableAt, true},
+	{"the row's bytes", RowBytesAt, false},
+	{"P", PeriodAt, false},
+	{"N", RingAt, false},
+	{"the stride", StrideAt, true},
+}
+
+// field gives what one of the six reads in code.
+func field(code []byte, at int, long bool) int {
+	if long {
+		return dtx.GetLong(code, FormatAt+at)
+	}
+	return dtx.GetWord(code, FormatAt+at)
+}
+
+// Blank zeroes the six fields a combine writes. A package writes all six, so
+// blanking one of those is the run where a field left out would show.
 func TestBlankZeroesEveryFieldACombineWrites(t *testing.T) {
 	needsImages(t)
-	carried := image.Read(dtx.DTX2, 2, 1, false)
-	if carried == nil {
+	code, err := Image(packed(64, 2, 2, 1, 960))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, one := range fields {
+		if field(code, one.at, one.long) == 0 {
+			t.Fatalf("%s is zero before the blank, so a blank that left it"+
+				" alone would pass", one.name)
+		}
+	}
+	Blank(code)
+	for _, one := range fields {
+		if got := field(code, one.at, one.long); got != 0 {
+			t.Fatalf("%s is %d, not zero", one.name, got)
+		}
+	}
+}
+
+// The carried code was blanked where it was built, so the six read zero in
+// the file itself: code shipped without a combine reads a state block of
+// zero bytes rather than some other table's.
+func TestTheCarriedCodeReadsZeroForEveryFieldACombineWrites(t *testing.T) {
+	needsImages(t)
+	code := image.Read(dtx.DTX2, 2, 1, false)
+	if code == nil {
 		t.Skip("this build does not contain DTX2-w2-k1.bin")
 	}
-	code := append([]byte(nil), carried...)
-	Blank(code)
-	for _, at := range []struct {
-		name string
-		at   int
-		long bool
-	}{
-		{"the state block's bytes", StateAt, true},
-		{"the table", TableAt, true},
-		{"the row's bytes", RowBytesAt, false},
-		{"P", PeriodAt, false},
-		{"N", RingAt, false},
-		{"the stride", StrideAt, true},
-	} {
-		got := dtx.GetWord(code, FormatAt+at.at)
-		if at.long {
-			got = dtx.GetLong(code, FormatAt+at.at)
-		}
-		if got != 0 {
-			t.Fatalf("%s is %d, not zero", at.name, got)
+	for _, one := range fields {
+		if got := field(code, one.at, one.long); got != 0 {
+			t.Fatalf("%s is %d, not zero", one.name, got)
 		}
 	}
 }
 
 // The state block is the head and one pointer at every width and every C,
 // under DTX0 and DTX1 alike: one width covers the whole table, so one pointer
-// walks every column of it.
+// walks every column of it. The figure is read back out of the image, where
+// a caller reads it.
 func TestTheStateBlockIsTheSameAtEveryWidth(t *testing.T) {
+	if got := StateBytes(); got != 20 {
+		t.Fatalf("the head and one pointer are %d bytes, not 20", got)
+	}
+	needsImages(t)
 	for _, width := range []int{1, 2, 4} {
 		for _, variant := range []int{dtx.DTX0, dtx.DTX1} {
 			for _, columns := range []int{1, 3} {
-				head, err := dtx.ReadHeader(plain(variant, 2, columns, width))
+				out, err := Image(plain(variant, 2, columns, width))
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got := StateBytes(head); got != 20 {
+				if got := dtx.GetLong(out, FormatAt+StateAt); got != 20 {
 					t.Fatalf("DTX%d of %d columns at a width of %d takes %d"+
-						" bytes, not 28", variant, columns, width, got)
+						" bytes, not 20", variant, columns, width, got)
 				}
 			}
 		}
@@ -224,7 +257,8 @@ func TestTheStateBlockIsTheSameAtEveryWidth(t *testing.T) {
 
 // The figures define what the image cannot read back: R, C and RR reach the
 // code out of the table's own header, and what is left is the width, the
-// row's bytes and the state block.
+// row's bytes and the state block, and under DTX2 the period, N, the unit
+// and the copy code.
 func TestTheFiguresDefineOnlyWhatTheImageCannotReadBack(t *testing.T) {
 	for _, width := range []int{1, 2, 4} {
 		for _, file := range [][]byte{
@@ -396,7 +430,7 @@ func TestAPackedStateBlockContainsADecoderStateAndARingAColumn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := Decoders(head); got != 52 {
+	if got := Decoders(); got != 52 {
 		t.Fatalf("the decoder states stand at %d, not the 52 that 68k/DTX2.S"+
 			" puts them at", got)
 	}
@@ -445,8 +479,8 @@ func TestAWidthTheCodeDoesNotReadIsRefused(t *testing.T) {
 	}
 }
 
-// The payload defines whether its columns contain copies, so the image a
-// table takes is the file's to fix and no word from a caller enters it.
+// The payload defines whether its columns contain copies, so the file fixes
+// the image a table takes and no word from a caller enters it.
 func TestThePayloadDefinesWhetherItsColumnsContainCopies(t *testing.T) {
 	needsImages(t)
 	plain, err := Image(packed(64, 2, 2, 1, 960))

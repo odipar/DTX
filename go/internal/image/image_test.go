@@ -55,6 +55,26 @@ func TestContainsEveryImageOrNone(t *testing.T) {
 	}
 }
 
+// No two of the twenty-two are one bytes. A build is a variant, a width and
+// a decoder, and each of the three moves the code: two builds that assembled
+// to the same bytes would be one build named twice.
+func TestNoTwoImagesAreTheSameBytes(t *testing.T) {
+	if Embedded() == 0 {
+		t.Skip("this build does not contain images: run mvn process-classes")
+	}
+	builds := Builds()
+	for i, one := range builds {
+		first := Read(one.Variant, one.Width, one.Unit, one.Copies)
+		for _, other := range builds[i+1:] {
+			second := Read(other.Variant, other.Width, other.Unit, other.Copies)
+			if string(first) == string(second) {
+				t.Fatalf("%s and %s are the same %d bytes",
+					one.Name(), other.Name(), len(first))
+			}
+		}
+	}
+}
+
 // What the executable contains and what a release attaches are the same
 // bytes: the Maven build writes both, and a release that shipped others
 // would be two readers of one table.

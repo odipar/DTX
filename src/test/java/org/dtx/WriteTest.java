@@ -1,11 +1,14 @@
 package org.dtx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -62,6 +65,31 @@ final class WriteTest {
                     Dtx.read(Files.readAllBytes(back)),
                     "through text and back, with the width and repeat the"
                             + " comment gives");
+        }
+    }
+
+    @Test
+    void aFlagWithNoNumberBehindItGivesTheToolsLine(@TempDir Path work)
+            throws IOException {
+        // Every number a flag gives is read in one place, so a flag with
+        // nothing behind it, or with letters, gives the tool's line and
+        // exit 2 rather than a stack trace. The tool is run as a caller runs
+        // it, since it exits the JVM it stands in.
+        Path text = work.resolve("t.csv");
+        Files.writeString(text, Rig.numbers(4, 2));
+        Path out = work.resolve("t.dtx");
+        for (String[] flags : new String[][] {{"-v"}, {"-r"}, {"-k"}, {"-m"},
+                {"-wx"}, {"-v2", "-copiesx"}}) {
+            List<String> argv = new ArrayList<>(List.of("java", "-cp",
+                    Rig.root().resolve("target/classes").toString(),
+                    "org.dtx.Write", text.toString(), out.toString()));
+            argv.addAll(List.of(flags));
+            String said = assertThrows(IllegalStateException.class,
+                    () -> Rig.run(argv)).getMessage();
+            String last = flags[flags.length - 1];
+            assertTrue(said != null && said.contains(
+                            "dtx-write does not read " + last),
+                    "dtx-write " + last + " gave " + said);
         }
     }
 

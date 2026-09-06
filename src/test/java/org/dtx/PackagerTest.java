@@ -4,8 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -54,9 +57,9 @@ final class PackagerTest {
 
     @Test
     void theFiguresDoNotContainAnInstruction() {
-        // 68k/DTX.S is where every instruction stands. What the packager
-        // writes is equates and macro invocations, and a move or a bra in
-        // it would be an instruction the template does not contain.
+        // The templates under 68k/ are where every instruction stands. What
+        // the packager writes is equates, and a move or a bra in it would be
+        // an instruction the template does not contain.
         for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
             for (String line : Packager.table(table(variant, 2)).split("\n")) {
                 String read = line.trim();
@@ -71,16 +74,20 @@ final class PackagerTest {
     void theStateBlockIsTheSameAtEveryWidth() {
         // One width covers the whole table, so one pointer walks every column
         // of it: the block is the head and that pointer at each of the three
-        // widths, at any C, and under DTX0 and DTX1 alike.
+        // widths, at any C, and under DTX0 and DTX1 alike. The figure is read
+        // back out of the image, where a caller reads it.
+        assertEquals(20, Packager.stateBytes(), "the head and one pointer");
         for (int width : new int[] {1, 2, 4}) {
             Table one = Csv.table("1\n2\n", width);
             Table three = Csv.table("1,2,3\n4,5,6\n", width);
-            assertEquals(20, Packager.stateBytes(Dtx.header(Dtx0.write(three))),
-                    "DTX0 of three columns at a width of " + width);
-            assertEquals(20, Packager.stateBytes(Dtx.header(Dtx1.write(one))),
-                    "DTX1 of one column at a width of " + width);
-            assertEquals(20, Packager.stateBytes(Dtx.header(Dtx1.write(three))),
-                    "DTX1 of three columns at a width of " + width);
+            for (byte[] file : new byte[][] {Dtx0.write(three),
+                    Dtx1.write(one), Dtx1.write(three)}) {
+                Dtx.Header header = Dtx.header(file);
+                assertEquals(20, Dtx.getLong(Packager.image(file),
+                                Packager.FORMAT_AT + Packager.STATE_BYTES),
+                        "DTX" + header.variant() + " of " + header.columns()
+                                + " columns at a width of " + width);
+            }
         }
     }
 
@@ -222,19 +229,33 @@ final class PackagerTest {
     }
 
     @Test
-    void aPackedStateBlockContainsADecoderStateAndARingAColumn() {
+    void aPackedStateBlockContainsADecoderStateAndARingAColumn()
+            throws IOException {
         byte[] file = packed(64, 2, 2, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
-        assertEquals(52, Packager.decoders(header),
+        assertEquals(52, Packager.decoders(),
                 "the decoder states follow the pointer, the payload, the"
                         + " records, the fill, C, the rings and the four"
-                        + " figures, where 68k/DTX2.S puts them:"
-                        + " DTX_DECODERS equ 52");
+                        + " figures");
+        // The template reads its own copy of the figure, so the two are
+        // compared rather than each pinned to 52 on its own.
+        assertEquals(templateDecoders(), Packager.decoders(),
+                "68k/DTX2.S equates DTX_DECODERS to another offset");
         assertEquals(52 + 32 * 2, Packager.ring(header),
                 "the rings follow two decoder states of 32 bytes");
         assertEquals(52 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
                 "a ring a column");
+    }
+
+    /** {@code DTX_DECODERS} as 68k/DTX2.S equates it. */
+    private static int templateDecoders() throws IOException {
+        Matcher equ = Pattern.compile("^DTX_DECODERS\\s+equ\\s+(\\d+)",
+                        Pattern.MULTILINE)
+                .matcher(Files.readString(
+                        Rig.root().resolve("68k/DTX2.S")));
+        assertTrue(equ.find(), "68k/DTX2.S does not equate DTX_DECODERS");
+        return Integer.parseInt(equ.group(1));
     }
 
     @Test
@@ -295,10 +316,9 @@ final class PackagerTest {
     @Test
     void rmacMakesAnImageThatOpensWithTheSlotsAndTheFormatBlock()
             throws Exception {
-        String named = System.getenv("RMAC");
-        Path rmac = Path.of(named == null ? "rmac" : named);
-        Assumptions.assumeTrue(named != null || onThePath(rmac),
-                "no rmac at " + rmac);
+        String at = Rig.rmac();
+        Assumptions.assumeTrue(Rig.onThePath(at), "no rmac at " + at);
+        Path rmac = Path.of(at);
         byte[] image = Packager.image(table(Dtx.DTX0, 2), rmac);
         assertEquals(0x60, image[0] & 0xFF, "the first slot is a bra.w");
         assertEquals("DTX", new String(image, 16, 3),
@@ -324,18 +344,5 @@ final class PackagerTest {
                 "DTX0 strides by the width");
         assertEquals(Dtx1.stride(4, 4), Dtx.getLong(one, 16 + Packager.STRIDE_AT),
                 "DTX1 strides by a column's length");
-    }
-
-    private static boolean onThePath(Path rmac) {
-        String path = System.getenv("PATH");
-        if (path == null) {
-            return false;
-        }
-        for (String at : path.split(":")) {
-            if (Files.isExecutable(Path.of(at).resolve(rmac.toString()))) {
-                return true;
-            }
-        }
-        return false;
     }
 }

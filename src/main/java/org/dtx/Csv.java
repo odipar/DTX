@@ -100,10 +100,14 @@ public final class Csv {
         }
         out.append('\n');
         int width = table.width();
+        byte[][] column = new byte[table.columns()][];
+        for (int i = 0; i < table.columns(); i++) {
+            column[i] = table.column(i);
+        }
         for (int r = 0; r < table.rows(); r++) {
             for (int i = 0; i < table.columns(); i++) {
                 out.append(i == 0 ? "" : ",")
-                        .append(get(table.column(i), r * width, width));
+                        .append(get(column[i], r * width, width));
             }
             out.append('\n');
         }

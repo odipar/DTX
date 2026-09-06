@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
  */
 final class PackedVariantTest {
 
-    /** How long a stand-in data set runs for a column of {@code bytes}. */
+    /** The ST4 header a stand-in data set opens with; the column follows it. */
     private static final int ST4_HEADER = 28;
 
     private static final Packer STANDIN = (column, unit, ring) -> {
@@ -33,7 +33,7 @@ final class PackedVariantTest {
         assertEquals(2, file[3], "the variant");
         assertEquals(960, Dtx.getWord(file, payload), "N");
         assertEquals(1, file[payload + 2], "k");
-        assertEquals(0, file[payload + 3], "the byte after k");
+        assertEquals(0, file[payload + 3], "the flags: no copies");
         assertArrayEquals(new int[] {16, 52, 88}, offsets(file));
     }
 

@@ -7,8 +7,8 @@
 ;
 ; doc/abi.md defines the calls, the format block and the state block. One
 ; template a variant: this file reads only DTX2, so no call in it tests which
-; variant it contains. org.dtx.Packager takes the template the table's
-; variant needs.
+; variant it contains. dtx-blobs assembles this once a width and a decoder,
+; and a packager combines that code with the table (doc/abi.md 5).
 ;
 ; DTX2 packs a column with ST4, and this reader follows YMX. Every column
 ; decodes through its own ring; init fills every ring with P rows; and after
@@ -28,7 +28,7 @@
 ; WHAT MOVES THE CODE is the width and the decoder: the width every value
 ; takes (R6.3) and k and the copy code are assembly-time constants, so a
 ; table of another width, or packed at another unit, or with copies, contains
-; other instructions. One build a width a unit is what that costs.
+; other instructions. That costs one build a width a unit.
 ;
 ; ONE FILL AND ONE REFILL FOR EVERY COLUMN. Every ring is N bytes and every
 ; decoder state 32, so the ring, the state and the stream record of column i
@@ -57,12 +57,11 @@
 
         include "DTX_table.i"
 
-; One stream record, and what a run of them is.
+; One stream record.
 DTX_S_A             equ     0
 DTX_S_B             equ     4
 DTX_S_C             equ     8
 DTX_S_D             equ     12
-DTX_S_SIZE          equ     16
 
 ; The state block beyond what doc/abi.md 3 defines: the payload, where the
 ; stream records stand, the column a fill is at, the five figures the table
@@ -81,28 +80,15 @@ DTX_DECODERS        equ     52
 
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
-        DTX_IMAGE 2,DTX_PERIOD,DTX_N,ST4_UNIT,DTX_WIDTH
+        DTX_IMAGE 2,ST4_UNIT,DTX_WIDTH
 
 ; -----------------------------------------------------------------------------
-; Where things stand, worked out rather than assembled in: the payload and the
-; column table both move with C.
+; The first stream record in a3. Where the column table stands is read out of
+; the format block, which repeats what the assembler worked out.
 
-; The payload's first byte in a1 and the table's header in a2. The header is
-; 16 bytes under every variant and every C (SPEC.md 1).
-DTX_payload:
-        lea     _fmt(pc),a2
-        movea.l a2,a1
-        suba.w  #_fmt-_base,a1
-        adda.l  8(a2),a1
-        movea.l a1,a2                   ; the header
-        adda.w  #16,a1                  ; the payload
-        rts
-
-; The first stream record in a3.
 DTX_columns:
-        lea     _fmt(pc),a3
-        adda.l  20(a3),a3               ; the field, while a3 is still the block
-        suba.w  #_fmt-_base,a3          ; and the offset counts from _base
+        lea     _base(pc),a3
+        adda.l  _fmt-_base+20(a3),a3
         rts
 
 ; -----------------------------------------------------------------------------
@@ -122,12 +108,10 @@ DTX_record:
         rts
 
 ; The ring's first byte in a1. N is any size a word takes, so this one is a
-; multiply. N reaches it in a register: d5 is ST4's to clobber like d4, and
-; a multiply of two registers is one shape the rig times.
+; multiply, and N reaches it out of the block rather than through a register.
 DTX_ring:
         move.w  DTX_FILL(a6),d4
-        move.w  DTX_NFIG+2(a6),d5
-        mulu.w  d5,d4
+        mulu.w  DTX_NFIG+2(a6),d4
         movea.l a6,a1
         adda.l  DTX_RINGS(a6),a1
         adda.l  d4,a1
@@ -144,10 +128,10 @@ DTX_state:
 
 ; The budget one refill takes, in units: the rows in d3 times the width,
 ; divided by k. Both are assembly-time constants, so the two are one shift
-; of what the width is over the unit, and nothing at all where they are
-; equal. A macro rather than a subroutine: at a ratio of one there is
-; nothing to call, and at any other one instruction is cheaper than
-; reaching a subroutine and coming back.
+; of what the width is over the unit, and nothing where they are equal. A
+; macro rather than a subroutine: at a ratio of one the macro is empty, and
+; at any other one instruction is cheaper than reaching a subroutine and
+; coming back.
 
         .macro  DTX_BUDGET
         .if     (DTX_WIDTH)=(2*ST4_UNIT)
@@ -172,7 +156,7 @@ DTX_state:
 
 DTX_wrap:
         move.l  a1,d3
-        bsr     DTX_ring                ; a1 the ring's first byte
+        bsr.s   DTX_ring                ; a1 the ring's first byte
         move.l  a1,d4
         add.l   DTX_NFIG(a6),d4         ; one past its last
         cmp.l   d4,d3
@@ -186,14 +170,13 @@ DTX_wrap:
 ; the state.
 
 DTX_store:
-        bsr     DTX_state
+        bsr.s   DTX_state
         movem.l d0-d2/a0-a2/a4-a5,(a3)
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_seed. Every decoder seeded, every ring filled with P rows, the read
-; pointer a row below row 0. Init takes it, and so does a jump that runs
-; from row 0.
+; DTX_seed. Every decoder seeded, every ring filled with P rows, the pointer
+; a row below row 0. Init takes it, and so does a jump that runs from row 0.
 ;
 ; One loop over the columns. ST4 clobbers a3, so where the column stands is
 ; worked out again after every call into it.
@@ -204,7 +187,7 @@ DTX_seed:
         move.l  DTX_PERIODFIG(a6),DTX_DECODED(a6)
         clr.w   DTX_FILL(a6)
 seed_column:
-        bsr     DTX_record              ; a3 the record
+        bsr.s   DTX_record              ; a3 the record
         movea.l DTX_PAYLOAD(a6),a0
         movea.l a0,a2
         movea.l a0,a4
@@ -213,25 +196,23 @@ seed_column:
         adda.l  DTX_S_B(a3),a2
         adda.l  DTX_S_C(a3),a4
         adda.l  DTX_S_D(a3),a5
-        bsr     DTX_ring                ; a1 the ring's first byte
+        bsr.s   DTX_ring                ; a1 the ring's first byte
         move.w  DTX_NFIG+2(a6),d3       ; N, a ring's bytes, in a word
         bsr     ST4_init
         move.l  DTX_PERIODFIG(a6),d3
         DTX_BUDGET
         bsr     ST4_resume
-        bsr     DTX_wrap
-        bsr     DTX_store
+        bsr.s   DTX_wrap
+        bsr.s   DTX_store
+        addq.w  #1,DTX_FILL(a6)
         move.w  DTX_FILL(a6),d4
-        addq.w  #1,d4
-        move.w  d4,DTX_FILL(a6)
         cmp.w   DTX_CFIG(a6),d4
         bcs.s   seed_column
 
-; The read pointer a row below column 0's first row, so the advance into row 0
+; The pointer a row below column 0's first row, so the advance into row 0
 ; steps like any other advance.
-        movea.l a6,a1
-        adda.l  DTX_RINGS(a6),a1
-        move.l  a1,d0
+        move.l  a6,d0
+        add.l   DTX_RINGS(a6),d0
         subq.l  #DTX_WIDTH,d0
         move.l  d0,DTX_POINTER(a6)
         rts
@@ -268,7 +249,7 @@ DTX_init:
         moveq   #0,d2
         move.w  d1,d2
         lsl.l   #5,d2
-        addi.l  #DTX_DECODERS,d2
+        addi.w  #DTX_DECODERS,d2
         move.l  d2,DTX_RINGS(a6)
 
         bsr     DTX_seed
@@ -276,7 +257,7 @@ DTX_init:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_step. One row: the read pointer moves, the column whose turn it is is
+; DTX_step. One row: the pointer moves, the column whose turn it is is
 ; refilled, and the turn steps.
 
 DTX_step:
@@ -296,16 +277,16 @@ DTX_step:
 ; the step above. At the turn's wrap a period's rows join the rows decoded,
 ; and that shortens a column's last refill and stops the one after it.
 DTX_refill:
+        move.w  DTX_TURN(a6),d1
+        cmp.w   DTX_CFIG(a6),d1
+        bcc.s   DTX_turn                ; a turn past the last column
         move.l  DTX_ROWSFIG(a6),d3
         sub.l   DTX_DECODED(a6),d3      ; the rows this period's refills take
-        ble.w   DTX_turn                ; every row decoded: no refill
+        ble.s   DTX_turn                ; every row decoded: no refill
         cmp.l   DTX_PERIODFIG(a6),d3
         bcs.s   .rows
         move.l  DTX_PERIODFIG(a6),d3
 .rows:
-        move.w  DTX_TURN(a6),d1
-        cmp.w   DTX_CFIG(a6),d1
-        bcc.w   DTX_turn                ; a turn past the last column
         move.w  d1,DTX_FILL(a6)
         DTX_BUDGET
         bsr     DTX_state
@@ -339,6 +320,7 @@ DTX_turn:
 DTX_jump:
         move.l  a6,DTX_PARK(a0)
         movea.l a0,a6
+jump_parked:
         move.l  d0,-(a7)
         move.l  DTX_ROW(a6),d4
         bmi.s   .afresh
@@ -374,8 +356,9 @@ DTX_advance:
         move.l  DTX_REPEATFIG(a6),d0
         cmp.l   DTX_ROWSFIG(a6),d0
         bcc.s   .over                   ; RR at R: the end, and it is sticky
-        movea.l DTX_PARK(a6),a6
-        bra.w   DTX_jump                ; the repeat is a jump
+        bra.s   jump_parked             ; the repeat is a jump, and a6 and
+                                        ; DTX_PARK(a6) already stand as
+                                        ; DTX_jump's first two leave them
 .over:
         moveq   #-1,d0
         movea.l DTX_POINTER(a6),a1      ; the last row stands where it stood
@@ -394,11 +377,6 @@ DTX_advance:
 
         .align  4
         include "ST4_wrap.S"
-
-; rmac cuts its listing's symbol table off before ST4_resume, which sorts
-; late. The emulation rig counts the decoder's calls, and reaches
-; it through this name instead.
-DTX_resume      equ     ST4_resume
 
 ; -----------------------------------------------------------------------------
         DTX_TABLE_FOLLOWS

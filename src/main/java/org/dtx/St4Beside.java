@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.st4.St4Format;
 
 /**
  * A {@link Packer} that runs an ST4 packer beside this one.
@@ -13,8 +14,9 @@ import java.util.List;
  * <p>{@link St4} packs with the copy in this repository, and a tool
  * takes it where none is named. This runs another: an ST4 build of its
  * own, named by {@code -p}, so a packer newer than the copy here is used
- * through this. The unit and the ring reach it as {@code -kK} and {@code -mN},
- * where {@code -m} counts units and {@code N} is in bytes.
+ * through this. The unit and the ring reach it as {@code -kK} and
+ * {@code -mN}, where {@code -m} counts units and {@code N} is in bytes, at
+ * most what a word offset can give.
  *
  * <p>Every column is packed with {@code -l65535}, which meets ST4_wrap's
  * assumption 4: no operation is longer than the 65535 units the 68000
@@ -22,7 +24,7 @@ import java.util.List;
  * defines it rather than taking it.
  *
  * <p>{@code copies} reaches the packer as {@code -c}, or {@code -cS} for a
- * search of {@code S} seconds. A column packed that way so that a match beyond
+ * search of {@code S} seconds. In a column packed that way a match beyond
  * the ring copies from its own literal stream, which packs a small ring far
  * smaller; the reader of it takes a decoder built with
  * {@code ST4_WINDOW equ 1}, which the payload defines (R5.10).
@@ -38,8 +40,8 @@ public final class St4Beside implements Packer {
     }
 
     /**
-     * A packer that runs the executable at {@code packer}, letting a match
-     * beyond the ring copy from the literal stream.
+     * A packer that runs the executable at {@code packer}, under which a
+     * match beyond the ring copies from the literal stream.
      *
      * @param copies {@code -c}, or {@code -cS} for a search of {@code S}
      *     seconds, or empty for none
@@ -62,9 +64,15 @@ public final class St4Beside implements Packer {
                 Path in = work.resolve("column");
                 Path out = work.resolve("column.st4");
                 Files.write(in, column);
+                // The offset limit is capped as St4 caps it, so the two
+                // packers are given one limit: a word offset is stored
+                // scaled to bytes, and 32512 units at k=4 would not fit the
+                // word.
+                int offsetLimit = Math.min(ring / unit,
+                        St4Format.maxOffsetUnits(unit));
                 List<String> command = new ArrayList<>(List.of(
                         packer.toString(), "-f", "-k" + unit,
-                        "-m" + ring / unit, "-l65535"));
+                        "-m" + offsetLimit, "-l65535"));
                 if (!copies.isEmpty()) {
                     command.add(copies);
                 }

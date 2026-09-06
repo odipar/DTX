@@ -22,7 +22,9 @@ that tool, with every argument its own.
 Every tool prints its synopsis, a line a flag with the default in
 parentheses, examples, and the section of this document that describes it
 on `-help`, and prints the same to standard error where it is given no
-file to work on. The three trees print one text, which `ParityTest` compares.
+file to work on. The Java and C# trees print one text, and the Go tree the
+same but for `dtx-package`, which combines and does not assemble, so its
+help lists neither `-a` nor `-s`. `ParityTest` compares them.
 
 | what it does | Java | Go | C# |
 |---|---|---|---|
@@ -123,7 +125,7 @@ With `-copies` a match beyond the ring copies from the column's own literal
 stream, and that saves most at the small rings DTX2 reads through. Measured
 on a table of 512 rows repeating a pattern 37 rows long, at a width of 2 and
 `N` of 64, where the pattern runs to 74 bytes and reaches past the ring: the
-file goes from 2140 bytes to 356, and its image from 3300 to 1548.
+file goes from 2140 bytes to 356, and its image from 3100 to 1348.
 
 **The payload defines it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
 Write is the one tool that reads `-copies` and the packager takes the
@@ -144,18 +146,19 @@ A DTX file of any variant into a standalone 68000 image: the code, then the
 table's bytes, reached PC relative. [abi.md](abi.md) defines the four calls
 into the image, and the state block a caller supplies. It combines rather
 than assembles. The code does not move with `R`, `C` or `RR`, so it is built
-ahead of time: one build a variant, one a width under DTX1 and DTX2, and under
-DTX2 one a unit and the copy code as well. The tool takes the image for the
-build the table needs, writes the five fields the table gives into the format
-block, and appends the table's bytes. No assembler runs, and a caller who
-takes a release does not install one.
+ahead of time: one build a variant, one a width under DTX1 and DTX2, and
+under DTX2 one a unit and the copy code as well. The tool takes the image
+for the build the table needs, writes the six fields the table gives into
+the format block, and appends the table's bytes. No assembler runs, and a
+caller who takes a release does not install one.
 
 ```
 bin/dtx-package in.dtx out.bin
 ```
 
 The Go one contains the twenty-two images, so it needs neither this
-repository nor a runtime beside it:
+repository nor a runtime beside it. It combines only, and reads neither of
+the two flags below:
 
 ```
 go build -o dtx-package ./cmd/dtx-package    # under go/
@@ -164,7 +167,7 @@ go build -o dtx-package ./cmd/dtx-package    # under go/
 
 | flag | gives |
 |---|---|
-| `-aRMAC` | assemble the template with this rmac rather than take the carried code. The two give the same bytes, and a template edit is tried through this one |
+| `-aRMAC` | assemble the template with this rmac rather than take the image the build made. The templates are read from `68k` beside the caller, or from what `DTX_68K` names. The two give the same bytes, and a template edit is tried through this one |
 | `-s` | write the figures rather than the image, for reading or for a build of your own |
 
 The image contains one table and the code for that table's variant, and under
@@ -196,7 +199,7 @@ each of them three times:
 | into | read by |
 |---|---|
 | the classes the jar is made of | the Java packager, off the classpath |
-| `build/68k` | a release, which attaches all of them, and the C# assembly, which embeds them from there |
+| `build/68k` | the C# assembly, which embeds them from there |
 | `go/internal/image/data` | `go:embed`, which reads only inside its own module |
 They are plain files and nothing about them is Java's, so a port in another
 language builds from the same twenty-two. A Go executable built after the
@@ -223,7 +226,7 @@ writes the same twenty-two into directories of your own.
 | `-tTEMPLATES` | where `68k/` stands. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository does not have a directory to resolve a relative one against, so it names this |
 
 The table each build is assembled from is made rather than read: at the
-build's own width the code is the same for any table, and the five fields
+build's own width the code is the same for any table, and the six fields
 one would give are zeroed, so an image does not define a table until a
 package writes one.
 
@@ -238,9 +241,8 @@ where no period meets every rule abi.md 4 defines: what it gives names the
 rule and the figures that break it.
 
 A DTX2 image needs more of the caller than a plain one. Its state block
-contains a decoder state and a ring a column, so it runs to `NC` bytes
-and more; the
-tool prints the figure and the format block defines it.
+contains a decoder state and a ring a column, so it runs to `NC` bytes and
+more; the tool prints the figure and the format block defines it.
 
 ## Release
 
@@ -271,9 +273,10 @@ in a release.
 
 Writing DTX2 needs an ST4 packer, and each tree contains one:
 `src/main/java/org/st4` and `dotnet/nt4`, both taken from
-odipar/ST4@498aa25, and `go/internal/st4`, taken from odipar/YMX@498aa25,
-which is that same packer in Go. None is edited here beyond one comment
-naming where it came from, and the three pack the same bytes, which
+odipar/ST4@498aa25, and `go/internal/st4`, taken from odipar/YMX@611e321,
+which is that same packer in Go. No code is edited here: the Go copy's
+package comment is edited to name where the copy came from, and `beside.go`
+and `packer.go` are added beside it. The three pack the same bytes, which
 `ParityTest` checks. So a release does not need a packer beside it
 either. `-pPACKER` runs another where a caller has a newer build.
 
@@ -296,13 +299,12 @@ it is on a 68000, which the emulator's own model does not take.
 **The round trip.** The same text through Write, through Package and
 through the 68000 at DTX0, DTX1 and DTX2, compared with the rows the text
 defines and with one another (R1.3). What a row should be is worked out in
-the rig
-itself, from the text, by a reader that does not share code with the one under
-test, so neither the writer nor the 68000 is checked against itself. Under
-DTX2 it counts the decoder's calls as well, and compares that with the
-calls ST4_wrap's assumption 5 allows: a stopping rule under which a column
-runs one call past its end marker does not change a byte a reader gives, and
-shows up only in the count.
+the rig itself, from the text, by a reader that does not share code with
+the one under test, so neither the writer nor the 68000 is checked against
+itself. Under DTX2 it counts the decoder's calls as well, and compares that
+with the calls ST4_wrap's assumption 5 allows: a stopping rule under which
+a column runs one call past its end marker does not change a byte a reader
+gives, and shows up only in the count.
 
 **The figures.** performance.md records what each call costs in 68000
 cycles and what a build's code runs to in bytes, and the rig measures both
@@ -318,8 +320,13 @@ code on. `$ST4` names a packer to pack with instead of the carried one.
 files compared byte for byte: text written at each variant, width and unit,
 a plain file rewritten, the twenty-two images built, and a table packaged
 across the variants, the widths and the units. One input has one output in
-every tree. It needs Go, the .NET SDK and rmac, and is skipped without one of
-them.
+every tree. It needs Go, the .NET SDK and rmac, and is skipped without one
+of them.
+
+The C# tree does not have tests of its own, so this is its check. Its
+corpus is one table of decimal values under a comment, so no hexadecimal
+value, negative value, names line or shape comment is read back in any
+tree, and no run with `-s`, `-a` or `-p` is compared.
 
 **The code a build assembles to.** A corpus a variant at a time, every
 image's code compared with the first one's byte for byte, so R, C and RR
@@ -345,8 +352,8 @@ over lowered prose with samples it is in and samples it is not in, and
 
 ## Through Maven
 
-Each tool has a Maven execution as well, which takes its arguments as one
-string and builds every time:
+Write and Blobs have a Maven execution as well. An execution takes its
+arguments as one string and builds every time:
 
 ```
 mvn -q compile exec:exec@write -Dargs="in.csv out.dtx -v2"

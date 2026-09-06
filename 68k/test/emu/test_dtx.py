@@ -5,25 +5,25 @@ Two kinds of check run here.
 
 THE CALLS. Every table is written by the Java tools, packaged by
 org.dtx.Packager, assembled by rmac and run on a plain 68000 through
-Unicorn: every row through advance and read, a jump to every row forward
-and backward, the repeat at RR, the sticky end, a read before the first
-advance, the registers that stand across a call, and a guard band past the
-row.
+Unicorn: every row through advance, a jump to every row forward and
+backward, the repeat at RR, the sticky end, metadata before init, the
+registers that stand across a call, and every word or long on its
+alignment.
 
 THE ROUND TRIP. The same text through the writer, the packager and the
 68000 at DTX0, DTX1 and DTX2, compared with the rows the text defines and
 with one another (R1.3). What a row should be is worked out in this file,
-from the
-text, by a reader that does not share code with the one under test - so
-neither the writer nor the 68000 is checked against itself. Under DTX2 it
-also counts the decoder's calls, the one thing a wrong stopping rule shows
-up in: the output does not change when a column is driven one call past
-its end marker, but the count does.
+from the text, by a reader that does not share code with the one under
+test - so neither the writer nor the 68000 is checked against itself.
+Under DTX2 it also counts the decoder's calls, the one thing a wrong
+stopping rule shows up in: the output does not change when a column is
+driven one call past its end marker, but the count does.
 
     python3 68k/test/emu/test_dtx.py
 
-Needs `mvn compile`, rmac on the path or at $RMAC, `pip install unicorn`,
-and $ST4 to pack with a packer other than the carried one.
+Needs `mvn process-classes` with rmac on the path or at $RMAC, `pip
+install unicorn`, and $ST4 to pack with a packer other than the carried
+one.
 """
 
 import os
@@ -46,11 +46,10 @@ from unicorn.m68k_const import (
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 CLASSES = os.path.join(ROOT, "target", "classes")
 RMAC = os.environ.get("RMAC", "rmac")
-ST4 = os.environ.get("ST4", "st4")
+ST4 = os.environ.get("ST4")
 
 IMAGE = 0x10000          # the packaged image
 STATE = 0x30000          # the state block the caller supplies
-MARK = 0x3C000           # what a1 goes in as: every call gives it back
 STACK = 0x40000          # the caller's stack
 DONE = 0x50000           # the return address a call comes back to
 
@@ -93,9 +92,9 @@ def read_dtx(blob):
 
 
 # --------------------------------------------------------------------------
-# An independent CSV reader: doc/tools.md, "The text", in Python. This is
-# what makes the round trip a round trip - the rows a table should give come
-# out of the text the writer was given, not out of the file it wrote.
+# An independent CSV reader: doc/tools.md, "The text", in Python. The rows a
+# table should give come out of the text the writer was given, not out of the
+# file it wrote.
 
 def csv_values(csv):
     """The values of `csv`, a row a line, as whole numbers."""
@@ -108,7 +107,7 @@ def csv_values(csv):
         if columns < 0:
             columns = len(cell)
         assert len(cell) == columns, \
-            "line %d holds %d values, not %d" % (at, len(cell), columns)
+            "line %d has %d values, not %d" % (at, len(cell), columns)
         row = []
         for c in cell:
             if c.startswith("$"):
@@ -179,7 +178,7 @@ def write_table(csv, variant, width=None, repeat=None, unit=1, ring=960,
         argv += ["-k%d" % unit, "-m%d" % ring]
         # The tree contains a copy of ST4, so no packer stands beside it. $ST4
         # names one to pack with instead of the carried one.
-        if os.environ.get("ST4"):
+        if ST4:
             argv.append("-p" + ST4)
         if copies:
             argv.append("-copies")
@@ -188,13 +187,12 @@ def write_table(csv, variant, width=None, repeat=None, unit=1, ring=960,
         return f.read()
 
 
-def package(blob, assemble=False):
+def package(blob):
     """The raw image the packager makes, and where every label of it stands.
 
-    The image comes from the packager. By default it combines the code the
-    build made from 68k/DTX*.S, which is the path a caller takes; with
-    `assemble` it runs rmac over the template instead. The two give the
-    same bytes, and BlobTest checks that.
+    The image comes from the packager, which combines the code the build made
+    from 68k/DTX*.S: the path a caller takes. A run of rmac over the template
+    gives the same bytes, and BlobTest checks that.
 
     The labels come from a run of rmac over the same template and the same
     figures, for the listing's symbol table alone: the rig counts the decoder's
@@ -208,8 +206,7 @@ def package(blob, assemble=False):
         f.write(blob)
     # No -copies: the payload defines it (R5.10), so the packager reads
     # which decoder the table needs out of the file.
-    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img]
-        + (["-a" + RMAC] if assemble else []))
+    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img])
     run(["java", "-cp", CLASSES, "org.dtx.Packager", src,
          os.path.join(work, "DTX_table.i"), "-s"])
     run([RMAC, "-m68000", "-fr", "+o3", "-i" + work,
@@ -251,8 +248,8 @@ class Machine:
         # is a fault here as it is on the hardware.
         self.misaligned = []
         self.mu.hook_add(UC_HOOK_MEM_READ | UC_HOOK_MEM_WRITE, self._aligned)
-        # rts at DONE would run on: an illegal word stops the emulation
-        # instead, and every call is run to the DONE address explicitly.
+        # every call runs until the pc reaches DONE, the return address the
+        # rig pushes
         self.seed()
 
     def _aligned(self, mu, access, address, size, value, data):
@@ -263,19 +260,18 @@ class Machine:
         self.mu.mem_write(STATE, b"\x00" * max(0x1000, self.state_bytes))
 
 
-    def call(self, name, d0=0, a0=STATE, a1=MARK):
+    def call(self, name, d0=0, a0=STATE):
         """One call through its slot, back at the sentinel."""
         mu = self.mu
         for r in D + A:
             mu.reg_write(r, 0)
-        # d6, d7, a6 and the stack beyond the return address stand across a
-        # call: seed them with a mark and check it after.
+        # d6, d7 and a6 stand across a call: seed them with a mark and check
+        # it after.
         mu.reg_write(UC_M68K_REG_D6, 0x6D6D6D6D)
         mu.reg_write(UC_M68K_REG_D7, 0x7D7D7D7D)
         mu.reg_write(UC_M68K_REG_A6, 0x00046000)
         mu.reg_write(UC_M68K_REG_D0, d0 & 0xFFFFFFFF)
         mu.reg_write(UC_M68K_REG_A0, a0)
-        mu.reg_write(UC_M68K_REG_A1, a1)
         sp = STACK + 0x8000
         mu.mem_write(sp - 4, struct.pack(">I", DONE))
         mu.reg_write(UC_M68K_REG_A7, sp - 4)
@@ -318,7 +314,7 @@ class Machine:
 
 def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
     blob = write_table(csv, variant, width, repeat, unit, ring)
-    if variant == 2:  # noqa: the plain file gives a row's values
+    if variant == 2:
         # The table is the same under every variant (R1.3), so what a row
         # is, is read out of the plain file, by the reader in this rig.
         plain = write_table(csv, 1, width, repeat)
@@ -404,13 +400,16 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
             assert values(got) == want[r + 1], \
                 "the row after a jump and an advance"
 
-    # the pointer stands still while the caller reads: the values at it are
-    # the same read twice, since nothing but an advance moves it
+    # the row an advance gives stands until the next advance (doc/abi.md 2):
+    # under DTX2 the refill that would write over it is P advances away
     m.call("init")
+    before = None
     for r in range(rows):
         got = m.call("advance")
-        first = values(got)
-        assert values(got) == first, "the values moved under the caller"
+        if before is not None:
+            assert m.row(before, columns, stride, width) == want[r - 1], \
+                "row %d moved under the caller" % (r - 1)
+        before = got["a1"]
 
     print("  %-40s DTX%d  R=%-5d C=%-3d W=%d row=%-3d P=%-4d state=%-6d image=%d"
           % (name, kind, rows, columns, width, row_bytes, p, state_bytes,
@@ -453,16 +452,14 @@ def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     fmt = image[16:16 + 28]
     assert fmt[:3] == b"DTX" and fmt[3] == variant, "the format block"
     state_bytes = struct.unpack(">I", fmt[4:8])[0]
-    row_bytes = struct.unpack(">H", fmt[12:14])[0]
     stride = struct.unpack(">I", fmt[24:28])[0]
     m = Machine(image, state_bytes)
-    # rmac's listing cuts its symbol table off, so the decoder is reached
-    # through DTX_resume, which sorts early enough to survive it. A missing
+    # The decoder is counted at ST4_resume's address in the listing. A missing
     # symbol is a fault in the rig, not a count of zero.
     if variant == 2:
-        assert "DTX_resume" in at, \
-            "no DTX_resume in the listing: the rig cannot count the decoder"
-    resumes = m.count(IMAGE + at["DTX_resume"]) if "DTX_resume" in at else None
+        assert "ST4_resume" in at, \
+            "no ST4_resume in the listing: the rig cannot count the decoder"
+    resumes = m.count(IMAGE + at["ST4_resume"]) if "ST4_resume" in at else None
     given = m.call("metadata")
     rows, columns = given["d0"], given["d1"] & 0xFFFF
     width = image[header_at + 14]
@@ -491,8 +488,8 @@ def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
             # no more. One at init and one a period while rows remain.
             due = columns * -(-len(want) // p)
             assert resumes == due, \
-                "the decoder was asked %d times, not the %d ST4_wrap allows" \
-                % (resumes, due)
+                "the decoder was called %d times, not the %d ST4_wrap's" \
+                " assumption 5 allows" % (resumes, due)
             asked = "  %d resumes at P=%d" % (resumes, p)
         # The writer's link, where this rig can read the file: the bytes the
         # writer laid down are the rows the text gave.
@@ -602,14 +599,16 @@ def condition(cc, sr):
             n != v or z)[cc]
 
 
-def cycles_of(words, sr, dn, pc, next_pc):
+def cycles_of(words, sr, dn, pc, next_pc, source=None):
     """The cycles of the instruction at `pc` that `words` begin, and how many
     words it is.
 
     `sr` is the status register before it and `dn` the data registers before
     it, or None where the instruction reads neither. `next_pc` is where the
     machine went after it, which tells a branch taken from one not, or None
-    where the rig does not have it.
+    where the rig does not have it. `source` is the word at the effective
+    address, for a multiply whose source is in memory, or None where the rig
+    does not have it.
     """
     op = words[0]
     top = op >> 12
@@ -752,6 +751,8 @@ def cycles_of(words, sr, dn, pc, next_pc):
                 value = dn[reg] & 0xFFFF
             elif key == (7, 4):
                 value = words[1]
+            elif source is not None:
+                value = source
             else:
                 raise Unknown("a multiply from memory")
             if opmode == 3:                      # mulu: the ones in the source
@@ -811,7 +812,9 @@ def cycles_of(words, sr, dn, pc, next_pc):
 
 # Encodings against the manual's tables: the words, the status register, the
 # data registers, where the machine went next relative to the instruction (None
-# for a fall-through that is not a branch), and the cycles.
+# for a fall-through that is not a branch), and the cycles. A sixth entry is
+# the word at the effective address, for a multiply that takes its source
+# there.
 TIMED = [
     ((0x3000,), 0, None, None, 4),                  # move.w d0,d0
     ((0x2280,), 0, None, None, 12),                 # move.l d0,(a1)
@@ -884,6 +887,8 @@ TIMED = [
     ((0x90C9,), 0, None, None, 8),                  # suba.w a1,a0
     ((0xC0C1,), 0, (0, 0xFFFF, 0, 0, 0, 0, 0, 0), None, 70),  # mulu.w d1,d0, d1 all ones
     ((0xC0C1,), 0, (0, 0, 0, 0, 0, 0, 0, 0), None, 38),       # mulu.w d1,d0, d1 zero
+    ((0xC0EE, 0x0004), 0, None, None, 78, 0xFFFF),  # mulu.w 4(a6),d0, all ones
+    ((0xC0EE, 0x0004), 0, None, None, 46, 0),       # mulu.w 4(a6),d0, zero there
     ((0x4880,), 0, None, None, 4),                  # ext.w d0
     ((0x4E71,), 0, None, None, 4),                  # nop
 ]
@@ -891,9 +896,12 @@ TIMED = [
 
 def cycle_tables():
     """The tables here against the manual, on the encodings above."""
-    for words, sr, dn, went, cycles in TIMED:
+    for one in TIMED:
+        words, sr, dn, went, cycles = one[:5]
+        source = one[5] if len(one) > 5 else None
         pc = 0x1000
-        got, length = cycles_of(words, sr, dn, pc, None if went is None else pc + went)
+        got, length = cycles_of(words, sr, dn, pc,
+                                None if went is None else pc + went, source)
         assert got == cycles, "%s: the tables give %d cycles, the manual %d" % (
             " ".join("%04x" % w for w in words), got, cycles)
         assert length == len(words), "%s: read as %d words, not %d" % (
@@ -925,16 +933,23 @@ class Cycles:
         dn = [mu.reg_read(r) for r in D] if reads else None
         tests = op >> 12 == 5 and op >> 6 & 3 == 3 and op >> 8 & 0xF >= 2
         sr = mu.reg_read(UC_M68K_REG_SR) if tests else 0
-        self.pending = (address, raw, sr, dn)
+        # A multiply's cycles move with its source, so where that source is
+        # in memory the rig reads it at the effective address. Only d16(An),
+        # the mode DTX_ring takes, is read.
+        source = None
+        if op >> 12 == 0xC and op >> 6 & 7 in (3, 7) and op >> 3 & 7 == 5:
+            at = mu.reg_read(A[op & 7]) + struct.unpack(">h", raw[2:4])[0]
+            source = struct.unpack(">H", mu.mem_read(at, 2))[0]
+        self.pending = (address, raw, sr, dn, source)
 
     def _settle(self, next_pc):
         if self.pending is None:
             return
-        pc, raw, sr, dn = self.pending
+        pc, raw, sr, dn, source = self.pending
         self.pending = None
         words = struct.unpack(">5H", raw)
         try:
-            cycles, _ = cycles_of(words, sr, dn, pc, next_pc)
+            cycles, _ = cycles_of(words, sr, dn, pc, next_pc, source)
         except Unknown as what:
             raise AssertionError("the cycle tables do not cover %s at %08x"
                                  % (what, pc))
@@ -1065,7 +1080,8 @@ def performance():
     for name, _ in EXAMPLES:
         rows = listed[at:at + len(CALLS)]
         assert [row[0] for row in rows] == list(CALLS), \
-            "doc/performance.md's %s table does not list the seven calls" % name
+            "doc/performance.md's %s table does not list the %d rows %s" \
+            % (name, len(CALLS), ", ".join(CALLS))
         for row in rows:
             for column, one in enumerate(calls[name]):
                 assert row[1 + column] == one[row[0]], \
@@ -1093,7 +1109,7 @@ def performance():
 
 def main():
     if not os.path.isdir(CLASSES):
-        raise SystemExit("run `mvn compile` first: no " + CLASSES)
+        raise SystemExit("run `mvn process-classes` first: no " + CLASSES)
     bad = 0
     for variant in (0, 1):
         print("DTX%d" % variant)

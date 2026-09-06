@@ -20,27 +20,6 @@ import org.junit.jupiter.api.Test;
  */
 class ExperimentsTest {
 
-    /** The rig's numbers table: row r, column i is r(i+1) modulo 251. */
-    private static String numbers(int rows, int columns) {
-        StringBuilder out = new StringBuilder();
-        for (int r = 0; r < rows; r++) {
-            for (int i = 0; i < columns; i++) {
-                out.append(i == 0 ? "" : ",").append(r * (i + 1) % 251);
-            }
-            out.append('\n');
-        }
-        return out.toString();
-    }
-
-    /** The table repeating a pattern 37 rows long, 512 rows. */
-    private static String repeating() {
-        StringBuilder out = new StringBuilder();
-        for (int r = 0; r < 512; r++) {
-            out.append(r % 37).append(',').append(r % 37 * 7).append('\n');
-        }
-        return out.toString();
-    }
-
     private static String doc() throws IOException {
         return Files.readString(Rig.root().resolve("doc/experiments.md"));
     }
@@ -66,7 +45,7 @@ class ExperimentsTest {
     void whereDtx2BecomesTheSmallerOfTheTwo() throws IOException {
         for (String[] row : rows(doc(), "Where DTX2 becomes the smaller of the two")) {
             int r = Integer.parseInt(row[0]);
-            Table table = Csv.table(numbers(r, 3), 1);
+            Table table = Csv.table(Rig.numbers(r, 3, 251), 1);
             int one = Dtx1.write(table).length;
             int two = Dtx2.write(table, new St4(), 1, 960).length;
             assertEquals(Integer.parseInt(row[1]), one, "DTX1 at R of " + r);
@@ -76,7 +55,7 @@ class ExperimentsTest {
 
     @Test
     void copiesFromTheLiteralStreamAtASmallRing() throws IOException {
-        Table table = Csv.table(repeating(), 2);
+        Table table = Csv.table(Rig.repeating(), 2);
         for (String[] row : rows(doc(), "Copies from the literal stream, at a small ring")) {
             byte[] file = switch (row[0]) {
                 case "DTX1" -> Dtx1.write(table);

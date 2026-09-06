@@ -2,9 +2,9 @@
 // the format they share. It is a port of src/main/java/org/st4, held to the
 // same bar - the same input gives the same bytes out of both.
 //
-// It is a copy of odipar/YMX@498aa25's go/internal/st4, and this comment is
-// the only line of it edited here. Beside, in beside.go, is DTX's own and
-// runs an ST4 executable instead.
+// It is a copy of odipar/YMX@611e321's go/internal/st4. This package comment
+// is edited here to name where the copy came from; no code is. beside.go and
+// packer.go are DTX's own, and Beside runs an ST4 executable instead.
 //
 // Stream A holds the bits, the flags and the interlaced Elias gamma lengths,
 // read a word at a time. Stream B holds the literal units, stream C the byte

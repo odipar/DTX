@@ -20,6 +20,12 @@ var Magic = []byte{'D', 'T', 'X'}
 // HeaderLength is what a header runs to, under every variant and every C.
 const HeaderLength = 16
 
+// MaxRows is the largest R a header defines, R6.1: the field is four bytes,
+// and a value past what a signed long gives is out of bounds, so the error
+// gives the count the header defines rather than a negative one. RR is 0 to
+// R, so the one bound covers both.
+const MaxRows = 2147483647
+
 // Align gives at up to the next multiple of to.
 func Align(at, to int) int {
 	return (at + to - 1) / to * to
@@ -60,8 +66,8 @@ func ReadHeader(file []byte) (Header, error) {
 	columns := GetWord(file, 8)
 	repeat := GetLong(file, 10)
 	width := int(file[14])
-	if rows < 1 {
-		return Header{}, fmt.Errorf("R is 1 upward, not %d", rows)
+	if rows < 1 || rows > MaxRows {
+		return Header{}, fmt.Errorf("R is 1 to %d, not %d", MaxRows, rows)
 	}
 	if columns < 1 || columns > 256 {
 		return Header{}, fmt.Errorf("C is 1 to 256, not %d", columns)

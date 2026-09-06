@@ -22,8 +22,9 @@ import (
 // -aRMAC and -s, which this tool does not read.
 const help = `dtx-package in.dtx out.bin
 
-Packages a DTX file as a 68000 image: the code for its variant, the column
-table and the file. doc/abi.md gives the four calls into the image.
+Packages a DTX file as a 68000 image: the code for its variant and,
+under DTX1 and DTX2, its width, the column table and the file.
+doc/abi.md gives the four calls into the image.
 
   -help        this text
 
@@ -39,6 +40,12 @@ doc/tools.md, Package.
 // standard error and exits with 2.
 var errUsage = errors.New("usage")
 
+// A misuse is a flag the tool does not read: the message goes to standard
+// error and the exit is 2, as the Java tree exits.
+type misuse string
+
+func (m misuse) Error() string { return string(m) }
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		if errors.Is(err, errUsage) {
@@ -46,6 +53,10 @@ func main() {
 			os.Exit(2)
 		}
 		fmt.Fprintln(os.Stderr, err)
+		var m misuse
+		if errors.As(err, &m) {
+			os.Exit(2)
+		}
 		os.Exit(1)
 	}
 }
@@ -60,7 +71,7 @@ func run(args []string) error {
 	var named []string
 	for _, arg := range args {
 		if len(arg) > 0 && arg[0] == '-' {
-			return fmt.Errorf("dtx-package does not read %s", arg)
+			return misuse("dtx-package does not read " + arg)
 		}
 		named = append(named, arg)
 	}
@@ -82,7 +93,7 @@ func run(args []string) error {
 	if err := os.WriteFile(named[1], out, 0o644); err != nil {
 		return err
 	}
-	state := pack.StateBytes(header)
+	state := pack.StateBytes()
 	if header.Variant == dtx.DTX2 {
 		given, err := pack.ReadPacked(file, header)
 		if err != nil {

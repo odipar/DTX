@@ -17,7 +17,7 @@ emits behind the slots changes with the variant.
 The code behind those slots does not move with the table's shape. `R`,
 `C` and `RR` reach it at run time, out of the table's own header, and init
 writes the few of them a loop counts with into the instructions that take
-them. So one build assembles to one image, byte for byte, at any number of
+them. So one build assembles to one code, byte for byte, at any number of
 rows or columns.
 
 What does move the code is the width and the decoder. Every value of a
@@ -25,9 +25,9 @@ table takes one width (R6.3), and that width is an assembly-time constant:
 a read moves a value in one instruction, and a table of another width
 takes another build. Under DTX2 `k` and the copy code are ST4's own build
 parameters and move it the same way. The cost is one build a width, and
-where the image stands: the code writes to itself at init, so it stands in
-RAM and not in ROM, and a 68030 caller flushes the instruction cache after
-`DTX_init`.
+where the image stands: under DTX0 and DTX1, and under DTX2 with copies,
+the code writes to itself at init, so it stands in RAM and not in ROM, and
+a 68030 caller flushes the instruction cache after `DTX_init`.
 
 Under DTX2 the reader follows YMX's shape, which plays twenty-five packed
 streams a frame at a time on the same hardware: every column decodes
@@ -37,9 +37,9 @@ ring and no read ever decodes.
 
 Terms are the glossary's. This document adds four, and the glossary takes
 them in the change that adds this file (R0.8): **state block**, what a
-caller supplies and passes back; **pointer**, the address in a ring of the
-row the cursor stands on; **turn**, the column a row refills; **period**,
-`P`, the rows between one column's refills.
+caller supplies and passes back; **pointer**, the address, in a ring or in
+the payload, of the row the cursor stands on; **turn**, the column a row
+refills; **period**, `P`, the rows between one column's refills.
 
 ---
 
@@ -52,7 +52,7 @@ In this order, from the image's first byte:
 | +0 | 16 | four `bra.w` slots, one a call |
 | +16 | 28 | the format block, on a long |
 | +44 | .. | the bodies for the variant |
-| .. | 324, 328 or 330 | under DTX2, ST4's wrap decoder at `k` |
+| .. | 324, 328 or 330, and 354, 360 or 366 with the copy code | under DTX2, ST4's wrap decoder at `k` |
 | .. | .. | under DTX2 the column table, on a long. The plain variants do not have one |
 | .. | .. | the table's bytes, header and payload, on a long |
 
@@ -79,15 +79,18 @@ for it.
 `R`, `C` and `RR` are not here. They stand in the table's own header, at
 the offsets SPEC.md 1 gives, and the field at +8 reaches it. The variant
 at +3 of that header and the width at +14 are the two bytes this block
-repeats, and the packager checks both rather than writing them: an image
-built for another variant or another width does not read this table.
+repeats, and the packager checks the variant, and under DTX1 and DTX2 the
+width, rather than writing them: an image built for another variant or
+another width does not read this table.
 
 The block does not define a cost figure. What a call costs is measured on the
 emitted code under emulation and recorded in performance.md, not in the
 image.
 
-The two offsets are fields rather than displacements the assembler works
-out because both move with `C`, and the code does not.
+The header's place is a field because it moves with the column table's
+size, and the code does not. The column table's place the assembler works
+out; the block repeats it so that a combine checks it against the code's
+length and a caller reads it out of the file.
 
 **The column table**, which DTX2 has and the plain variants do not. Under DTX0
 and DTX1 a read is arithmetic on `R`, `C` and the width, and the packager
@@ -141,11 +144,12 @@ row below row 0 of column 0's ring.
 
 After that preload a read alternates between the streams and does not touch a
 decoder: from row 0 onward every value a read takes is already in a ring.
-Init writes only the block and its own instructions. The image is code in RAM
-under every variant: the sites section 5 lists are written on every init, and
-under DTX2 with copies ST4's own init writes the reach into two more. A 68030
-caller flushes the instruction cache after `DTX_init`, and after a jump that
-runs from row 0, which seeds the decoders again.
+Init writes only the block and its own instructions. Under DTX0 and DTX1 the
+sites section 5 lists are written on every init, and under DTX2 with copies
+ST4's own init writes the ring's size into two of its instructions; a DTX2
+image without copies is not written and may stand in ROM. A 68030 caller
+flushes the instruction cache after `DTX_init`, and after a jump that runs
+from row 0, which seeds the decoders again.
 
 Two readers of one image run at once, a block each, and the values the
 two inits write are the same: one image contains one table. A call is not
@@ -161,7 +165,7 @@ Both blocks are bytes in the image, reached with one `lea` each, so this
 call does not need state and may be made before init. Its fields stand at
 fixed offsets, so a caller that builds against a given image reads them
 out of the file at build time and never makes the call. The packager
-prints them as it writes the image, the state block's bytes among them.
+prints the state block's bytes as it writes the image.
 
 ### 2. `DTX_jump`, image+8
 
@@ -234,8 +238,9 @@ The stride is the width under DTX0, where a row's values stand one after
 another; a column's length under DTX1, `R` times the width rounded up to a
 word, where the columns lie at one stride; and `N` under DTX2, where every
 column has a ring of that size. None of the three moves with the column,
-so one displacement a column reaches the whole row and a caller reading
-one column of it makes one move.
+so column `i` stands at `i` strides off the pointer. A `d16(An)`
+displacement reaches the columns within 32767 bytes of it, and a caller
+adds the stride to reach a column past that.
 
 A caller that needs the row laid out as DTX0 lays it (SPEC.md 2.1) makes
 those `C` moves into its own memory. The image does not, so the two calls
@@ -250,24 +255,24 @@ no boundary applies.
 
 **The pointer stands until the next advance.** Under DTX0 and DTX1 it
 points into the table's own bytes, which nothing writes. Under DTX2 it
-points into a ring, and the refill that would write over it is `P`
-advances away (section 4), so the row it was given stands until its next
-advance.
+points into a ring, and the refill that would write over it does not come
+before the next advance (section 4), so the row it was given stands until
+then.
 
 ---
 
 ## 3. The state block
 
 The caller supplies the block and passes it back in `a0` on every call
-but `DTX_metadata`. Its size is a build time constant the format block
-defines at +4, which the packager prints and a caller reads out of the
-image. The block stands on a long.
+but `DTX_metadata`. Its size is the table's: the format block defines it
+at +4 once a table is combined in, the packager prints it, and a caller
+reads it out of the image. The block stands on a long.
 
 | at | bytes | contains |
 |---|---|---|
 | +0 | 4 | the row the cursor stands on, or $FFFFFFFF |
 | +4 | 2 | the turn, 0 to `P` minus one. Zero under DTX0 and DTX1 |
-| +6 | 2 | zero |
+| +6 | 2 | unused |
 | +8 | 4 | the rows decoded. Zero under DTX0 and DTX1 |
 | +12 | 4 | the caller's `a6`, parked for a DTX2 refill |
 | +16 | 4 | the pointer, under every variant |
@@ -358,9 +363,9 @@ over the row the read on that row is about to take.
   budget range, and the reason `k` divides `P` times the width. `k` then
   divides `N` as well, which is ST4_wrap's assumption 1
 
-A read walks the rings by adding a stride rather than by a displacement
-off a pointer, so no rule bounds `C` beyond R6.2's 256: a table of 256
-columns at any `N` the format takes packages.
+A caller past 32767 bytes from the pointer reaches a column by adding a
+stride rather than by a displacement, so no rule bounds `C` beyond R6.2's
+256: a table of 256 columns at any `N` the format takes packages.
 
 **Why ST4_wrap and not ST4_ring.** ST4_wrap decodes a fixed budget a call and
 leaves the wrap to the caller, which fits exactly: every refill of a column is
@@ -373,9 +378,9 @@ driven past its data set.
 
 `P` is the lever. `P` equal to `C` gives the smallest rings and the
 flattest cost; a larger `P` uses more ring and leaves `P` minus `C`
-rows a period with no refill. The packager's default is the
-smallest `P` at least `C` that meets every rule above, and it fails the
-package where no such `P` stands below `R`.
+rows a period with no refill. The packager takes the smallest `P` at least
+`C` that meets every rule above, and it fails the package where no such
+`P` stands below `R`.
 
 **The repeat.** An advance from row `R` minus one to an `RR` below it is a
 jump backward, so it seeds every ring again and runs forward from row 0: a
@@ -390,26 +395,28 @@ not yet, and under it a repeat is a jump.
 
 It combines rather than assembles. One variant is one code, so the code
 is built once and kept, and packaging a table takes the file for the
-build the table needs, writes the five fields the table gives into the
+build the table needs, writes the six fields the table gives into the
 format block, and appends the column table and the table's
 bytes. rmac runs where the code is built, not where a table is packaged.
 
-The five: the state block's bytes at +4, the table's header at +8, the
-row's bytes at +12, `P` at +14 and `N` at +16. A kept file reads zero for
-each of them, so code shipped without a combine does not define a table,
-rather than the one it happened to be built from. What it does define is
-the variant at +3, `k` at +18, the width at +19 and the column table's
-place at +20, and a combine checks the first three against the table
-rather than writing them.
+The six: the state block's bytes at +4, the table's header at +8, the
+row's bytes at +12, `P` at +14, `N` at +16 and the stride at +24. A kept
+file reads zero for each of them, so code shipped without a combine does
+not define a table, rather than the one it happened to be built from. What
+it does define is the variant at +3, `k` at +18, the width at +19 and the
+column table's place at +20, and a combine checks the variant and `k`
+against the table, and the width under DTX1 and DTX2, rather than writing
+them.
 
-It folds only the state block's offsets into the bodies. Every figure the
-table gives it writes into the format block and the column table instead,
-and the code reads them at run time. The few a loop counts with, which no
-68000 addressing mode takes from memory, init writes into the instructions
-that take them: `R` and `RR` for the compares an advance takes, and the
-row's bytes a DTX0 advance steps by. A site is `lea`d PC relative into an
-address register and written through it, since a 68000 reaches PC relative
-for a source and never for a destination.
+It folds the state block's offsets into the bodies, the width into DTX1's
+and DTX2's, and `k` and the copy code into DTX2's. Every figure that moves
+with the table it writes into the format block and the column table, and
+the code reads them at run time. The few a loop counts with, which the 20
+byte block of DTX0 and DTX1 does not contain, init writes into the
+instructions that take them: `R` and `RR` for the compares an advance
+takes, and the row's bytes a DTX0 advance steps by. A site is `lea`d PC
+relative into an address register and written through it, since a 68000
+reaches PC relative for a source and never for a destination.
 
 Under DTX2 the carried decoder is ST4's wrap decoder built at `ST4_UNIT`
 equal to `k`. The packer's options are `-f -k<k> -m<N/k> -l65535`, and the
@@ -417,10 +424,9 @@ last meets ST4_wrap's assumption 4: no operation longer than the 65535
 units a 68000 decoder counts in a word.
 
 A column may be packed with `-c` as well, so that a match beyond the ring
-copies from the column's own literal stream. That packs a small ring
-far smaller, and it asks one thing of the package: the decoder is built
-with its copy code, which measures 32 bytes more at `k` of 1
-and 2 and 36 at `k` of 4.
+copies from the column's own literal stream. That packs a small ring far
+smaller, and the package takes the decoder built with its copy code,
+which measures 32 bytes more at `k` of 1 and 2 and 36 at `k` of 4.
 
 The payload defines which kind its columns are, in the flags byte SPEC.md
 2.3 gives, so the packager reads the decoder a table needs out of the
@@ -441,15 +447,15 @@ builds every one of them and checks that no two are the same bytes.
 Which of them a table takes is its width, in the header at +14, and under
 DTX2 `k` and the copies flag, both in the payload (SPEC.md 2.3). The image
 repeats the width at +19 of its format block and `k` at +18, and a combine
-checks both against the table.
+checks `k` against the table, and the width under DTX1 and DTX2.
 
 The writer packs the columns for the `N` it is given, and the packager
 takes the smallest `P` that meets every rule of section 4 at that `N`, or
-fails the package naming the rule.
+fails the package listing the rules.
 
 At package time the packager checks what no call checks: the header against
-R6, so an `R` at or above 2147483648, which reads as a negative, fails R6.1
-and no row number reads as the $FFFFFFFF an advance ends on; under DTX2 that a
+R6, so an `R` at or above 2147483648 fails R6.1 and no row number reads as
+the $FFFFFFFF an advance ends on; under DTX2 that a
 column's bytes divide by `k`, that every data set opens with `$53 $34 $07 k`
 for the payload's own `k`, and the four rules of section 4; and that the image
 it combines with reads the table's variant, width and unit and puts the column
@@ -464,7 +470,7 @@ performance.md records it, in 68000 cycles counted under emulation from
 the manual's tables, and the rig that counts them checks that document
 against its count.
 
-The shape, which the figures bear out: under DTX0 and DTX1 every call is
+The shape the figures give: under DTX0 and DTX1 every call is
 flat in `R` and in `C`, since no call walks the columns. Under DTX2 an
 advance is flat and takes one column's refill of at most `P` rows, and a
 jump costs the rows it runs the turn through. What reading the columns
@@ -524,10 +530,11 @@ have two places, and what a reader keeps of a row stays out of the code.
 Given up: `a0` is the block on every call.
 
 **The code does not move with the table.** One variant assembles to one
-image at any `R`, `C` or `RR`, so what an emulation check reads is the
-code every table of that variant runs, not one table's. Given up: the
-image is code in RAM rather than ROM, and a read costs a memory read for
-each of the three counts and displacements it once had as immediates.
+code at any `R`, `C` or `RR`, so what an emulation check reads is the
+code every table of that variant runs, not one table's. Given up: a DTX0
+or DTX1 image stands in RAM rather than ROM, as does a DTX2 image with
+copies, and a read costs a memory read for each of the three counts and
+displacements it once had as immediates.
 
 **ST4_wrap over ST4_ring.** No ring end check in the decoder, and 62 to
 66 bytes less. Given up: the reader takes the write pointer back to the

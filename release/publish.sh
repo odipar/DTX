@@ -6,14 +6,15 @@
 #
 #   release/publish.sh [version]      # the six platforms below
 #   TARGETS="linux-x64" release/publish.sh
+#   OUT=dir RMAC=path release/publish.sh
 #
 # They are built from go/, so there are six of them: go build
 # cross-compiles to any target from any host with nothing installed for it.
 #
 # NO JAVA RUNS HERE. The images come from the Go dtx-blobs, which assembles
 # 68k/ with rmac, so the only tool this needs beside Go is that assembler.
-# The Java tree writes the same bytes and ParityTest checks the two
-# to it, but a release is built from one tree.
+# The Java and C# trees write the same bytes, and ParityTest checks the three
+# against one another; a release is built from one tree.
 #
 # The executables do not take a wrapper. Go builds a real executable, so
 # nothing has to find a runtime or a classpath before one runs.
@@ -21,6 +22,10 @@ set -e
 cd "$(dirname "$0")/.."
 REPO=$(pwd)
 OUT=${OUT:-dist}
+# A relative OUT counts from the repository, and every use below is the
+# resolved one: a build runs from go/, where a relative path counts from
+# somewhere else.
+case $OUT in /*) ;; *) OUT=$REPO/$OUT ;; esac
 RMAC=${RMAC:-rmac}
 TARGETS=${TARGETS:-"win-x64 win-arm64 osx-x64 osx-arm64 linux-x64 linux-arm64"}
 TOOLS="dtx-write dtx-package dtx-blobs"
@@ -42,7 +47,7 @@ mkdir -p "$OUT/release"
 
 # dtx-blobs first, and from a tree with no image: it builds them, so it
 # is the one tool that does not need one.
-(cd go && go build -o "$REPO/$OUT/dtx-blobs" ./cmd/dtx-blobs)
+(cd go && go build -o "$OUT/dtx-blobs" ./cmd/dtx-blobs)
 "$OUT/dtx-blobs" "$IMAGES" "$OUT/release" -a"$RMAC" -t"$REPO/68k"
 rm -f "$OUT/dtx-blobs"
 
@@ -73,7 +78,7 @@ for target in $TARGETS; do
         # CGO off makes the binary static and the cross-build runs; -s
         # -w drop the symbol and debug tables, which nothing here reads.
         (cd go && CGO_ENABLED=0 GOOS=$os GOARCH=$arch \
-            go build -ldflags="-s -w" -o "$REPO/$OUT/$target/$tool$ext" \
+            go build -ldflags="-s -w" -o "$OUT/$target/$tool$ext" \
             ./cmd/"$tool")
     done
     zip="dtx-tools-$target-v$VERSION.zip"
@@ -87,9 +92,9 @@ done
 for image in "$OUT"/release/*.bin; do
     mv "$image" "${image%.bin}-v$VERSION.bin"
 done
-IMAGES="dtx-images-v$VERSION.zip"
-(cd "$OUT/release" && zip -q -X "$IMAGES" ./*.bin && rm -f ./*.bin)
-echo "$OUT/release/$IMAGES: $(wc -c < "$OUT/release/$IMAGES" | tr -d ' ') bytes"
+IMAGES_ZIP="dtx-images-v$VERSION.zip"
+(cd "$OUT/release" && zip -q -X "$IMAGES_ZIP" ./*.bin && rm -f ./*.bin)
+echo "$OUT/release/$IMAGES_ZIP: $(wc -c < "$OUT/release/$IMAGES_ZIP" | tr -d ' ') bytes"
 
 # What the release contains, by name, size and hash: release/manifest.sh.
 release/manifest.sh "$VERSION" "$OUT/release"
@@ -111,8 +116,8 @@ if [ -n "$host" ] && [ -d "$OUT/$host" ]; then
     # One build a width, so each width takes another image out of the
     # executable. The three cover DTX1's three.
     for w in 1 2 4; do
-        "$REPO/$OUT/$host/dtx-write" "$try/t.csv" "$try/t.dtx" -v1 -w"$w"
-        "$REPO/$OUT/$host/dtx-package" "$try/t.dtx" "$try/t$w.bin"
+        "$OUT/$host/dtx-write" "$try/t.csv" "$try/t.dtx" -v1 -w"$w"
+        "$OUT/$host/dtx-package" "$try/t.dtx" "$try/t$w.bin"
         echo "tried: width $w, $(wc -c < "$try/t$w.bin" | tr -d ' ') bytes" \
              "of image from $OUT/$host, outside the repository"
     done

@@ -38,6 +38,7 @@ size() {
 
 unpacked=$(mktemp -d)
 unzip -q "$DIR/$IMAGES" -d "$unpacked"
+count=$(ls "$unpacked"/*.bin | wc -l | tr -d ' ')
 MANIFEST="$DIR/MANIFEST.txt"
 {
     echo "DTX images and tools - release $VERSION"
@@ -51,8 +52,8 @@ MANIFEST="$DIR/MANIFEST.txt"
         # The name gives the width as -wW and the unit as -kK. DTX0's code
         # does not move with the width, and DTX0 and DTX1 do not have a
         # decoder, so those columns read - rather than a figure.
-        w=$(echo "$name" | sed -n 's/.*-w\([0-9]*\)-.*/\1/p')
-        k=$(echo "$name" | sed -n 's/.*-k\([0-9]*\)-.*/\1/p')
+        w=$(echo "$name" | sed -n 's/.*-w\([0-9]*\)[-.].*/\1/p')
+        k=$(echo "$name" | sed -n 's/.*-k\([0-9]*\)[-.].*/\1/p')
         [ -n "$w" ] || w=-
         [ -n "$k" ] || k=-
         case "$name" in
@@ -67,7 +68,7 @@ MANIFEST="$DIR/MANIFEST.txt"
     echo
     echo "the zips"
     echo "name  bytes  sha256  contents"
-    echo "$IMAGES  $(size "$DIR/$IMAGES")  $(sha "$DIR/$IMAGES")  the twenty-two images"
+    echo "$IMAGES  $(size "$DIR/$IMAGES")  $(sha "$DIR/$IMAGES")  the $count images"
     for zip in "$DIR"/dtx-tools-*.zip; do
         name=$(basename "$zip")
         platform=$(echo "$name" | sed "s/^dtx-tools-//; s/-v$VERSION\.zip$//")

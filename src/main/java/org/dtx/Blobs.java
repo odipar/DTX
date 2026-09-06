@@ -5,15 +5,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.st4.St4Format;
 
 /**
  * The code in this repository, one file a build.
  *
- * <p>A variant assembles to one code any table that follows it, so the
- * packager combines rather than assembles: it takes the file for the build
- * the table needs, writes the five fields the table gives into the
- * format block, and appends the column table and the table's bytes. This
- * writes those files, and it is the one step rmac is needed for.
+ * <p>A build assembles to one code for any table it reads, so the packager
+ * combines rather than assembles: it takes the file for the build the table
+ * needs, writes the six fields the table gives into the format block, and
+ * appends the column table and the table's bytes. This writes those files,
+ * and it is the one step rmac is needed for.
  *
  * <p>Twenty-two of them. DTX0 reads a row as one run of bytes, so its code
  * does not move with the width and one file is every DTX0 table's. DTX1
@@ -23,7 +24,7 @@ import java.util.List;
  *
  * <p>The table each is assembled from fixes only the figures the assembler
  * reads, so it is made here rather than read: the columns do not contain
- * bytes that decode, and {@link Packager#blank} zeroes the five fields the
+ * bytes that decode, and {@link Packager#blank} zeroes the six fields the
  * table did give. What comes out is a function of the template alone.
  */
 public final class Blobs {
@@ -105,10 +106,11 @@ public final class Blobs {
         set[1] = '4';
         set[2] = 7;
         set[3] = (byte) unit;
-        Dtx.putLong(set, 4, column.length / unit);
+        Dtx.putLong(set, 4, column.length);
         Dtx.putLong(set, 8, 28);
         Dtx.putLong(set, 12, 28 + column.length);
         Dtx.putLong(set, 16, 28 + column.length);
+        Dtx.putLong(set, 20, St4Format.NO_REWIND);
         Dtx.putLong(set, 24, ring / unit);
         System.arraycopy(column, 0, set, 28, column.length);
         return set;
@@ -134,7 +136,15 @@ public final class Blobs {
      * in another language builds from. The files are the same bytes in each,
      * and nothing about them is Java's.
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
+        try {
+            run(args);
+        } catch (IOException | RuntimeException failed) {
+            Help.stopped(failed);
+        }
+    }
+
+    static void run(String[] args) throws IOException {
         if (Help.among(args)) {
             System.out.print(Help.BLOBS);
             return;
@@ -172,7 +182,7 @@ public final class Blobs {
                         + build.name() + " with an assembler at " + rmac
                         + " and templates at " + templates
                         + ": the build runs one, and -Drmac=PATH names"
-                        + " another. A release holds what it built, and a"
+                        + " another. A release contains what it built, and a"
                         + " caller who takes one does not run an assembler.",
                         failed);
             }

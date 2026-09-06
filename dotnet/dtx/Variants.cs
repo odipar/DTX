@@ -195,15 +195,6 @@ public static class Variants
     }
 
     /// <summary>
-    /// The DTX2 file of the table in a DTX file of any variant. The table
-    /// is the same under every variant (R1.3), so what comes back has the
-    /// same rows, width, R and RR as what went in, and a DTX2 file comes
-    /// back packed at the unit and ring given here.
-    /// </summary>
-    public static byte[] Dtx2From(byte[] file, IPacker packer, int unit, int ring)
-            => WriteDtx2(Read(file), packer, unit, ring);
-
-    /// <summary>
     /// The table in a DTX2 file, each column unpacked with the copy of ST4
     /// in this repository. A data set runs from its offset to the next
     /// offset above it, or to the end of the file.

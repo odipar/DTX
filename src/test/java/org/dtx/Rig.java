@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -81,25 +82,75 @@ final class Rig {
         return run(root(), argv);
     }
 
-    /** A directory the caller writes into, removed with the JVM. */
+    /** Every directory {@link #work} made, in the order it made them. */
+    private static final List<Path> WORK = new ArrayList<>();
+
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(Rig::removeWork));
+    }
+
+    /**
+     * A directory the caller writes into. It and everything under it are
+     * removed when the JVM goes: {@code deleteOnExit} removes an empty
+     * directory alone, and every caller writes files into this one.
+     */
     static Path work(String named) {
         try {
             Path at = Files.createTempDirectory(named);
-            at.toFile().deleteOnExit();
+            synchronized (WORK) {
+                WORK.add(at);
+            }
             return at;
         } catch (IOException failed) {
             throw new UncheckedIOException(failed);
         }
     }
 
+    /** Every work directory and what stands under it, removed deepest
+     * first. */
+    private static void removeWork() {
+        synchronized (WORK) {
+            for (Path at : WORK) {
+                try (var walk = Files.walk(at)) {
+                    walk.sorted(Comparator.reverseOrder()).forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (IOException gone) {
+                            // a temporary directory the system clears
+                        }
+                    });
+                } catch (IOException gone) {
+                    // the same
+                }
+            }
+        }
+    }
+
     /** Comma separated text of {@code rows} rows and {@code columns} columns. */
     static String numbers(int rows, int columns) {
+        return numbers(rows, columns, 97);
+    }
+
+    /**
+     * The same, row r column i being r(i+1) modulo {@code modulo}. The
+     * conformance kit and the experiments are written at 251.
+     */
+    static String numbers(int rows, int columns, int modulo) {
         StringBuilder out = new StringBuilder();
         for (int r = 0; r < rows; r++) {
             for (int i = 0; i < columns; i++) {
-                out.append(i == 0 ? "" : ",").append(r * (i + 1) % 97);
+                out.append(i == 0 ? "" : ",").append(r * (i + 1) % modulo);
             }
             out.append('\n');
+        }
+        return out.toString();
+    }
+
+    /** A table repeating a pattern 37 rows long, 512 rows. */
+    static String repeating() {
+        StringBuilder out = new StringBuilder();
+        for (int r = 0; r < 512; r++) {
+            out.append(r % 37).append(',').append(r % 37 * 7).append('\n');
         }
         return out.toString();
     }
@@ -123,7 +174,8 @@ final class Rig {
         return argv;
     }
 
-    /** One table written by the Java tree, as a .dtx file at {@code out}. */
+    /** One table written by the Java tree, through org.dtx.Write, and its
+     * bytes. */
     static byte[] write(Path work, String csv, int variant, int width,
             @Nullable Integer repeat, int unit, int ring, boolean copies) {
         try {

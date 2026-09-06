@@ -72,17 +72,6 @@ final class St4Test {
     }
 
     @Test
-    void everyColumnIsPackedWithTheOperationLengthTheDecodersCount()
-            throws Exception {
-        // ST4_wrap assumption 4 needs -l65535, and a packer that did not
-        // take the flag would fail rather than pack.
-        for (int width : WIDTHS) {
-            byte[] file = Dtx2.write(table(width), new St4(), 1, 960);
-            assertEquals(2, file[3], "the variant at W=" + width);
-        }
-    }
-
-    @Test
     void aColumnPackedWithCopiesRunsToFewerBytesAtASmallRing()
             throws Exception {
         // A column that repeats a pattern further back than the ring
@@ -117,8 +106,11 @@ final class St4Test {
     void theCarriedPackerPacksWhatAnExecutableBesideItPacks() throws Exception {
         // src/main/java/org/st4 is a copy of ST4's own packer, and a copy
         // that packed otherwise would be a second packer rather than the
-        // same one. Skipped where no executable stands beside this to check
-        // it to.
+        // same one. The executable is run with -l65535, ST4_wrap's
+        // assumption 4, and the carried packer passes the same figure, so
+        // one set of bytes from the two covers the longest operation as
+        // well. Skipped where no executable stands beside this to check it
+        // to.
         Path beside = packer();
         for (int width : WIDTHS) {
             for (int unit : new int[] {1, 2, 4}) {

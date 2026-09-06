@@ -103,11 +103,11 @@ Every column is the same length, so they lie at one stride: `R` times `W`,
 up to a word. Column `i` begins at `i` strides, and a reader steps from one
 column of a row to the next by adding one (R4.2).
 
-DTX1 has that padding over DTX0 (R4.3). It costs a byte a column at a
-width of 1 and an odd `R`, and nothing at all at a width of 2 or 4, where
-a column is a whole number of words already. In return every value stands
-on a word under every `C`, where DTX0 at a width of 1 puts a row on an odd
-offset.
+DTX1 has that padding over DTX0 (R4.3). It costs a byte between one column
+and the next at a width of 1 and an odd `R`, and nothing at a width of 2 or
+4, where a column is a whole number of words already. In return every value
+stands on a word under every `C`, where DTX0 at a width of 1 puts a row on
+an odd offset.
 
 The other difference is the reach of one read: a row of DTX0, a column of
 DTX1.
@@ -172,8 +172,9 @@ the one build for that unit (R5.3).
 
 `R` times `W` divides by `k` (R5.6). A column is `R` times `W` bytes and
 ST4 packs whole units, so a column that is not a whole number of them
-unpacks to more bytes than the column has. At a width of 4 that is true
-at every `k` and every `R`; at a width of 1 it bounds `R`.
+unpacks to more bytes than the column has. At a width of 4 that is true at
+every `k` and every `R`; at a width of 2 and `k` of 4 it bounds `R` to even
+numbers, and at a width of 1 it bounds `R` to multiples of `k`.
 
 Four bytes and `4C` divide by 4, so the first data set begins on a long
 where the payload does. The data sets follow, each beginning on a long:
@@ -183,8 +184,8 @@ A reader takes a column from its offset alone: a data set defines the
 length of what it unpacks to, and the bits that pack it end on a marker,
 so no offset is read against the next.
 
-**What an ST4 data set is.** Enough of it to find the way; the format is
-defined in full in [ST4](https://github.com/odipar/ST4).
+**What an ST4 data set is.** What a reader of DTX2 needs of it; the format
+is defined in full in [ST4](https://github.com/odipar/ST4).
 
 - Its first long is `$53 $34 $07 k`: `'S'`, `'4'`, the ST4 format version
   7, and the unit `k`.

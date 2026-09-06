@@ -7,7 +7,7 @@ table again from these and compares the file in `tables/` with it, so a
 row here is one the writer gives.
 
 The text is one of two. **numbers R C** is `R` rows of `C` columns where row
-`r`, column `i` is `r` times `i` plus one, modulo 251. **repeating** is 512
+`r`, column `i` is `r` times (`i` plus one), modulo 251. **repeating** is 512
 rows of two columns where row `r` is `r` modulo 37 and seven times that,
 so a pattern 37 rows long repeats, further back than a ring of 64 bytes
 reaches.

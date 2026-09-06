@@ -8,10 +8,10 @@ using System.Reflection;
 /// <para>Twenty-two of them. DTX0 reads a row as one run of bytes, so its
 /// code does not move with the width and one file is every DTX0 table's.
 /// DTX1 moves a value a column, so it has one a width. DTX2 has one a width
-/// and a build of the decoder built into it, which is a unit of 1, 2 or 4
-/// with the copy code and without. They are built once and an assembly that
-/// packages a table contains them rather than assembling one. doc/tools.md
-/// defines how they are built and doc/abi.md what each of them does.</para>
+/// and a build of the decoder built into it: a unit of 1, 2 or 4, with the
+/// copy code and without. They are built once and an assembly that packages
+/// a table contains them rather than assembling one. doc/tools.md defines
+/// how they are built and doc/abi.md what each of them does.</para>
 ///
 /// <para>They are build output, embedded from build/68k. An assembly built
 /// without them does not contain one: Read gives null back and the caller
@@ -109,21 +109,5 @@ public static class Images
                     + " with one");
         }
         return File.ReadAllBytes(Path.Combine(at, name));
-    }
-
-    /// <summary>How many of the builds this one contains: twenty-two, or
-    /// none.</summary>
-    public static int Embedded()
-    {
-        int embedded = 0;
-        foreach (Build build in Builds())
-        {
-            if (Read(build.Variant, build.Width, build.Unit, build.Copies)
-                    != null)
-            {
-                embedded++;
-            }
-        }
-        return embedded;
     }
 }

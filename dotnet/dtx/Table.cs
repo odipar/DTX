@@ -78,24 +78,6 @@ public sealed class Table
         return new Table(rows, repeat, width, kept);
     }
 
-    /// <summary>Whether two tables are the same rows, width, R and RR.</summary>
-    public bool Same(Table other)
-    {
-        if (Rows != other.Rows || Repeat != other.Repeat
-                || Width != other.Width || column.Length != other.column.Length)
-        {
-            return false;
-        }
-        for (int i = 0; i < column.Length; i++)
-        {
-            if (!column[i].AsSpan().SequenceEqual(other.column[i]))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
     /// <summary>The header of this table under variant, SPEC.md 1.</summary>
     public byte[] Header(int variant)
     {
