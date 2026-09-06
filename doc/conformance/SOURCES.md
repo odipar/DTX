@@ -33,7 +33,7 @@ of the table gives back (TASK.md).
 | `dtx2-w4-k4` | numbers 64 2 | `-v2 -w4 -k4 -m960` | 604 | 5fb2e661a148978c | DTX2 at a width of 4 and k of 4 |
 | `dtx2-w4-k1` | numbers 64 2 | `-v2 -w4 -k1 -m960` | 324 | 475d57982f70276b | DTX2 at a width of 4 and k of 1, a unit below the width |
 | `dtx2-w1-k4` | numbers 64 2 | `-v2 -w1 -k4 -m960` | 220 | 53c80b69f773a637 | DTX2 at a width of 1 and k of 4, a unit above the width |
-| `dtx2-repeat` | numbers 64 2 | `-v2 -w1 -r16 -k1 -m960` | 220 | b3f5021ecfe140f2 | DTX2: a table that repeats at row 16, a jump backward on a packed reader |
+| `dtx2-repeat` | numbers 64 2 | `-v2 -w1 -r16 -k1 -m960` | 226 | 7db50b78c9c39e15 | DTX2: a table that repeats at row 16, so its data sets loop there |
 | `dtx2-rows-not-a-multiple-of-p` | numbers 50 3 | `-v2 -w1 -k1 -m960` | 284 | 76c705b1e5fc0347 | DTX2: R of 50 at P of 3, so the last refill of a column is short |
 | `dtx2-twenty-columns` | numbers 64 20 | `-v2 -w2 -k1 -m960` | 3300 | 34c8bd7f7fc53dd6 | DTX2: C of 20, so P is 20 and a read walks twenty rings |
 | `dtx2-copies` | repeating | `-v2 -w2 -k1 -m64 -copies` | 356 | 4764b1c120676c1a | DTX2 with copies from the literal stream, at a ring of 64 the pattern does not fit |

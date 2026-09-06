@@ -165,7 +165,7 @@ final class PackagerTest {
             }
 
             @Override
-            public byte[] pack(byte[] bytes, int k, int n) {
+            public byte[] pack(byte[] bytes, int k, int n, int loop) {
                 byte[] set = new byte[28 + bytes.length];
                 set[0] = 'S';
                 set[1] = '4';

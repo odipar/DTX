@@ -16,7 +16,7 @@ final class PackedVariantTest {
     /** The ST4 header a stand-in data set opens with; the column follows it. */
     private static final int ST4_HEADER = 28;
 
-    private static final Packer STANDIN = (column, unit, ring) -> {
+    private static final Packer STANDIN = (column, unit, ring, loop) -> {
         byte[] set = new byte[ST4_HEADER + column.length];
         set[0] = 'S';
         set[1] = '4';

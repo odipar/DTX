@@ -1,5 +1,7 @@
 package org.dtx;
 
+import java.util.Arrays;
+import org.st4.St4Block;
 import org.st4.St4Compressor;
 import org.st4.St4EventOptimizer;
 import org.st4.St4Format;
@@ -55,7 +57,7 @@ public final class St4 implements Packer {
     }
 
     @Override
-    public byte[] pack(byte[] column, int unit, int ring) {
+    public byte[] pack(byte[] column, int unit, int ring, int loop) {
         String problem = St4Format.checkUnit(unit);
         if (!problem.isEmpty()) {
             throw new IllegalArgumentException(problem);
@@ -64,12 +66,44 @@ public final class St4 implements Packer {
         // figure: 32512 units at k=4 would not fit the word.
         int offsetLimit = Math.min(ring / unit, St4Format.maxOffsetUnits(unit));
         int[] units = Units.split(column, unit);
-        var parsed = copies
-                ? St4LiteralCopySearch.optimize(units, unit, offsetLimit,
-                        MAX_OP, seconds, false)
-                : St4EventOptimizer.optimize(units, unit, offsetLimit, false);
-        St4Compressor.Result result = St4Compressor.compress(
-                parsed, units, unit, MAX_OP, -1, offsetLimit);
+        if (loop < -1 || loop >= units.length) {
+            throw new IllegalArgumentException("the loop is unit -1 to "
+                    + (units.length - 1) + " of the column, not " + loop);
+        }
+        St4Compressor.Result result =
+                loop >= 0 && units.length - loop > offsetLimit
+                        ? rewinding(units, unit, offsetLimit, loop)
+                        : St4Compressor.compress(parse(units, unit,
+                                offsetLimit), units, unit, MAX_OP, loop,
+                                offsetLimit);
         return org.st4.St4.container(result);
+    }
+
+    /**
+     * A column whose loop is longer than a back reference reaches, packed to
+     * be replayed: the run before the loop and the loop are parsed apart, so
+     * no match in the loop reaches before the loop's first unit and every
+     * pass reads the same history. A reader puts the decoder's state away at
+     * that unit and back at the column's end, every pass (abi.md 4).
+     */
+    private St4Compressor.Result rewinding(int[] units, int unit, int limit,
+            int loop) {
+        int[] before = Arrays.copyOfRange(units, 0, loop);
+        int[] over = Arrays.copyOfRange(units, loop, units.length);
+        return St4Compressor.compressRewinding(
+                before.length == 0 ? null : parse(before, unit, limit),
+                parse(over, unit, limit), units, unit, MAX_OP, loop, limit);
+    }
+
+    /**
+     * One parse of {@code units}, with the copy code where this packs it.
+     * Neither optimizer reports progress: a tool writes what it wrote, and
+     * a meter on standard output would stand in the middle of it.
+     */
+    private St4Block parse(int[] units, int unit, int limit) {
+        return copies
+                ? St4LiteralCopySearch.optimize(units, unit, limit, MAX_OP,
+                        seconds, false)
+                : St4EventOptimizer.optimize(units, unit, limit, false);
     }
 }

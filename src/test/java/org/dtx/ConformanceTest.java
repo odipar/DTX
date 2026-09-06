@@ -64,7 +64,7 @@ class ConformanceTest {
             new Source("dtx2-w1-k4", Rig.numbers(64, 2, 251), 2, 1, null, 4, 960, false,
                     "DTX2 at a width of 1 and k of 4, a unit above the width"),
             new Source("dtx2-repeat", Rig.numbers(64, 2, 251), 2, 1, 16, 1, 960, false,
-                    "DTX2: a table that repeats at row 16, a jump backward on a packed reader"),
+                    "DTX2: a table that repeats at row 16, so its data sets loop there"),
             new Source("dtx2-rows-not-a-multiple-of-p", Rig.numbers(50, 3, 251), 2, 1, null, 1, 960, false,
                     "DTX2: R of 50 at P of 3, so the last refill of a column is short"),
             new Source("dtx2-twenty-columns", Rig.numbers(64, 20, 251), 2, 2, null, 1, 960, false,

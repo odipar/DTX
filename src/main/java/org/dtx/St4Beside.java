@@ -57,7 +57,7 @@ public final class St4Beside implements Packer {
     }
 
     @Override
-    public byte[] pack(byte[] column, int unit, int ring) {
+    public byte[] pack(byte[] column, int unit, int ring, int loop) {
         try {
             Path work = Files.createTempDirectory("dtx");
             try {
@@ -73,6 +73,12 @@ public final class St4Beside implements Packer {
                 List<String> command = new ArrayList<>(List.of(
                         packer.toString(), "-f", "-k" + unit,
                         "-m" + offsetLimit, "-l65535"));
+                if (loop >= 0) {
+                    // st4 -r takes the loop's own unit, and works out for
+                    // itself whether a back reference reaches the loop's
+                    // first unit or the pass has to be replayed
+                    command.add("-r" + loop);
+                }
                 if (!copies.isEmpty()) {
                     command.add(copies);
                 }
