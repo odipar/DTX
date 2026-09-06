@@ -50,7 +50,7 @@ public sealed class St4Packer : IPacker
     public bool Copies => copies;
 
     /// <inheritdoc/>
-    public byte[] Pack(byte[] column, int unit, int ring)
+    public byte[] Pack(byte[] column, int unit, int ring, int loop)
     {
         string problem = Nt4.Format.CheckUnit(unit);
         if (problem.Length != 0)
@@ -61,13 +61,50 @@ public sealed class St4Packer : IPacker
         // figure: 32512 units at k=4 would not fit the word.
         int offsetLimit = Math.Min(ring / unit, Nt4.Format.MaxOffsetUnits(unit));
         int[] units = Nt4.Units.Split(column, unit);
-        Nt4.Block parsed = copies
-                ? Nt4.LiteralCopySearch.Optimize(units, unit, offsetLimit,
-                        MaxOp, seconds, false)
-                : Nt4.EventOptimizer.Optimize(units, unit, offsetLimit, false);
-        return Nt4.Nt4.Container(Nt4.Compressor.Compress(
-                parsed, units, unit, MaxOp, -1, offsetLimit));
+        if (loop < -1 || loop >= units.Length)
+        {
+            throw new ArgumentException($"the loop is unit -1 to"
+                    + $" {units.Length - 1} of the column, not {loop}");
+        }
+        // ST4 packs a loop two ways, and this makes the same test its own
+        // packer makes: the end marker's endless match where a back
+        // reference reaches the loop's first unit, and a replayed pass
+        // where it does not.
+        return Nt4.Nt4.Container(
+                loop >= 0 && units.Length - loop > offsetLimit
+                        ? Replayed(units, unit, offsetLimit, loop)
+                        : Nt4.Compressor.Compress(Parse(units, unit,
+                                offsetLimit), units, unit, MaxOp, loop,
+                                offsetLimit));
     }
+
+    /// <summary>
+    /// A column whose loop is longer than a back reference reaches. The run
+    /// before the loop and the loop are parsed apart, so nothing in the loop
+    /// reaches before the loop's first unit and every pass reads the same
+    /// history. The data set records that unit, and a reader puts the
+    /// decoder's registers away there and back at the column's end, every
+    /// pass, which ST4's decoders leave to the caller (abi.md 4).
+    /// </summary>
+    private Nt4.Compressor.Result Replayed(int[] units, int unit, int limit,
+            int loop)
+    {
+        int[] before = units[..loop];
+        int[] over = units[loop..];
+        return Nt4.Compressor.CompressRewinding(
+                before.Length == 0 ? null : Parse(before, unit, limit),
+                Parse(over, unit, limit), units, unit, MaxOp, loop, limit);
+    }
+
+    /// <summary>
+    /// One parse of units, with the copy code where this packs it. Neither
+    /// optimizer reports progress: a tool writes what it wrote, and a meter
+    /// on standard output would stand in the middle of it.
+    /// </summary>
+    private Nt4.Block Parse(int[] units, int unit, int limit) => copies
+            ? Nt4.LiteralCopySearch.Optimize(units, unit, limit, MaxOp,
+                    seconds, false)
+            : Nt4.EventOptimizer.Optimize(units, unit, limit, false);
 }
 
 /// <summary>
@@ -95,7 +132,7 @@ public sealed class St4Beside : IPacker
     public bool Copies => copies.Length != 0;
 
     /// <inheritdoc/>
-    public byte[] Pack(byte[] column, int unit, int ring)
+    public byte[] Pack(byte[] column, int unit, int ring, int loop)
     {
         string work = Directory.CreateTempSubdirectory("dtx").FullName;
         try
@@ -108,15 +145,28 @@ public sealed class St4Beside : IPacker
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
             };
+            // The offset limit is capped as St4Packer caps it, so the two
+            // packers are given one limit: a word offset is stored scaled to
+            // bytes, and 32512 units at k=4 would not fit the word.
+            int offsetLimit = Math.Min(ring / unit,
+                    Nt4.Format.MaxOffsetUnits(unit));
             foreach (string one in new[]
             {
                 "-f",
                 "-k" + unit.ToString(CultureInfo.InvariantCulture),
-                "-m" + (ring / unit).ToString(CultureInfo.InvariantCulture),
+                "-m" + offsetLimit.ToString(CultureInfo.InvariantCulture),
                 "-l65535",
             })
             {
                 start.ArgumentList.Add(one);
+            }
+            if (loop >= 0)
+            {
+                // st4 -r takes the loop's own unit, and works out for itself
+                // whether a back reference reaches the loop's first unit or
+                // the pass has to be replayed
+                start.ArgumentList.Add(
+                        "-r" + loop.ToString(CultureInfo.InvariantCulture));
             }
             if (copies.Length != 0)
             {

@@ -143,8 +143,9 @@ public static class Variants
 
     /// <summary>table as a DTX2 file, every column packed at one unit.</summary>
     /// <exception cref="ArgumentException">where unit or ring is outside
-    /// what the payload can define, or a column's bytes do not divide by
-    /// unit</exception>
+    /// what the payload can define, a column's bytes do not divide by unit,
+    /// or the table repeats at a row whose first byte is not a unit of the
+    /// column (R5.11)</exception>
     public static byte[] WriteDtx2(Table table, IPacker packer, int unit, int ring)
     {
         if (unit != 1 && unit != 2 && unit != 4)
@@ -162,10 +163,11 @@ public static class Variants
                     + $" {table.Width} bytes, which does not divide by k of"
                     + $" {unit}");
         }
+        int loop = Loop(table, unit);
         byte[][] set = new byte[table.Columns][];
         for (int i = 0; i < set.Length; i++)
         {
-            set[i] = packer.Pack(table.Column(i), unit, ring);
+            set[i] = packer.Pack(table.Column(i), unit, ring, loop);
         }
 
         // 2.3: N, k, the flags, then an offset a column
@@ -192,6 +194,34 @@ public static class Variants
             set[i].CopyTo(out_, head.Length + at[i]);
         }
         return out_;
+    }
+
+    /// <summary>
+    /// The unit every data set loops at (R5.11). Every set of a DTX2
+    /// payload loops, so no set ends and a reader decodes one row after
+    /// another without a figure to count against: where RR is below R the
+    /// set loops at that row, and where the table does not repeat it loops
+    /// at its last unit, which gives row R minus one again for as long as a
+    /// caller advances.
+    /// </summary>
+    /// <exception cref="ArgumentException">where row RR does not begin a
+    /// unit of the column</exception>
+    public static int Loop(Table table, int unit)
+    {
+        int units = table.Rows * table.Width / unit;
+        if (table.Repeat >= table.Rows)
+        {
+            return units - 1;
+        }
+        int at = table.Repeat * table.Width;
+        if (at % unit != 0)
+        {
+            throw new ArgumentException($"the table repeats at row"
+                    + $" {table.Repeat}, which is byte {at} of a column and"
+                    + $" not a unit of one at k of {unit}: RR times the width"
+                    + " divides by k (R5.11)");
+        }
+        return at / unit;
     }
 
     /// <summary>

@@ -44,12 +44,12 @@ public static class Program
                     return 2;
             }
         }
-        catch (Exception failed) when (failed is ArgumentException
-                || failed is InvalidOperationException || failed is IOException)
+        catch (Exception failed)
         {
-            // A malformed text, a missing file or a unit no variant takes
-            // gives the message on standard error and 1, as the Go tools do.
-            // A flag a tool does not read exits with 2.
+            // A malformed text, a missing file, a truncated one or a unit no
+            // variant takes gives the message on standard error and 1, as
+            // the Java and Go tools do, and not a stack trace. A flag a tool
+            // does not read exits with 2.
             Console.Error.WriteLine(failed.Message);
             return 1;
         }

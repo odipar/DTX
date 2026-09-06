@@ -143,8 +143,12 @@ const CopiesFlag = 1
 // beside it that -p names.
 type Packer interface {
 	// Pack gives column as one complete ST4 data set: its own header, and
-	// the length of what it unpacks to.
-	Pack(column []byte, unit, ring int) ([]byte, error)
+	// the length of what it unpacks to. loop is the unit the set decodes
+	// back to when it reaches the end, so that it decodes forever, or -1
+	// where the set ends (R5.11). It is an error to give a loop to a packer
+	// with none to give: a set that ends where the file defines a loop
+	// reads wrongly.
+	Pack(column []byte, unit, ring, loop int) ([]byte, error)
 
 	// Copies gives whether a match beyond the ring copies from the
 	// column's own literal stream, which ST4 packs with -c. The packer
@@ -158,6 +162,10 @@ type Packer interface {
 // The payload defines N and k once, so one ring size and one decoder build
 // reads every column (R5.3, R5.5), then an offset a column, then the data
 // sets, each beginning on a long (R5.9).
+//
+// It is an error where unit or ring is outside what the payload defines, a
+// column's bytes do not divide by unit, or the table repeats at a row whose
+// first byte is not a unit of the column (R5.11).
 func WriteDtx2(t *Table, packer Packer, unit, ring int) ([]byte, error) {
 	if unit != 1 && unit != 2 && unit != 4 {
 		return nil, fmt.Errorf("k is 1, 2 or 4, not %d", unit)
@@ -169,10 +177,13 @@ func WriteDtx2(t *Table, packer Packer, unit, ring int) ([]byte, error) {
 		return nil, fmt.Errorf("a column is %d times %d bytes, which does"+
 			" not divide by k of %d", t.Rows(), t.Width(), unit)
 	}
+	loop, err := Loop(t, unit)
+	if err != nil {
+		return nil, err
+	}
 	set := make([][]byte, t.Columns())
 	for i := range set {
-		var err error
-		if set[i], err = packer.Pack(t.Column(i), unit, ring); err != nil {
+		if set[i], err = packer.Pack(t.Column(i), unit, ring, loop); err != nil {
 			return nil, err
 		}
 	}
@@ -200,6 +211,27 @@ func WriteDtx2(t *Table, packer Packer, unit, ring int) ([]byte, error) {
 	return out, nil
 }
 
+// Loop gives the unit every data set loops at (R5.11). Every set of a DTX2
+// payload loops, so no set ends and a reader decodes one row after another
+// without a figure to count against: where RR is below R the set loops at
+// that row, and where the table does not repeat it loops at its last unit,
+// which gives row R minus one again for as long as a caller advances.
+//
+// It is an error where row RR does not begin a unit of the column.
+func Loop(t *Table, unit int) (int, error) {
+	units := t.Rows() * t.Width() / unit
+	if t.Repeat() >= t.Rows() {
+		return units - 1, nil
+	}
+	at := t.Repeat() * t.Width()
+	if at%unit != 0 {
+		return 0, fmt.Errorf("the table repeats at row %d, which is byte %d"+
+			" of a column and not a unit of one at k of %d: RR times the"+
+			" width divides by k (R5.11)", t.Repeat(), at, unit)
+	}
+	return at / unit, nil
+}
+
 // Dtx2From gives the DTX2 file of the table in a DTX file of any variant.
 // The table is the same under every variant (R1.3), so what comes back has
 // the same rows, width, R and RR as what went in, and a DTX2 file comes
@@ -213,13 +245,14 @@ func Dtx2From(file []byte, packer Packer, unit, ring int) ([]byte, error) {
 }
 
 // Packed gives what a DTX2 payload defines: the ring, the unit, whether its
-// columns contain copies from the literal stream, and where each column's
-// data set begins in the payload.
+// columns contain copies from the literal stream, whether a reader replays
+// each set's pass, and where each column's data set begins in the payload.
 type Packed struct {
-	Ring   int // N
-	Unit   int // k
-	Copies bool
-	At     []int
+	Ring     int // N
+	Unit     int // k
+	Copies   bool
+	Replayed bool
+	At       []int
 }
 
 // ReadPacked reads those out of a DTX2 payload, SPEC.md 2.3.
@@ -245,9 +278,17 @@ func ReadPacked(file []byte, header Header) (Packed, error) {
 	signature := 0x53340700 + unit
 	for i := range out.At {
 		out.At[i] = GetLong(file, payload+4+4*i)
-		if out.At[i] < prefix || len(file) < payload+out.At[i]+4 {
+		if out.At[i] < prefix || len(file) < payload+out.At[i]+24 {
 			return Packed{}, fmt.Errorf("column %d's data set begins at %d,"+
 				" outside the payload", i, out.At[i])
+		}
+		// Byte 20 of a data set gives the unit its loop begins at, or
+		// $FFFFFFFF where its end marker loops it. A set that records one is
+		// replayed by the reader (abi.md 4), and every set of a payload
+		// takes the same form: they are one table's columns, so one loop and
+		// one length.
+		if int32(GetLong(file, payload+out.At[i]+20)) != -1 {
+			out.Replayed = true
 		}
 		opens := GetLong(file, payload+out.At[i])
 		if opens != signature {

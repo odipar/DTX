@@ -26,8 +26,9 @@ func (p Beside) Copies() bool {
 	return p.CopiesFlag != ""
 }
 
-// Pack gives column as one complete ST4 data set.
-func (p Beside) Pack(column []byte, unit, ring int) ([]byte, error) {
+// Pack gives column as one complete ST4 data set, looping at unit loop or
+// ending where loop is -1.
+func (p Beside) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	work, err := os.MkdirTemp("", "dtx")
 	if err != nil {
 		return nil, err
@@ -38,8 +39,18 @@ func (p Beside) Pack(column []byte, unit, ring int) ([]byte, error) {
 	if err := os.WriteFile(in, column, 0o644); err != nil {
 		return nil, err
 	}
+	// The offset limit is capped as Packer caps it, so the two packers are
+	// given one limit: a word offset is stored scaled to bytes, and 32512
+	// units at k=4 would not fit the word.
+	offsetLimit := min(ring/unit, MaxOffsetUnits(unit))
 	argv := []string{"-f", "-k" + strconv.Itoa(unit),
-		"-m" + strconv.Itoa(ring/unit), "-l65535"}
+		"-m" + strconv.Itoa(offsetLimit), "-l65535"}
+	if loop >= 0 {
+		// st4 -r takes the loop's own unit, and works out for itself whether
+		// a back reference reaches the loop's first unit or the pass has to
+		// be replayed
+		argv = append(argv, "-r"+strconv.Itoa(loop))
+	}
 	if p.CopiesFlag != "" {
 		argv = append(argv, p.CopiesFlag)
 	}
