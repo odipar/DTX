@@ -47,10 +47,10 @@ back than a ring of 64:
 
 | written as | file bytes | image bytes |
 |---|---|---|
-| DTX1 | 2064 | 2268 |
-| DTX2, N=64 | 2146 | 3106 |
-| DTX2, N=64, copies | 362 | 1354 |
-| DTX2, N=128, copies | 258 | 1250 |
+| DTX1 | 2064 | 2192 |
+| DTX2, N=64 | 2146 | 2974 |
+| DTX2, N=64, copies | 362 | 1222 |
+| DTX2, N=128, copies | 258 | 1118 |
 
 Without copies the ring is too short for the pattern and DTX2 packs to
 more than DTX1. With them a match beyond the ring copies from the column's
@@ -99,7 +99,7 @@ bytes to 716 and DTX2's from 1352 to 1476.
 One width a table (R6.3) took the test out again, and the ABI took the
 move with it: an advance gives the pointer at the row's first value and
 the caller reads where the values stand (abi.md 2), so nothing in an image
-moves one. DTX1's code is 160 bytes now and DTX2's 884, and the rig's
+moves one. DTX1's code is 84 bytes now and DTX2's 752, and the rig's
 alignment hook passes every table it runs.
 
 ## A column packed with copies, read without them

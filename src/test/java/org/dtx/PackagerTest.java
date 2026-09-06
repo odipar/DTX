@@ -76,14 +76,14 @@ final class PackagerTest {
         // of it: the block is the head and that pointer at each of the three
         // widths, at any C, and under DTX0 and DTX1 alike. The figure is read
         // back out of the image, where a caller reads it.
-        assertEquals(20, Packager.stateBytes(), "the head and one pointer");
+        assertEquals(12, Packager.stateBytes(), "the head and one pointer");
         for (int width : new int[] {1, 2, 4}) {
             Table one = Csv.table("1\n2\n", width);
             Table three = Csv.table("1,2,3\n4,5,6\n", width);
             for (byte[] file : new byte[][] {Dtx0.write(three),
                     Dtx1.write(one), Dtx1.write(three)}) {
                 Dtx.Header header = Dtx.header(file);
-                assertEquals(20, Dtx.getLong(Packager.image(file),
+                assertEquals(12, Dtx.getLong(Packager.image(file),
                                 Packager.FORMAT_AT + Packager.STATE_BYTES),
                         "DTX" + header.variant() + " of " + header.columns()
                                 + " columns at a width of " + width);
@@ -234,17 +234,16 @@ final class PackagerTest {
         byte[] file = packed(64, 2, 2, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
-        assertEquals(52, Packager.decoders(),
+        assertEquals(36, Packager.decoders(),
                 "the decoder states follow the pointer, the payload, the"
-                        + " records, the fill, C, the rings and the four"
-                        + " figures");
+                        + " records, the fill, C, the rings, P and N");
         // The template reads its own copy of the figure, so the two are
         // compared rather than each pinned to 52 on its own.
         assertEquals(templateDecoders(), Packager.decoders(),
                 "68k/DTX2.S equates DTX_DECODERS to another offset");
-        assertEquals(52 + 32 * 2, Packager.ring(header),
+        assertEquals(36 + 32 * 2, Packager.ring(header),
                 "the rings follow two decoder states of 32 bytes");
-        assertEquals(52 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
+        assertEquals(36 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
                 "a ring a column");
     }
 
@@ -324,7 +323,7 @@ final class PackagerTest {
         assertEquals("DTX", new String(image, 16, 3),
                 "the format block behind the four slots");
         assertEquals(0, image[19], "the variant the format block defines");
-        assertEquals(20, Dtx.getLong(image, 20), "the state block's bytes");
+        assertEquals(12, Dtx.getLong(image, 20), "the state block's bytes");
         int header = Dtx.getLong(image, 24);
         assertEquals("DTX", new String(image, header, 3),
                 "the header the format block points at");

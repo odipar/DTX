@@ -125,7 +125,7 @@ With `-copies` a match beyond the ring copies from the column's own literal
 stream, and that saves most at the small rings DTX2 reads through. Measured
 on a table of 512 rows repeating a pattern 37 rows long, at a width of 2 and
 `N` of 64, where the pattern runs to 74 bytes and reaches past the ring: the
-file goes from 2146 bytes to 362, and its image from 3106 to 1354.
+file goes from 2146 bytes to 362, and its image from 2974 to 1222.
 
 **The payload defines it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
 Write is the one tool that reads `-copies` and the packager takes the

@@ -58,20 +58,12 @@
         .endm
 
 ; -----------------------------------------------------------------------------
-; DTX_init. It installs R and RR, and leaves the pointer a row below row 0.
+; DTX_init. It leaves the pointer a row below row 0.
 
 DTX_init:
-        move.l  #-1,DTX_ROW(a0)
         clr.w   DTX_TURN(a0)
-        clr.l   DTX_DECODED(a0)
 
-        bsr.s   DTX_payload             ; a1 the payload, a2 the header
-        move.l  4(a2),d3                ; R
-        move.l  10(a2),d5               ; RR
-        DTX_INSTALL_L d3,advance_rows
-        DTX_INSTALL_L d3,advance_end
-        DTX_INSTALL_L d5,advance_repeat
-
+        bsr.s   DTX_payload             ; a1 the payload
 ; The pointer a row below row 0, so the advance into row 0 steps like any
 ; other advance.
         subq.l  #DTX_WIDTH,a1
@@ -83,7 +75,6 @@ DTX_init:
 ; a shift a width.
 
 DTX_jump:
-        move.l  d0,DTX_ROW(a0)
         move.l  d0,d1
         DTX_SCALE d1
         bsr.s   DTX_payload
@@ -92,26 +83,12 @@ DTX_jump:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_advance. The move that leaves d0 sets N and Z, so bmi after the call.
-; a1 comes back the row's first value, and the caller takes column i at i
-; strides from it.
+; DTX_advance. One row on: a1 comes back the row's first value, and the
+; caller takes column i at i strides from it. Which row that is the caller
+; counts (abi.md 2): no call keeps a row number, and an advance past row R
+; minus one reads past the column.
 
 DTX_advance:
-        move.l  DTX_ROW(a0),d0
-        addq.l  #1,d0
-advance_rows:
-        cmpi.l  #0,d0                   ; installed: R
-        bne.s   advance_next
-advance_repeat:
-        move.l  #0,d0                   ; installed: RR
-advance_end:
-        cmpi.l  #0,d0                   ; installed: R
-        bcs.s   DTX_jump                ; RR below R: the repeat is a jump
-        moveq   #-1,d0                  ; the end, and it is sticky
-        movea.l DTX_POINTER(a0),a1      ; the last row stands where it stood
-        rts
-advance_next:
-        move.l  d0,DTX_ROW(a0)
         addq.l  #DTX_WIDTH,DTX_POINTER(a0)
         movea.l DTX_POINTER(a0),a1
         rts

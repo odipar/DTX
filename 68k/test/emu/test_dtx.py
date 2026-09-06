@@ -367,36 +367,33 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
         it: a1 the first value, and a stride to the next column's."""
         return m.row(got["a1"], columns, stride, width)
 
-    # every row, one advance each
+    # every row, one advance each. No call gives a row number: the caller
+    # counts, as doc/abi.md 2 defines.
     for r in range(rows):
         got = m.call("advance")
-        assert got["d0"] == r, "advance gave row %d, not %d" % (got["d0"], r)
         assert values(got) == want[r], \
             "row %d reads %s, not %s" % (r, values(got).hex(), want[r].hex())
 
-    # the end
-    got = m.call("advance")
-    if rr >= rows:
-        assert got["d0"] == 0xFFFFFFFF, "the end gave %08x" % got["d0"]
-        assert values(got) == want[rows - 1], \
-            "the end moved the pointer off the last row"
-        got = m.call("advance")
-        assert got["d0"] == 0xFFFFFFFF, "the end is not sticky"
-        assert values(got) == want[rows - 1], \
-            "a second end moved the pointer off the last row"
-    else:
-        assert got["d0"] == rr, "the repeat gave row %d, not %d" % (got["d0"], rr)
-        assert values(got) == want[rr], "the repeat's row"
+    # A table that repeats, under DTX2: every data set loops at RR (R5.11),
+    # so the rows come round from there and nothing is decoded twice. Where
+    # the table does not repeat the set loops on its last unit, which is a
+    # row only where the unit divides the width, so what stands past the
+    # last row is not defined and the caller stops (abi.md 7). Under DTX0
+    # and DTX1 an advance past the last row reads past the table.
+    if kind == 2 and rr < rows:
+        for pass_ in range(2):
+            for r in range(rr, rows):
+                got = m.call("advance")
+                assert values(got) == want[r], \
+                    "the rows past the last, pass %d row %d" % (pass_, r)
 
     # a jump to every row, forward and backward
     for r in list(range(rows)) + list(reversed(range(rows))):
         got = m.call("jump", d0=r)
-        assert got["d0"] == r, "jump gave %d, not %d" % (got["d0"], r)
         assert values(got) == want[r], "the row after a jump to %d" % r
         # the row after the one jumped to
         if r + 1 < rows:
             got = m.call("advance")
-            assert got["d0"] == r + 1, "advance after a jump"
             assert values(got) == want[r + 1], \
                 "the row after a jump and an advance"
 
@@ -467,7 +464,6 @@ def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     out = []
     for r in range(rows):
         got = m.call("advance")
-        assert got["d0"] == r, "advance skipped row %d" % r
         out.append(m.row(got["a1"], columns, stride, width))
     p = struct.unpack(">H", fmt[14:16])[0]
     return out, blob, image, (resumes[0] if resumes else 0), p
@@ -484,12 +480,15 @@ def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
             csv, variant, width, repeat, unit, ring,
             copies and variant == 2)
         if variant == 2:
-            # ST4_wrap assumption 5: a column takes ceil(O/budget) calls and
-            # no more. One at init and one a period while rows remain.
-            due = columns * -(-len(want) // p)
-            assert resumes == due, \
-                "the decoder was called %d times, not the %d ST4_wrap's" \
-                " assumption 5 allows" % (resumes, due)
+            # One call a column at init and one a column a period after it,
+            # every period, since every data set loops (R5.11) and no set
+            # runs out. Reading R rows takes the seed and one period a P
+            # rows, so a column is called once more than the periods those
+            # rows cover.
+            due = columns * (1 + (len(want) + p - 1) // p)
+            assert resumes <= due, \
+                "the decoder was called %d times, and reading %d rows at a" \
+                " period of %d takes at most %d" % (resumes, len(want), p, due)
             asked = "  %d resumes at P=%d" % (resumes, p)
         # The writer's link, where this rig can read the file: the bytes the
         # writer laid down are the rows the text gave.

@@ -23,11 +23,9 @@ import java.nio.file.Path;
 public final class Packager {
 
     /** The state block's fields, from doc/abi.md 3. */
-    static final int ROW = 0;
-    static final int TURN = 4;
-    static final int DECODED = 8;
-    static final int PARK = 12;
-    static final int POINTER = 16;
+    static final int TURN = 0;
+    static final int PARK = 4;
+    static final int POINTER = 8;
 
     /** Where the format block stands: behind the four slots. */
     static final int FORMAT_AT = 16;
@@ -53,7 +51,7 @@ public final class Packager {
     static final int STREAM = 16;
 
     /** What a packed reader's state block contains before its decoder states. */
-    static final int PACKED_HEAD = 52;
+    static final int PACKED_HEAD = 36;
 
     /** The state block DTX0 and DTX1 take: the head, and one pointer. */
     static final int PLAIN = POINTER + 4;
@@ -220,9 +218,7 @@ public final class Packager {
                 .append("; Every instruction is the template's; nothing here"
                         + " is one.\n\n")
                 .append("; The state block, doc/abi.md 3.\n")
-                .append(equ("DTX_ROW", ROW))
                 .append(equ("DTX_TURN", TURN))
-                .append(equ("DTX_DECODED", DECODED))
                 .append(equ("DTX_PARK", PARK))
                 .append(equ("DTX_POINTER", POINTER))
                 .append("\n; What the code takes at assembly time.\n")
