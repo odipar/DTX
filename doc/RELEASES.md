@@ -28,6 +28,38 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
+### 0.3.0, 2026-09-06
+
+<https://github.com/odipar/DTX/releases/tag/v0.3.0>, built from the commit
+tagged `v0.3.0`.
+
+**It reads 0.2.0's files, and 0.2.0 reads its own.** The format, the four
+calls and the state block are what 0.2.0 defined; what changed is the code
+behind the calls and what the tools print.
+
+What changed since 0.2.0:
+
+- **The reader is smaller.** `DTX_payload` and the macro that installs a
+  long moved into `68k/DTX_image.S`, where three templates include the one
+  copy, and the six fields a combine writes stand at zero in the format
+  block rather than being assembled in and then written over. DTX0's code
+  is 208 bytes where it was 232, DTX1's 160 where it was 176, and DTX2's
+  884 where it was 924. An image the packager assembles and one it takes
+  from the build are the same bytes now, at every variant and width.
+- **The three trees read alike.** A bare `-a`, a header with an `R` above
+  2147483647, and code with no format block were each taken or reported
+  differently by the Java, Go and C# tools. The three now give one line for
+  each, and a tool that cannot do the work it was given prints the reason
+  rather than a stack trace.
+- **The documents read back what the code does.** A review of every file
+  against the code it describes took 213 findings: the format block's place
+  and size in the glossary, six slots where there are four, five fields
+  where a combine writes six, image sizes from two changes ago, a
+  conformance kit whose README named a check that no test in this
+  repository runs, a cell formula that read as `r` times `i` plus one where
+  the writer computes `r` times (`i` plus one), and a rule that left one
+  width out.
+
 ### 0.2.0, 2026-09-05
 
 <https://github.com/odipar/DTX/releases/tag/v0.2.0>, built from the commit
