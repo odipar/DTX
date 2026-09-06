@@ -99,7 +99,9 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		state = pack.PackedStateBytes(header, given)
+		if state, err = pack.PackedStateBytes(header, given); err != nil {
+			return err
+		}
 	}
 	fmt.Printf("%s -> DTX%d image %d bytes, table %d bytes, %d rows,"+
 		" %d columns, state block %d bytes\n",

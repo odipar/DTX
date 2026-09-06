@@ -37,13 +37,17 @@ public static class Pack
     /// <summary>What one stream record runs to, one a column under DTX2.</summary>
     public const int Stream = 16;
 
-    /// <summary>What one decoder state takes, and the copy of it a replay
-    /// puts away.</summary>
-    public const int State = 32;
+    /// <summary>What one decoder state takes: the eight registers, the
+    /// ring's end, where the registers go at a loop, and the budget.</summary>
+    public const int State = 48;
+
+    /// <summary>What the copy of a decoder's registers takes, where a pass
+    /// is replayed.</summary>
+    public const int Saved = 32;
 
     /// <summary>What a packed reader's state block contains before its
     /// decoder states.</summary>
-    public const int PackedHead = 56;
+    public const int PackedHead = 72;
 
     /// <summary>The state block DTX0 and DTX1 take: the head, and one pointer.</summary>
     public const int Plain = Pointer + 4;
@@ -97,8 +101,10 @@ public static class Pack
     /// <summary>Where the decoder states stand in the state block, doc/abi.md 3.</summary>
     public static int Decoders() => PackedHead;
 
-    /// <summary>Where the rings stand in the state block.</summary>
-    public static int Ring(Header header) => Decoders() + 32 * header.Columns;
+    /// <summary>Where the rings stand in the state block: behind a decoder
+    /// state a turn.</summary>
+    public static int Ring(Header header, Packed given) =>
+            Decoders() + State * Period(header, given);
 
     /// <summary>
     /// The state block a plain reader of this table takes, in bytes.
@@ -110,13 +116,12 @@ public static class Pack
 
     /// <summary>
     /// The state block a packaged DTX2 reader takes, in bytes. A replayed
-    /// payload takes a second decoder state a column behind the rings, where
-    /// the reader puts the registers away at the row its loop begins
-    /// (abi.md 4).
+    /// payload takes a copy of the registers a column behind the rings,
+    /// where the reader puts them at the row its loop begins (abi.md 4).
     /// </summary>
     public static int PackedStateBytes(Header header, Packed given) =>
-            Ring(header) + given.Ring * header.Columns
-                    + (given.Replayed ? State * header.Columns : 0);
+            Ring(header, given) + given.Ring * header.Columns
+                    + (given.Replayed ? Saved * header.Columns : 0);
 
     /// <summary>
     /// The stride from one column's value to the next, in the row an advance

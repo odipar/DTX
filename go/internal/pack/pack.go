@@ -44,13 +44,17 @@ const (
 // Stream is what one stream record runs to, one a column under DTX2.
 const Stream = 16
 
-// State is what one decoder state takes, and the copy of it a replay puts
-// away.
-const State = 32
+// State is what one decoder state takes: the eight registers, the ring's
+// end, where the registers go at a loop, and the budget.
+const State = 48
+
+// Saved is what the copy of a decoder's registers takes, where a pass is
+// replayed.
+const Saved = 32
 
 // PackedHead is what a packed reader's state block contains before its
 // decoder states.
-const PackedHead = 56
+const PackedHead = 72
 
 // Plain is the state block DTX0 and DTX1 take: the head, and one pointer.
 const Plain = Pointer + 4
@@ -72,9 +76,14 @@ func Decoders() int {
 	return PackedHead
 }
 
-// Ring gives where the rings stand in the state block.
-func Ring(header dtx.Header) int {
-	return Decoders() + State*header.Columns
+// Ring gives where the rings stand in the state block: behind a decoder
+// state a turn.
+func Ring(header dtx.Header, given Packed) (int, error) {
+	period, err := Period(header, given)
+	if err != nil {
+		return 0, err
+	}
+	return Decoders() + State*period, nil
 }
 
 // StateBytes gives the state block a plain reader takes.
@@ -86,15 +95,18 @@ func StateBytes() int {
 }
 
 // PackedStateBytes gives the state block a packaged DTX2 reader takes. A
-// replayed payload takes a second decoder state a column behind the rings,
-// where the reader puts the registers away at the row its loop begins
-// (abi.md 4).
-func PackedStateBytes(header dtx.Header, given Packed) int {
-	out := Ring(header) + given.Ring*header.Columns
-	if given.Replayed {
-		out += State * header.Columns
+// replayed payload takes a copy of the registers a column behind the rings,
+// where the reader puts them at the row its loop begins (abi.md 4).
+func PackedStateBytes(header dtx.Header, given Packed) (int, error) {
+	ring, err := Ring(header, given)
+	if err != nil {
+		return 0, err
 	}
-	return out
+	out := ring + given.Ring*header.Columns
+	if given.Replayed {
+		out += Saved * header.Columns
+	}
+	return out, nil
 }
 
 // Stride gives the stride from one column's value to the next, in the row an
@@ -233,7 +245,9 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 	state := StateBytes()
 	period := 1
 	if header.Variant == dtx.DTX2 {
-		state = PackedStateBytes(header, given)
+		if state, err = PackedStateBytes(header, given); err != nil {
+			return nil, err
+		}
 		if period, err = Period(header, given); err != nil {
 			return nil, err
 		}
@@ -308,7 +322,9 @@ func Figures(file []byte) (string, error) {
 		if period, err = Period(header, given); err != nil {
 			return "", err
 		}
-		state = PackedStateBytes(header, given)
+		if state, err = PackedStateBytes(header, given); err != nil {
+			return "", err
+		}
 	}
 	var out strings.Builder
 	fmt.Fprintf(&out, "; What org.dtx.Packager writes of one table, for"+

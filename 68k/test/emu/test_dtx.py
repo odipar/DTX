@@ -565,9 +565,16 @@ PACKED = [
     # A loop longer than a back reference reaches: the rows from the loop to
     # the end are 1024 bytes against a ring of 960, so ST4 packs the pass to
     # be replayed and the reader puts the decoders' registers away at the
-    # loop's row and back at the column's end (abi.md 4).
+    # loop's row and back at the column's end (abi.md 4). From row 128 the
+    # loop is 768 bytes, which fits a ring of 960, so that case takes a
+    # ring of 64: a loop that begins past row 0 is put away at a period's
+    # end rather than at the seed, and the two cases reach both.
     ("a replayed pass", numbers(512, 2), 2, 0, 1, 960),
-    ("a replayed pass from row 128", numbers(512, 2), 2, 128, 1, 960),
+    ("a replayed pass from row 128", numbers(512, 2), 2, 128, 1, 64),
+    # A loop a back reference reaches, in a table whose R does not divide by
+    # P: the set loops by its end marker, and the reader's count comes round
+    # at the first period end past R rather than on it.
+    ("a loop by the marker, R odd", numbers(51, 2), 1, 20, 1, 960),
 ]
 
 

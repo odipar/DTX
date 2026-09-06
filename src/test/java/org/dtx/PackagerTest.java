@@ -236,16 +236,19 @@ final class PackagerTest {
         byte[] file = packed(64, 2, 2, 1, 960);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
-        assertEquals(56, Packager.decoders(),
+        assertEquals(72, Packager.decoders(),
                 "the decoder states follow the pointer, the payload, the"
-                        + " records, the fill, C, the rings, P and N");
+                        + " records, the fill, C, the rings, P, N, the count,"
+                        + " the state whose turn is next, column 0's ring"
+                        + " and the mode");
         // The template reads its own copy of the figure, so the two are
-        // compared rather than each pinned to 52 on its own.
+        // compared rather than each pinned to 72 on its own.
         assertEquals(templateDecoders(), Packager.decoders(),
                 "68k/DTX2.S equates DTX_DECODERS to another offset");
-        assertEquals(56 + 32 * 2, Packager.ring(header),
-                "the rings follow two decoder states of 32 bytes");
-        assertEquals(56 + 32 * 2 + 2 * 960, Packager.stateBytes(header, given),
+        assertEquals(2, Packager.period(header, given), "P is C");
+        assertEquals(72 + 48 * 2, Packager.ring(header, given),
+                "the rings follow two decoder states of 48 bytes, one a turn");
+        assertEquals(72 + 48 * 2 + 2 * 960, Packager.stateBytes(header, given),
                 "a ring a column");
     }
 
