@@ -88,10 +88,16 @@ elsewhere or not defined.
 
 ```
 # a time, a note and a step
+time, note, step
 0, $0100, -2
 1, $0101, -1
 2, $0102,  0
 ```
+
+The first two lines are not rows: the comment opens with `#`, and the names
+are the line before the first row of numbers in which no cell is a number.
+Both are passed over, and the names a reader gives a column are its own,
+since a DTX file does not define one.
 
 That table takes a width of 2: the width is the narrowest that takes every
 value of the table rather than of a column, and column 1 has values from 256
