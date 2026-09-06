@@ -28,7 +28,10 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
-### Not yet cut
+### 0.5.0, 2026-09-06
+
+<https://github.com/odipar/DTX/releases/tag/v0.5.0>, built from the commit
+tagged `v0.5.0`.
 
 **A caller written against 0.4.0's state block has to take its size out
 of the format block, as abi.md 3 has always said.** Every file reads as
