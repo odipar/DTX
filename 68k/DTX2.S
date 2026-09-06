@@ -379,42 +379,41 @@ DTX_first:
 ; the pass it belongs to is the caller's, not the stream's. So the copy back
 ; steps over a1's long and the ring stands where the last refill left it.
 
+; Eight registers carry a column between the two, so the loop is two movem:
+; d5 counts the columns, since the eight take every other data register, and
+; a3 and a4 walk the two blocks. A movem to memory writes at a displacement
+; and never past a postincrement, so the destination steps by a lea.
+
 DTX_away:
         lea     DTX_DECODERS(a6),a3
         movea.l a6,a4
         adda.l  DTX_SAVED(a6),a4
-        move.w  DTX_CFIG(a6),d3
-        subq.w  #1,d3
+        move.w  DTX_CFIG(a6),d5
+        subq.w  #1,d5
 .column:
-        move.l  (a3)+,(a4)+
-        move.l  (a3)+,(a4)+
-        move.l  (a3)+,(a4)+
-        move.l  (a3)+,(a4)+
-        move.l  (a3)+,(a4)+
-        move.l  (a3)+,(a4)+
-        move.l  (a3)+,(a4)+
-        move.l  (a3)+,(a4)+
-        dbra    d3,.column
+        movem.l (a3)+,d0-d4/a0-a2
+        movem.l d0-d4/a0-a2,(a4)
+        lea     32(a4),a4
+        dbra    d5,.column
         rts
+
+; The copy back leaves the write pointer, which the save put in d4: the
+; three longs behind it go to 20 rather than to 16, so the decoder keeps the
+; ring position its last refill left and takes the rest of the pass back.
 
 DTX_back:
         move.l  DTX_SAVEAT(a6),DTX_ROWSDONE(a6)
         lea     DTX_DECODERS(a6),a3
         movea.l a6,a4
         adda.l  DTX_SAVED(a6),a4
-        move.w  DTX_CFIG(a6),d3
-        subq.w  #1,d3
+        move.w  DTX_CFIG(a6),d5
+        subq.w  #1,d5
 .column:
-        move.l  (a4)+,(a3)+
-        move.l  (a4)+,(a3)+
-        move.l  (a4)+,(a3)+
-        move.l  (a4)+,(a3)+
-        addq.l  #4,a4                   ; a1, the write pointer, stands
-        addq.l  #4,a3
-        move.l  (a4)+,(a3)+
-        move.l  (a4)+,(a3)+
-        move.l  (a4)+,(a3)+
-        dbra    d3,.column
+        movem.l (a4)+,d0-d4/a0-a2
+        movem.l d0-d3,(a3)
+        movem.l a0-a2,20(a3)
+        lea     32(a3),a3
+        dbra    d5,.column
         rts
 
 ; -----------------------------------------------------------------------------

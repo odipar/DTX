@@ -34,7 +34,7 @@ plus one), modulo 251, so the first rows of the three column table are:
 | advance | 70 | 66 | 1112-1140 | 1068-1096 | 312-1082 |
 | jump to row 0 | 246 | 138 | 7494 | 5998 | 5970 |
 | jump to row 63 | 246 | 138 | 75818 | 71622 | 59110 |
-| code, bytes | 132 | 84 | 992 | 992 | 1000 |
+| code, bytes | 132 | 84 | 988 | 988 | 996 |
 
 ### Twenty columns
 
@@ -44,7 +44,7 @@ plus one), modulo 251, so the first rows of the three column table are:
 | advance | 70 | 66 | 1548 | 1286 | 1242 |
 | jump to row 0 | 246 | 138 | 51636 | 37334 | 35850 |
 | jump to row 63 | 246 | 138 | 152092 | 120484 | 115828 |
-| code, bytes | 132 | 84 | 992 | 992 | 1000 |
+| code, bytes | 132 | 84 | 988 | 988 | 996 |
 
 There are four calls (abi.md 2), and none of them moves a value: an advance
 gives the pointer at the row's first value and the caller reads from there.
