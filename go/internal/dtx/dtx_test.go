@@ -334,8 +334,7 @@ func TestEveryDataSetLoopsAtTheRowTheTableRepeatsAt(t *testing.T) {
 		width, unit  int
 		want         int
 	}{
-		{"the last unit where the table does not repeat", 64, 64, 2, 1, 127},
-		{"the last unit at k of 4", 64, 64, 2, 4, 31},
+		{"no loop where the table does not repeat", 64, 64, 2, 1, -1},
 		{"row 0 is unit 0", 64, 0, 2, 2, 0},
 		{"row 16 of two byte values at k of 1", 64, 16, 2, 1, 32},
 		{"row 16 of two byte values at k of 4", 64, 16, 2, 4, 8},

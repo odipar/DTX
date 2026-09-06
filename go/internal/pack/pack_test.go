@@ -438,15 +438,15 @@ func TestAPackedStateBlockContainsADecoderStateAndARingAColumn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := Decoders(); got != 52 {
-		t.Fatalf("the decoder states stand at %d, not the 52 that 68k/DTX2.S"+
+	if got := Decoders(); got != 56 {
+		t.Fatalf("the decoder states stand at %d, not the 56 that 68k/DTX2.S"+
 			" puts them at", got)
 	}
-	if got := Ring(head); got != 52+32*2 {
+	if got := Ring(head); got != 56+32*2 {
 		t.Fatalf("the rings stand at %d, not behind two decoder states of 32"+
 			" bytes", got)
 	}
-	if got := PackedStateBytes(head, given); got != 52+32*2+2*960 {
+	if got := PackedStateBytes(head, given); got != 56+32*2+2*960 {
 		t.Fatalf("the block is %d bytes, not a ring a column", got)
 	}
 }
@@ -467,7 +467,7 @@ func TestAReplayedPayloadTakesASecondDecoderStateAColumn(t *testing.T) {
 	if !given.Replayed {
 		t.Fatal("a payload whose sets record a loop was not replayed")
 	}
-	if got := PackedStateBytes(head, given); got != 52+32*2+2*960+32*2 {
+	if got := PackedStateBytes(head, given); got != 56+32*2+2*960+32*2 {
 		t.Fatalf("the block is %d bytes, not a ring and two decoder states"+
 			" a column", got)
 	}

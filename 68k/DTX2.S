@@ -74,16 +74,20 @@ DTX_CFIG            equ     22              ; C, a word
 DTX_RINGS           equ     24              ; where the rings begin, in the block
 DTX_PERIODFIG       equ     28              ; P
 DTX_NFIG            equ     32              ; N
-DTX_ROWSDONE        equ     36              ; the rows every column has
-                                            ; produced, kept only where the
-                                            ; sets are replayed
-DTX_SAVEAT          equ     40              ; RR, the row a loop begins at
-DTX_ENDAT           equ     44              ; R, the rows a column gives
-DTX_SAVED           equ     48              ; where the decoders' registers
+DTX_DONE            equ     36              ; the rows every column has
+                                            ; produced
+DTX_LEFTFIG         equ     40              ; what a refill counts its rows
+                                            ; against: R where the sets end,
+                                            ; so the last one is shortened
+                                            ; and the one after it does not
+                                            ; happen, and R plus P where they
+                                            ; loop, which no refill reaches
+DTX_SAVEAT          equ     44              ; the row a loop begins at, or -1
+DTX_ENDAT           equ     48              ; the row a pass ends at, or -1
+DTX_SAVED           equ     52              ; where the decoders' registers
                                             ; go, in the block, or 0 where
-                                            ; the sets loop by their end
-                                            ; marker and nothing is put away
-DTX_DECODERS        equ     52
+                                            ; nothing is put away
+DTX_DECODERS        equ     56
 
 ; -----------------------------------------------------------------------------
         include "DTX_image.S"
@@ -218,10 +222,10 @@ seed_column:
 ; The seed gave every column a period's rows, which the count starts from.
 ; A loop that begins there is put away now, as one that begins at row 0 was
 ; put away by DTX_first.
-        move.l  DTX_PERIODFIG(a6),DTX_ROWSDONE(a6)
+        move.l  DTX_PERIODFIG(a6),DTX_DONE(a6)
         tst.l   DTX_SAVED(a6)
         beq.s   .pointer
-        move.l  DTX_ROWSDONE(a6),d3
+        move.l  DTX_DONE(a6),d3
         cmp.l   DTX_SAVEAT(a6),d3
         bne.s   .pointer
         bsr     DTX_away
@@ -247,9 +251,7 @@ DTX_init:
         move.l  a1,DTX_PAYLOAD(a6)
         bsr     DTX_columns
         move.l  a3,DTX_RECORDS(a6)
-        move.l  10(a2),DTX_SAVEAT(a6)   ; RR, the row a loop begins at
-        move.l  4(a2),DTX_ENDAT(a6)     ; R
-        clr.l   DTX_ROWSDONE(a6)
+        clr.l   DTX_DONE(a6)
         move.w  8(a2),d1                ; C
         move.w  d1,DTX_CFIG(a6)
 
@@ -268,6 +270,28 @@ DTX_init:
         lsl.l   #5,d2
         addi.w  #DTX_DECODERS,d2
         move.l  d2,DTX_RINGS(a6)
+
+; What a refill counts its rows against, and the two rows a pass turns on.
+; Where RR is below R the sets loop at it (R5.11): the count comes round
+; there, and R plus P is a figure no refill reaches, so every refill takes a
+; whole period. Where the table does not repeat the sets end at R: the count
+; stops there, the last refill of a column is shortened and the one after it
+; does not happen, and neither row is ever reached.
+        move.l  4(a2),d3                ; R
+        move.l  10(a2),d4               ; RR
+        move.l  d4,DTX_SAVEAT(a6)
+        move.l  d3,DTX_ENDAT(a6)
+        cmp.l   d3,d4
+        bcs.s   .loops
+        move.l  d3,DTX_LEFTFIG(a6)      ; the sets end at R
+        moveq   #-1,d3
+        move.l  d3,DTX_SAVEAT(a6)       ; a row the count never stands on
+        move.l  d3,DTX_ENDAT(a6)
+        bra.s   .counted
+.loops:
+        add.l   DTX_PERIODFIG(a6),d3
+        move.l  d3,DTX_LEFTFIG(a6)      ; R plus P, which no refill reaches
+.counted:
 
 ; Where the decoders' registers go, behind the rings, and 0 where nothing is
 ; put away. Byte 20 of a data set gives the unit its loop begins at, or
@@ -310,14 +334,22 @@ DTX_step:
         move.l  d0,DTX_POINTER(a6)
 
 ; The refill of the row's turn, which a jump and an advance reach through
-; the step above. Every data set of a DTX2 payload loops (R5.11), so no set
-; ends, no refill is the last and none is shortened: a refill is a whole
-; period, every period, and nothing here counts the rows decoded.
+; the step above. Where the sets end, the rows left shorten the last refill
+; of a column and stop the one after it, which ST4_wrap's assumption 5 asks
+; for. Where they loop, the figure they are counted against is R plus P, so
+; the same three instructions give a whole period every time and no refill
+; is the last.
 DTX_refill:
         move.w  DTX_TURN(a6),d1
         cmp.w   DTX_CFIG(a6),d1
         bcc.s   DTX_turn                ; a turn past the last column
+        move.l  DTX_LEFTFIG(a6),d3
+        sub.l   DTX_DONE(a6),d3         ; the rows this period's refills take
+        ble.s   DTX_turn                ; every row decoded: no refill
+        cmp.l   DTX_PERIODFIG(a6),d3
+        bcs.s   .rows
         move.l  DTX_PERIODFIG(a6),d3
+.rows:
         move.w  d1,DTX_FILL(a6)
         DTX_BUDGET
         bsr     DTX_state
@@ -334,20 +366,25 @@ DTX_turn:
         clr.w   d1
         move.w  d1,DTX_TURN(a6)
 
-; A period ended, so every column has a period's rows more. Where the sets
-; are replayed the two rows the pass turns on fall on a period (abi.md 4),
-; so this compare finds them exactly: at the row the loop begins the
-; decoders' registers go away, and at the column's rows they come back.
-        tst.l   DTX_SAVED(a6)
-        beq.s   .marker                 ; the sets loop by their end marker
-        move.l  DTX_ROWSDONE(a6),d3
-        add.l   DTX_PERIODFIG(a6),d3
-        move.l  d3,DTX_ROWSDONE(a6)
+; A period ended, so every column took its refill and those rows are
+; decoded. Where the sets end the count stops at R and every refill after
+; that is skipped; where they loop it comes round at the row a pass ends
+; on, and the two rows a replayed pass turns on fall on a period
+; (abi.md 4), so these compares find them exactly.
+        move.l  DTX_LEFTFIG(a6),d3
+        sub.l   DTX_DONE(a6),d3
+        ble.s   .counted
+        cmp.l   DTX_PERIODFIG(a6),d3
+        bcs.s   .grew
+        move.l  DTX_PERIODFIG(a6),d3
+.grew:
+        add.l   d3,DTX_DONE(a6)
+.counted:
+        move.l  DTX_DONE(a6),d3
         cmp.l   DTX_SAVEAT(a6),d3
         beq.s   DTX_away
         cmp.l   DTX_ENDAT(a6),d3
         beq.s   DTX_back
-.marker:
         rts
 .stored:
         move.w  d1,DTX_TURN(a6)
@@ -385,6 +422,8 @@ DTX_first:
 ; and never past a postincrement, so the destination steps by a lea.
 
 DTX_away:
+        tst.l   DTX_SAVED(a6)
+        beq.s   DTX_kept
         lea     DTX_DECODERS(a6),a3
         movea.l a6,a4
         adda.l  DTX_SAVED(a6),a4
@@ -402,7 +441,9 @@ DTX_away:
 ; ring position its last refill left and takes the rest of the pass back.
 
 DTX_back:
-        move.l  DTX_SAVEAT(a6),DTX_ROWSDONE(a6)
+        move.l  DTX_SAVEAT(a6),DTX_DONE(a6)
+        tst.l   DTX_SAVED(a6)
+        beq.s   DTX_kept
         lea     DTX_DECODERS(a6),a3
         movea.l a6,a4
         adda.l  DTX_SAVED(a6),a4
@@ -414,6 +455,7 @@ DTX_back:
         movem.l a0-a2,20(a3)
         lea     32(a3),a3
         dbra    d5,.column
+DTX_kept:
         rts
 
 ; -----------------------------------------------------------------------------

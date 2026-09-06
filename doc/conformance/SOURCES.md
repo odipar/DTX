@@ -28,12 +28,12 @@ of the table gives back (TASK.md).
 | `dtx1-w4` | numbers 6 3 | `-v1 -w4` | 88 | 793f8d82d9ac7b53 | DTX1 at a width of 4 |
 | `dtx1-one-row` | numbers 1 2 | `-v1 -w4` | 24 | 980824999c012be3 | DTX1: one row, R of 1 |
 | `dtx1-repeat-at-0` | numbers 4 2 | `-v1 -w2 -r0` | 32 | cb4e4db6209408bb | DTX1: RR of 0, the table repeats from its first row |
-| `dtx2-w1-k1` | numbers 64 3 | `-v2 -w1 -k1 -m960` | 330 | bc5d967604b0a808 | DTX2 at a width of 1 and k of 1: N of 960, P of 3 |
-| `dtx2-w2-k2` | numbers 64 2 | `-v2 -w2 -k2 -m960` | 354 | e41bff8626ac6fee | DTX2 at a width of 2 and k of 2, a unit a value |
-| `dtx2-w4-k4` | numbers 64 2 | `-v2 -w4 -k4 -m960` | 610 | 9ad8c584f60aa3b6 | DTX2 at a width of 4 and k of 4 |
-| `dtx2-w4-k1` | numbers 64 2 | `-v2 -w4 -k1 -m960` | 330 | d247e294b731449f | DTX2 at a width of 4 and k of 1, a unit below the width |
-| `dtx2-w1-k4` | numbers 64 2 | `-v2 -w1 -k4 -m960` | 226 | fa8f85b2628cd614 | DTX2 at a width of 1 and k of 4, a unit above the width |
+| `dtx2-w1-k1` | numbers 64 3 | `-v2 -w1 -k1 -m960` | 320 | 98a50698e6348630 | DTX2 at a width of 1 and k of 1: N of 960, P of 3 |
+| `dtx2-w2-k2` | numbers 64 2 | `-v2 -w2 -k2 -m960` | 348 | e92a23fd8cd8bed6 | DTX2 at a width of 2 and k of 2, a unit a value |
+| `dtx2-w4-k4` | numbers 64 2 | `-v2 -w4 -k4 -m960` | 604 | 5fb2e661a148978c | DTX2 at a width of 4 and k of 4 |
+| `dtx2-w4-k1` | numbers 64 2 | `-v2 -w4 -k1 -m960` | 324 | 475d57982f70276b | DTX2 at a width of 4 and k of 1, a unit below the width |
+| `dtx2-w1-k4` | numbers 64 2 | `-v2 -w1 -k4 -m960` | 220 | 53c80b69f773a637 | DTX2 at a width of 1 and k of 4, a unit above the width |
 | `dtx2-repeat` | numbers 64 2 | `-v2 -w1 -r16 -k1 -m960` | 226 | 7db50b78c9c39e15 | DTX2: a table that repeats at row 16, so its data sets loop there |
-| `dtx2-rows-not-a-multiple-of-p` | numbers 50 3 | `-v2 -w1 -k1 -m960` | 294 | bf9e76170927dbdc | DTX2: R of 50 at P of 3, so the last refill of a column is short |
-| `dtx2-twenty-columns` | numbers 64 20 | `-v2 -w2 -k1 -m960` | 3378 | 30b834470af542d9 | DTX2: C of 20, so P is 20 and a read walks twenty rings |
-| `dtx2-copies` | repeating | `-v2 -w2 -k1 -m64 -copies` | 362 | 446a3c4c90b3512c | DTX2 with copies from the literal stream, at a ring of 64 the pattern does not fit |
+| `dtx2-rows-not-a-multiple-of-p` | numbers 50 3 | `-v2 -w1 -k1 -m960` | 284 | 76c705b1e5fc0347 | DTX2: R of 50 at P of 3, so the last refill of a column is short |
+| `dtx2-twenty-columns` | numbers 64 20 | `-v2 -w2 -k1 -m960` | 3300 | 34c8bd7f7fc53dd6 | DTX2: C of 20, so P is 20 and a read walks twenty rings |
+| `dtx2-copies` | repeating | `-v2 -w2 -k1 -m64 -copies` | 356 | 4764b1c120676c1a | DTX2 with copies from the literal stream, at a ring of 64 the pattern does not fit |

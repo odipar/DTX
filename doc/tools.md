@@ -88,10 +88,16 @@ elsewhere or not defined.
 
 ```
 # a time, a note and a step
+time, note, step
 0, $0100, -2
 1, $0101, -1
 2, $0102,  0
 ```
+
+The first two lines are not rows: the comment opens with `#`, and the names
+are the line before the first row of numbers in which no cell is a number.
+Both are passed over, and the names a reader gives a column are its own,
+since a DTX file does not define one.
 
 That table takes a width of 2: the width is the narrowest that takes every
 value of the table rather than of a column, and column 1 has values from 256
@@ -125,7 +131,7 @@ With `-copies` a match beyond the ring copies from the column's own literal
 stream, and that saves most at the small rings DTX2 reads through. Measured
 on a table of 512 rows repeating a pattern 37 rows long, at a width of 2 and
 `N` of 64, where the pattern runs to 74 bytes and reaches past the ring: the
-file goes from 2146 bytes to 362, and its image from 3210 to 1458.
+file goes from 2140 bytes to 356, and its image from 3272 to 1520.
 
 **The payload defines it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
 Write is the one tool that reads `-copies` and the packager takes the
