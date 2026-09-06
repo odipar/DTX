@@ -421,7 +421,7 @@ func TestARingTheWidthDoesNotDivideIsRefused(t *testing.T) {
 	if err == nil {
 		t.Fatal("a ring of six bytes took a period")
 	}
-	if !strings.HasPrefix(err.Error(), "no period from C of 2 to R of 64") {
+	if !strings.HasPrefix(err.Error(), "no period from C of 2 up") {
 		t.Fatalf("the error is %q", err)
 	}
 }
@@ -476,7 +476,7 @@ func TestAReplayedPayloadTakesASecondDecoderStateAColumn(t *testing.T) {
 // The reader puts a replayed set's registers away and takes them back at
 // the exact row, splitting the refill the row falls inside, so the period
 // is the same for every RR and R, doc/abi.md 4.
-func TestAReplayedPayloadTakesThePeriodWhateverItsRepeat(t *testing.T) {
+func TestAReplayedPayloadTakesThePeriodForEveryRepeat(t *testing.T) {
 	for _, one := range []struct {
 		name   string
 		file   []byte
@@ -504,6 +504,27 @@ func TestAReplayedPayloadTakesThePeriodWhateverItsRepeat(t *testing.T) {
 		if period != one.period {
 			t.Fatalf("%s: P is %d, not %d", one.name, period, one.period)
 		}
+	}
+}
+
+// A refill meets one mark at most, so a replayed loop is a period long at
+// least, doc/abi.md 4: thirty columns give P of 30, and a loop of 20 rows
+// from row 20 of 40 fails the package.
+func TestAReplayedLoopUnderThePeriodIsRefused(t *testing.T) {
+	file := sets(40, 20, 30, 1, 1, 960, false, 20)
+	head, err := dtx.ReadHeader(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	given, err := ReadPacked(file, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = Period(head, given); err == nil {
+		t.Fatal("a replayed loop of 20 rows under a period of 30 took a period")
+	}
+	if !strings.HasPrefix(err.Error(), "a replayed loop of 20 rows is under the period of 30") {
+		t.Fatalf("the error is %q", err)
 	}
 }
 

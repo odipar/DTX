@@ -36,7 +36,7 @@
 ; column's number; a refill reads its state's address out of the block,
 ; where the last refill left the next state's, and the state gives its
 ; ring's end, its budget and where its registers go at a loop: a refill
-; reads three fields and compares once. ST4 leaves only d6, d7 and a6
+; reads its fields and compares once. ST4 leaves only d6, d7 and a6
 ; alone, so nothing else stands across a call into it.
 ;
 ; THE COLUMN TABLE stands behind the code, and the format block defines where.
@@ -68,8 +68,8 @@ DTX_S_D             equ     12
 
 ; The state block beyond what doc/abi.md 3 defines: the payload, where the
 ; stream records stand, the column a seed is at, the five figures the table
-; gives, the count a replayed pass keeps, the state whose turn the next row
-; is, and column 0's ring. The decoder states stand at DTX_DECODERS, 48 a
+; gives, the count kept where the sets end, the state whose turn the next
+; row is, and column 0's ring. The decoder states stand at DTX_DECODERS, 48 a
 ; turn, and the rings behind them, N a column.
 DTX_PAYLOAD         equ     12
 DTX_RECORDS         equ     16              ; where the stream records stand

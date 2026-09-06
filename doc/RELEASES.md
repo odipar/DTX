@@ -31,23 +31,28 @@ assembler, and no image is tracked in the tree.
 ### Not yet cut
 
 **No file changes, and no caller's code but one that read the block's
-words at +44, +48 and +68.**
+fields from +36 on, or a decoder state's past its registers.**
 
-- A replayed pass puts each column's registers away and takes them back
-  at the exact row its loop begins and ends at, splitting the refill the
-  row falls inside, where it did so at a period's end and asked of the
-  packager that `RR` and `R` minus `RR` divide by `P`. That rule is gone:
-  a table repeats at any row, and packs at the period its ring gives
-  rather than one its loop divides by.
-- A table of fewer rows than a period packages: the reader seeds its rows
-  and its first period's budget is 0, where the packager failed it.
-- The block's words at +44 and +48 are the units before the loop and the
-  units of the loop; +68 is unused; a decoder state has a phase and a
-  mark at +42 and +44.
-- On 64 rows of three two byte columns an advance is 676 to 928 cycles
-  where it was 658 to 1002, and on twenty columns 1112 where it was 1094:
-  the mark's test on every refill, and no marked period. DTX2's code is
-  1448 bytes at `k` of 1 where it was 1244.
+- A replayed pass puts each column's registers away and takes them back at the
+  exact row its loop begins and ends at, splitting the refill the row falls
+  inside, where it did so at a period's end and asked of the packager that
+  `RR` and `R` minus `RR` divide by `P`. That rule is gone: a table repeats at
+  any row, and packs at the period its ring gives rather than one its loop
+  divides by; one rule stays, a replayed loop a period long at least, which
+  binds only a table whose period is above 32512 bytes.
+- A table of fewer rows than a period packages, where the packager failed
+  it: where its sets end the reader seeds its rows and the first period's
+  budget is 0, and where they loop it seeds a period's rows round the
+  loop.
+- The block's count at +36 no longer comes round to `RR`, and +40 is
+  $7FFFFFFF where the sets loop; the longs at +44 and +48 are the units
+  before the loop and the units of the loop; +68 is unused; a decoder
+  state's budget at +40 is never negated, and it has a phase and a mark
+  at +42 and +44.
+- On 64 rows of three two byte columns at `k` of 1 an advance is 676 to
+  928 cycles where it was 658 to 1002, and on twenty columns 1112 where
+  it was 1094: the mark's test on every refill, and no marked period.
+  DTX2's code is 1448 bytes at `k` of 1 where it was 1244.
 
 ### 0.5.0, 2026-09-06
 

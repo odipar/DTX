@@ -137,22 +137,29 @@ func Period(header dtx.Header, given Packed) (int, error) {
 		return 0, fmt.Errorf("a column is %d times %d bytes, which does not"+
 			" divide by k of %d", rows, width, k)
 	}
-	// A table shorter than a period takes the period all the same: the
-	// reader seeds its rows, and the first period's budget is 0 (abi.md 4).
-	for p := columns; p <= max(rows, columns); p++ {
+	// A table shorter than a period takes the period all the same: where
+	// its sets end the reader seeds its rows and the first period's budget
+	// is 0, and where they loop it seeds a period's rows round the loop
+	// (abi.md 4).
+	for p := columns; ; p++ {
 		budget := p * width / k
 		if n < 2*p*width {
 			break
 		}
 		if n%(p*width) == 0 && p*width%k == 0 &&
 			budget >= 1 && budget <= 65535 {
+			// A refill meets one mark at most, so a replayed loop is a period
+			// long at least (abi.md 4).
+			if loop := rows - header.Repeat; given.Replayed && loop < p {
+				return 0, fmt.Errorf("a replayed loop of %d rows is under the period"+
+					" of %d: a refill meets one mark at most", loop, p)
+			}
 			return p, nil
 		}
 	}
-	return 0, fmt.Errorf("no period from C of %d to R of %d meets N of %d and"+
-		" k of %d: N divides by P times the width, is at least twice that,"+
-		" and the budget is a whole number of units",
-		columns, rows, n, k)
+	return 0, fmt.Errorf("no period from C of %d up meets N of %d and k of %d:"+
+		" N divides by P times the width, is at least twice that, and the"+
+		" budget is a whole number of units", columns, n, k)
 }
 
 // ColumnTable gives the table behind the image's code: one stream record a

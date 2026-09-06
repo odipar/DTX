@@ -579,8 +579,9 @@ PACKED = [
     # splits the refill the row falls inside, so RR and R divide by nothing.
     ("a replayed pass from row 101", numbers(512, 2), 2, 101, 1, 64),
     ("a replayed pass of 511 rows", numbers(511, 2), 2, 0, 1, 64),
-    # A table shorter than a period: the seed decodes R rows, and the first
-    # period's budget is 0.
+    # A table shorter than a period: where its sets end the seed decodes R
+    # rows and the first period's budget is 0, and where they loop it
+    # decodes a period's rows round the loop.
     ("two rows of three columns", numbers(2, 3), 1, None, 1, 960),
     ("one row that repeats to itself", numbers(1, 2), 2, 0, 1, 960),
 ]

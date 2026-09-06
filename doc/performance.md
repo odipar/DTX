@@ -60,8 +60,8 @@ of `P` rows, and a turn past the last column does not refill.
 refill, and a jump is not flat: it runs the advance's body once a row up to
 the target, so a jump to row 63 costs the 63 rows. A backward jump seeds
 every ring again first, so a jump to row 0 costs an init and one row's
-step. A table that repeats costs that at every repeat, since the advance
-from row `R` minus one to `RR` is a jump.
+step. A table that repeats is advanced out of its last row as out of
+any other, since its data sets loop.
 
 **Init under DTX2** is `C` decoder seeds and `C` refills of `P` rows, so it
 grows with `C` and with `P`: the init rows of the two tables.
