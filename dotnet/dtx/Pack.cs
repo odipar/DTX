@@ -16,11 +16,9 @@ using System.Text;
 public static class Pack
 {
     /// <summary>The state block's fields, from doc/abi.md 3.</summary>
-    public const int Row = 0;
-    public const int Turn = 4;
-    public const int Decoded = 8;
-    public const int Park = 12;
-    public const int Pointer = 16;
+    public const int Turn = 0;
+    public const int Park = 4;
+    public const int Pointer = 8;
 
     /// <summary>The format block: where it stands, behind the four slots;
     /// what it runs to, so where the bodies begin; and its fields.</summary>
@@ -39,6 +37,10 @@ public static class Pack
     /// <summary>What one stream record runs to, one a column under DTX2.</summary>
     public const int Stream = 16;
 
+    /// <summary>What one decoder state takes, and the copy of it a replay
+    /// puts away.</summary>
+    public const int State = 32;
+
     /// <summary>What a packed reader's state block contains before its
     /// decoder states.</summary>
     public const int PackedHead = 52;
@@ -50,7 +52,8 @@ public static class Pack
     /// What a DTX2 payload defines: the ring, the unit, whether its columns
     /// contain copies from the literal stream, and where each data set begins.
     /// </summary>
-    public readonly record struct Packed(int Ring, int Unit, bool Copies, int[] At);
+    public readonly record struct Packed(int Ring, int Unit, bool Copies,
+            bool Replayed, int[] At);
 
     /// <summary>
     /// What a DTX2 payload gives, SPEC.md 2.3.
@@ -67,9 +70,16 @@ public static class Pack
         int unit = file[payload + 2];
         int[] at = new int[header.Columns];
         int signature = 0x53340700 + unit;
+        bool replayed = false;
         for (int i = 0; i < at.Length; i++)
         {
             at[i] = Format.GetLong(file, payload + 4 + 4 * i);
+            // Byte 20 of a data set gives the unit its loop begins at, or
+            // $FFFFFFFF where its end marker loops it. A set that records
+            // one is replayed by the reader (abi.md 4), and every set of a
+            // payload takes the same form: they are one table's columns, so
+            // one loop and one length.
+            replayed |= Format.GetLong(file, payload + at[i] + 20) != -1;
             int read = Format.GetLong(file, payload + at[i]);
             if (read != signature)
             {
@@ -81,7 +91,7 @@ public static class Pack
             }
         }
         return new Packed(Format.GetWord(file, payload), unit,
-                (file[payload + 3] & Format.CopiesFlag) != 0, at);
+                (file[payload + 3] & Format.CopiesFlag) != 0, replayed, at);
     }
 
     /// <summary>Where the decoder states stand in the state block, doc/abi.md 3.</summary>
@@ -98,9 +108,15 @@ public static class Pack
     /// </summary>
     public static int StateBytes(Header header) => Plain;
 
-    /// <summary>The state block a packaged DTX2 reader takes.</summary>
+    /// <summary>
+    /// The state block a packaged DTX2 reader takes, in bytes. A replayed
+    /// payload takes a second decoder state a column behind the rings, where
+    /// the reader puts the registers away at the row its loop begins
+    /// (abi.md 4).
+    /// </summary>
     public static int PackedStateBytes(Header header, Packed given) =>
-            Ring(header) + given.Ring * header.Columns;
+            Ring(header) + given.Ring * header.Columns
+                    + (given.Replayed ? State * header.Columns : 0);
 
     /// <summary>
     /// The stride from one column's value to the next, in the row an advance
@@ -133,6 +149,11 @@ public static class Pack
             throw new ArgumentException($"a column is {rows} times {width}"
                     + $" bytes, which does not divide by k of {k}");
         }
+        // A replayed set puts the decoder's registers away where its loop
+        // begins and back at the column's end, and a refill takes a whole
+        // period, so both rows fall on a period (abi.md 4).
+        int repeat = header.Repeat;
+        bool lands = !given.Replayed;
         for (int p = columns; p <= rows; p++)
         {
             long budget = (long)p * width / k;
@@ -141,15 +162,19 @@ public static class Pack
                 break;
             }
             if (n % (p * width) == 0 && (long)p * width % k == 0
-                    && budget >= 1 && budget <= 65535)
+                    && budget >= 1 && budget <= 65535
+                    && (lands || (repeat % p == 0 && (rows - repeat) % p == 0)))
             {
                 return p;
             }
         }
         throw new ArgumentException($"no period from C of {columns} to R of"
                 + $" {rows} meets N of {n} and k of {k}: N divides by P times"
-                + " the width, is at least twice that, and the budget is a"
-                + " whole number of units");
+                + " the width, is at least twice that, the budget is a whole"
+                + " number of units"
+                + (lands ? "" : $", and RR of {repeat} and the rows from it"
+                        + " to R divide by P, since these data sets are"
+                        + " replayed"));
     }
 
     /// <summary>
@@ -224,7 +249,7 @@ public static class Pack
         }
         Packed given = header.Variant == Format.Dtx2
                 ? ReadPacked(file, header)
-                : new Packed(0, 0, false, Array.Empty<int>());
+                : new Packed(0, 0, false, false, Array.Empty<int>());
         if (code[FormatAt + UnitAt] != given.Unit)
         {
             throw new InvalidOperationException($"the code decodes at a unit"
@@ -298,7 +323,7 @@ public static class Pack
             throw new ArgumentException(
                     $"the variant is 0, 1 or 2, not {variant}");
         }
-        Packed given = new(0, 0, false, Array.Empty<int>());
+        Packed given = new(0, 0, false, false, Array.Empty<int>());
         int period = 1;
         int state = StateBytes(header);
         if (variant == Format.Dtx2)
@@ -316,9 +341,7 @@ public static class Pack
                 .Append("; Every instruction is the template's; nothing here"
                         + " is one.\n\n")
                 .Append("; The state block, doc/abi.md 3.\n")
-                .Append(Equ("DTX_ROW", Row))
                 .Append(Equ("DTX_TURN", Turn))
-                .Append(Equ("DTX_DECODED", Decoded))
                 .Append(Equ("DTX_PARK", Park))
                 .Append(Equ("DTX_POINTER", Pointer))
                 .Append("\n; What the code takes at assembly time.\n")

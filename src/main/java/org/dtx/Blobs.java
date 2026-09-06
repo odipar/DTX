@@ -95,7 +95,7 @@ public final class Blobs {
     private record Plain(boolean copies) implements Packer {
 
         @Override
-        public byte[] pack(byte[] column, int unit, int ring) {
+        public byte[] pack(byte[] column, int unit, int ring, int loop) {
             return container(column, unit, ring);
         }
     }

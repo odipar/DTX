@@ -106,7 +106,17 @@ public interface IPacker
     /// column as one complete ST4 data set: its own header, and the length
     /// of what it unpacks to.
     /// </summary>
-    byte[] Pack(byte[] column, int unit, int ring);
+    /// <param name="column">the bytes of DTX1's column</param>
+    /// <param name="unit">the unit to pack at, 1, 2 or 4, which the data
+    /// set's own signature then gives (R5.2)</param>
+    /// <param name="ring">the bytes past which no back reference in the data
+    /// set reaches (R5.4)</param>
+    /// <param name="loop">the unit the set decodes back to when it reaches
+    /// the end, so that it decodes forever, or -1 where the set ends
+    /// (R5.11). A packer without a loop to give throws on a call that gives
+    /// one: a set that ends where the file defines a loop reads wrongly
+    /// </param>
+    byte[] Pack(byte[] column, int unit, int ring, int loop);
 
     /// <summary>
     /// Whether a match beyond the ring copies from the column's own literal

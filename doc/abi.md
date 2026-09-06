@@ -123,8 +123,14 @@ frame.
 |---|---|---|---|
 | `DTX_init` | `a0` the state block | nothing | d0-d5, a0-a5 |
 | `DTX_metadata` | nothing | `a0` format block, `a1` the table's header, `d0.l` `R`, `d1.w` `C`, `d2.l` `RR`, `d3.l` the stride | d0-d3, a0-a1 |
-| `DTX_jump` | `a0`, `d0.l` the row | `d0.l` that row, `a1` its first value | d0-d5, a0-a5 |
-| `DTX_advance` | `a0` | `d0.l` the row, or $FFFFFFFF, `a1` the row's first value | d0-d5, a0-a5 |
+| `DTX_jump` | `a0`, `d0.l` the row | `a1` that row's first value | d0-d5, a0-a5 |
+| `DTX_advance` | `a0` | `a1` the row's first value | d0-d5, a0-a5 |
+
+**No call keeps a row number.** An advance steps one row on and gives the
+address; a row is what a jump takes, and nothing else. A caller counts its
+own rows against the `R` and `RR` that `DTX_metadata` gives. So an advance
+under DTX0 and DTX1 is three instructions, and no figure in the block is
+there for a call to compare against.
 
 ### 0. `DTX_init`, image+0
 Seeds the block. The cursor does not stand on a row, so the first advance
@@ -174,14 +180,12 @@ advance gives the row after it.
 
 Under DTX0 the pointer is the payload plus the row times the row's bytes.
 Under DTX1 it is the payload plus the row times the width, a shift and an
-add. Under DTX2 a jump forward runs the whole of the advance's body
-once a row up to the target: the pointer step and its wrap, the refill of the
-row's turn, the turn step and the rows decoded. It leaves every ring, every
-write pointer and the turn where advancing there would leave them. Where the
-target is at or below the row standing, or the cursor does not stand on a row,
-it seeds and fills every ring afresh, as init does, and runs forward from row
-0. No checkpoints, so a backward jump costs the target row and not the
-distance.
+add. Under DTX2 a jump seeds and fills every ring afresh, as init does, and
+then runs the whole of the advance's body once a row up to the target: the
+pointer step and its wrap, the refill of the row's turn and the turn step.
+It leaves every ring, every write pointer and the turn where advancing
+there would leave them. Nothing in the block says where the cursor stood,
+so every jump runs from row 0 and costs the target row, forward or back.
 
 Under DTX2 the pointer stands in column 0's ring, at the row modulo the
 rows a ring contains, times the width. Under DTX1 it stands in the
@@ -189,8 +193,8 @@ payload, and a ring is absent.
 
 ### 3. `DTX_advance`, image+12
 
-Steps the cursor. The move that leaves `d0` sets N and Z, so `bmi` after
-the call.
+Steps the cursor one row on and gives the pointer. Under DTX0 and DTX1 it
+is a load, an add and a store, with no compare and no figure written.
 
 It adds the row's bytes to the pointer under DTX0, and the width to it
 under DTX1 and DTX2. A pointer that reaches the ring end goes back to the
@@ -202,11 +206,10 @@ past `C` minus one does not have a column and does not refill, so a `P` above
 
 The refill is one `ST4_resume` into that column's ring. Its budget is `P`
 times the width divided by `k` units, which the width and `k` being
-assembly-time constants makes a shift, except for the call that would reach
-past the data set: the block contains the rows decoded, and where fewer than
-`P` rows are left the budget is the rows left, and where none are left the
-refill does not happen. Without that rule every column takes one call
-past its end marker, which ST4_wrap's assumption 5 forbids.
+assembly-time constants makes a shift. Every budget is that one: every data
+set of a payload loops (SPEC.md 2.3, R5.11), so no set ends, no refill is
+the last and none is shortened. Nothing here counts the rows a column has
+decoded against the rows it has.
 
 After the call the write pointer is compared with the column's ring end
 and taken back to the ring start where the two are equal. `N` divides by
@@ -214,11 +217,18 @@ and taken back to the ring start where the two are equal. `N` divides by
 it, and the compare is exact. No call is counted and the block does not
 contain a counter; YMX wraps the same way.
 
-The advance from row `R` minus one where `RR` is below `R` is a jump to
-`RR`, since it is one. Where `RR` equals `R` it gives $FFFFFFFF, leaves
-the cursor on row `R` minus one and does not move the pointer, and a
-further advance gives $FFFFFFFF again: the end is sticky, and `a1` still
-gives row `R` minus one's values.
+**The repeat is not a call's to make.** Under DTX2 the rows come round
+because the data sets do: a set whose table repeats loops at `RR`, so the
+advance out of row `R` minus one is the advance into row `RR` and nothing
+is decoded twice. Under DTX0 and DTX1 nothing loops, so a caller whose
+table repeats counts to `R` and jumps to `RR`, which costs 246 cycles under
+DTX0 and 138 under DTX1.
+
+Past row `R` minus one of a table that does not repeat, what an advance
+gives is not defined. Under DTX0 and DTX1 it reads past the table. Under
+DTX2 the set loops at its last unit, which is a row only where `k` divides
+the width, so the values may be a row's or part of one. A caller stops at
+`R`, which `DTX_metadata` gives it.
 
 ### The row a caller reads
 
@@ -270,12 +280,10 @@ reads it out of the image. The block stands on a long.
 
 | at | bytes | contains |
 |---|---|---|
-| +0 | 4 | the row the cursor stands on, or $FFFFFFFF |
-| +4 | 2 | the turn, 0 to `P` minus one. Zero under DTX0 and DTX1 |
-| +6 | 2 | unused |
-| +8 | 4 | the rows decoded. Zero under DTX0 and DTX1 |
-| +12 | 4 | the caller's `a6`, parked for a DTX2 refill |
-| +16 | 4 | the pointer, under every variant |
+| +0 | 2 | the turn, 0 to `P` minus one. Zero under DTX0 and DTX1 |
+| +2 | 2 | unused |
+| +4 | 4 | the caller's `a6`, parked for a DTX2 refill |
+| +8 | 4 | the pointer, under every variant |
 
 One pointer, because every column is one width: under DTX1 and DTX2 the
 columns lie at one stride and a read walks them from it. Under DTX2 the
@@ -287,20 +295,24 @@ that `a6` reaches:
 
 | at | bytes | contains |
 |---|---|---|
-| +20 | 4 | the payload's first byte |
-| +24 | 4 | where the stream records stand |
-| +28 | 2 | the column a fill or a refill stands at |
-| +30 | 2 | `C` |
-| +32 | 4 | where the rings begin, from the block's first byte |
-| +36 | 4 | `R` |
-| +40 | 4 | `RR` |
-| +44 | 4 | `P` |
-| +48 | 4 | `N` |
+| +12 | 4 | the payload's first byte |
+| +16 | 4 | where the stream records stand |
+| +20 | 2 | the column a fill or a refill stands at |
+| +22 | 2 | `C` |
+| +24 | 4 | where the rings begin, from the block's first byte |
+| +28 | 4 | `P` |
+| +32 | 4 | `N` |
+| +36 | 4 | the rows every column has produced, where a pass is replayed |
+| +40 | 4 | `RR`, the row a loop begins at |
+| +44 | 4 | `R`, the rows a column gives |
+| +48 | 4 | where the decoders' registers go, or 0 where none go anywhere |
 
-The rows decoded is init's `P` and grows by each refill's rows. It
-shortens the last refill of a column and stops the one after it, and it is
-the only counter in the block: the write pointer's wrap is a compare,
-not a count.
+The four fields from +36 are a replayed pass's and no other's. Where a
+back reference reaches the loop's first unit, the set loops by its end
+marker, +48 reads zero and nothing is counted: the write pointer's wrap is
+a compare against the ring end, not a count. Where the pass is replayed,
+the rows every column has produced grow by `P` at each turn's wrap and are
+compared with `RR` and `R` there, once a period rather than once a row.
 
 Then, under DTX2 only, at +52, one **decoder state** a column: the eight
 longs a column's decoder is saved in between refills, 32 bytes at a stride
@@ -503,11 +515,9 @@ since under this reader it is a jump (section 4).
    multiple of `P` times the width and at least twice that, and the budget
    a whole number of units from 1 to 65535.
 8. DTX2: `R` times the width divides by `k` (R5.6).
-9. DTX2: the caller takes rows 0 to `R` minus one. The rows decoded
-   in the block shorten the last refill of a column and stop the one
-   after it, so a column takes the `ceil(R/P)` calls ST4_wrap's
-   assumption 5 allows and no more. ST4_wrap does not have a done state and
-   none is read.
+9. DTX2: every data set loops (R5.11), so no refill reaches an end marker
+   and ST4_wrap's assumption 5 is met however long a caller advances.
+   ST4_wrap does not have a done state and none is read.
 10. DTX2: ST4_wrap's own assumptions are met, its 1 to 7, which the packer
     options and the packager's checks see to.
 
@@ -539,8 +549,8 @@ displacements it once had as immediates.
 **ST4_wrap over ST4_ring.** No ring end check in the decoder, and 62 to
 66 bytes less. Given up: the reader takes the write pointer back to the
 ring start itself, which is one compare against the ring end after each
-refill and no counter anywhere. The budget is fixed except on the last
-refill of a column, and the rows decoded shortens that one.
+refill. Every budget is a whole period, since every set loops and no
+refill is the last.
 
 **One pointer, and a stride.** Every column is one width, so column `i`
 stands at the pointer plus `i` strides and a caller reaches the row off one
@@ -551,9 +561,11 @@ took three pointers before.
 pointer would turn every register read into a memory read and fork ST4's
 code. Given up: two `movem`s a refill, and one refill a row.
 
-**No checkpoints in DTX2.** A backward jump costs the target row and not
-the distance, and the repeat at `R` to `RR` is one. Given up: a bounded
-backward jump.
+**No checkpoints in DTX2.** A jump seeds every decoder and steps the turn
+forward to the target row, so it costs the target and not the distance,
+and no field in the block gives the row the cursor stood on. Given up: a
+forward jump that begins where the cursor is, and a bounded backward jump.
+The repeat costs neither: the data sets make it.
 
 **The image finds a row and the caller reads it.** An advance gives an
 address and a stride reaches the rest, so no call copies a value and

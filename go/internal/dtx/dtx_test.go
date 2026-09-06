@@ -126,9 +126,11 @@ type standin struct{}
 
 func (standin) Copies() bool { return false }
 
-func (standin) Pack(column []byte, unit, ring int) ([]byte, error) {
+func (standin) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	set := make([]byte, 28+len(column))
 	set[0], set[1], set[2], set[3] = 'S', '4', 7, byte(unit)
+	// the set loops by its end marker, so no pass is replayed
+	PutLong(set, 20, -1)
 	copy(set[28:], column)
 	return set, nil
 }
@@ -319,6 +321,99 @@ func TestADtx2FileReadsBackToTheTableItWasWrittenFrom(t *testing.T) {
 			t.Fatal(err)
 		}
 		same("DTX2 to DTX2 at another unit and back, "+at, again, want)
+	}
+}
+
+// R5.11: every data set loops. Where RR is below R it loops at that row, and
+// where the table does not repeat it loops at its last unit. Row RR begins a
+// unit of the column, so RR times the width divides by k.
+func TestEveryDataSetLoopsAtTheRowTheTableRepeatsAt(t *testing.T) {
+	for _, one := range []struct {
+		name         string
+		rows, repeat int
+		width, unit  int
+		want         int
+	}{
+		{"the last unit where the table does not repeat", 64, 64, 2, 1, 127},
+		{"the last unit at k of 4", 64, 64, 2, 4, 31},
+		{"row 0 is unit 0", 64, 0, 2, 2, 0},
+		{"row 16 of two byte values at k of 1", 64, 16, 2, 1, 32},
+		{"row 16 of two byte values at k of 4", 64, 16, 2, 4, 8},
+	} {
+		got, err := Loop(tableAt(t, one.rows, one.repeat, 2, one.width),
+			one.unit)
+		if err != nil {
+			t.Fatalf("%s: %v", one.name, err)
+		}
+		if got != one.want {
+			t.Fatalf("%s: the loop is unit %d, not %d", one.name, got,
+				one.want)
+		}
+	}
+	// 64 rows of one byte values repeating at row 3, at k of 2: row 3 is
+	// byte 3 of the column, which is not a unit of one.
+	_, err := Loop(tableAt(t, 64, 3, 2, 1), 2)
+	if err == nil {
+		t.Fatal("a repeat off a unit was taken")
+	}
+	want := "the table repeats at row 3, which is byte 3 of a column and" +
+		" not a unit of one at k of 2: RR times the width divides by k" +
+		" (R5.11)"
+	if err.Error() != want {
+		t.Fatalf("the error is %q", err)
+	}
+	if _, err := WriteDtx2(tableAt(t, 64, 3, 2, 1), st4.Packer{}, 2, 960); err == nil {
+		t.Fatal("a table the loop rule refuses was packed")
+	}
+}
+
+// A loop longer than a back reference reaches is replayed: the set records
+// the loop's first unit at byte 20 rather than the $FFFFFFFF of a set its end
+// marker loops, and it reads back to the same table.
+func TestALoopLongerThanABackReferenceReachesIsReplayed(t *testing.T) {
+	// 512 rows of two byte values are 1024 units at k of 1, and a ring of
+	// 960 reaches 960 of them, so the pass from row 0 is replayed.
+	want := tableAt(t, 512, 0, 2, 2)
+	file, err := WriteDtx2(want, st4.Packer{}, 1, 960)
+	if err != nil {
+		t.Fatal(err)
+	}
+	header, err := ReadHeader(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	packed, err := ReadPacked(file, header)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !packed.Replayed {
+		t.Fatal("a loop of 1024 units at a ring of 960 was not replayed")
+	}
+	for i, at := range packed.At {
+		if got := GetLong(file, header.Length()+at+20); got != 0 {
+			t.Fatalf("column %d rewinds to byte %d, not the 0 of row 0",
+				i, got)
+		}
+	}
+	got, err := ReadDtx2(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Same(want) {
+		t.Fatal("a replayed data set read back another table")
+	}
+	// The same table at a ring of 65280 reaches its own first unit, so its
+	// end marker loops it and no pass is replayed.
+	short, err := WriteDtx2(want, st4.Packer{}, 1, 65280)
+	if err != nil {
+		t.Fatal(err)
+	}
+	packed, err = ReadPacked(short, header)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if packed.Replayed {
+		t.Fatal("a loop a back reference reaches was replayed")
 	}
 }
 

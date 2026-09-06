@@ -19,11 +19,52 @@ public static class Tools
     }
 
     /// <summary>The seconds -copiesS searches for, or zero.</summary>
-    private static double Seconds(string copies) => copies.Length > 2
-            ? double.Parse(copies[2..], CultureInfo.InvariantCulture) : 0;
+    private static double Seconds(string copies)
+    {
+        if (copies.Length <= 2)
+        {
+            return 0;
+        }
+        try
+        {
+            return double.Parse(copies[2..], CultureInfo.InvariantCulture);
+        }
+        catch (Exception notANumber) when (notANumber is FormatException
+                || notANumber is OverflowException)
+        {
+            throw new NotRead("-copies" + copies[2..]);
+        }
+    }
 
-    private static int Number(string given) =>
-            int.Parse(given, CultureInfo.InvariantCulture);
+    /// <summary>
+    /// The whole number an argument gives behind its two letter flag. An
+    /// argument with anything else behind the flag is one the tool does not
+    /// read.
+    /// </summary>
+    private static int Number(string arg)
+    {
+        try
+        {
+            return int.Parse(arg[2..].Trim(), CultureInfo.InvariantCulture);
+        }
+        catch (Exception notANumber) when (notANumber is FormatException
+                || notANumber is OverflowException)
+        {
+            throw new NotRead(arg);
+        }
+    }
+
+    /// <summary>
+    /// A flag whose figure is not a number: an argument dtx-write does not
+    /// read. Write gives the line on standard error and exits with 2.
+    /// </summary>
+    private sealed class NotRead : Exception
+    {
+        internal NotRead(string arg)
+                : base($"dtx-write does not read {arg}")
+        {
+        }
+    }
 
     /// <summary>
     /// The tool that writes a table: dtx-write in out.
@@ -36,6 +77,21 @@ public static class Tools
     /// a DTX file out as text. doc/tools.md, Write.</para>
     /// </summary>
     public static int Write(string[] args)
+    {
+        try
+        {
+            return Writing(args);
+        }
+        catch (NotRead notRead)
+        {
+            Console.Error.WriteLine(notRead.Message);
+            return 2;
+        }
+    }
+
+    /// <summary>The tool's own work, which a flag it does not read
+    /// stops.</summary>
+    private static int Writing(string[] args)
     {
         if (Help.Among(args))
         {
@@ -52,11 +108,11 @@ public static class Tools
         string width = "", packer = "", copies = "";
         foreach (string arg in args[2..])
         {
-            if (arg.StartsWith("-v", StringComparison.Ordinal)) variant = Number(arg[2..]);
-            else if (arg.StartsWith("-w", StringComparison.Ordinal)) width = arg[2..];
-            else if (arg.StartsWith("-r", StringComparison.Ordinal)) repeat = Number(arg[2..]);
-            else if (arg.StartsWith("-k", StringComparison.Ordinal)) unit = Number(arg[2..]);
-            else if (arg.StartsWith("-m", StringComparison.Ordinal)) ring = Number(arg[2..]);
+            if (arg.StartsWith("-v", StringComparison.Ordinal)) variant = Number(arg);
+            else if (arg.StartsWith("-w", StringComparison.Ordinal)) width = arg;
+            else if (arg.StartsWith("-r", StringComparison.Ordinal)) repeat = Number(arg);
+            else if (arg.StartsWith("-k", StringComparison.Ordinal)) unit = Number(arg);
+            else if (arg.StartsWith("-m", StringComparison.Ordinal)) ring = Number(arg);
             // the packer's own: a match beyond the ring copies from the
             // literal stream, and -copiesS searches S seconds for a better
             // parse. YMX spells it the same way.
@@ -81,7 +137,7 @@ public static class Tools
         {
             if (width.Length != 0)
             {
-                Console.Error.WriteLine($"-w{width} gives text its width,"
+                Console.Error.WriteLine($"{width} gives text its width,"
                         + $" and {named[0]} is a DTX file with its own");
                 return 2;
             }
@@ -99,7 +155,7 @@ public static class Tools
         {
             string text = Encoding.UTF8.GetString(in_);
             int given = width.Length == 0
-                    ? Csv.Width(text) : Number(width.Trim());
+                    ? Csv.Width(text) : Number(width);
             int at = repeat < 0 ? Csv.Repeat(text) : repeat;
             table = at < 0
                     ? Csv.TableAt(text, given) : Csv.TableAt(text, given, at);
@@ -296,17 +352,21 @@ public static class Tools
 
         public bool Copies => copies;
 
-        public byte[] Pack(byte[] column, int unit, int ring)
+        public byte[] Pack(byte[] column, int unit, int ring, int loop)
         {
             byte[] set = new byte[28 + column.Length];
             set[0] = (byte)'S';
             set[1] = (byte)'4';
             set[2] = 7;
             set[3] = (byte)unit;
-            Format.PutLong(set, 4, column.Length / unit);
+            Format.PutLong(set, 4, column.Length);
             Format.PutLong(set, 8, 28);
             Format.PutLong(set, 12, 28 + column.Length);
             Format.PutLong(set, 16, 28 + column.Length);
+            // Nothing decodes this set, so the loop is left out of it: byte
+            // 20 reads $FFFFFFFF, the rewind field of a set the reader does
+            // not replay (abi.md 4).
+            Format.PutLong(set, 20, Nt4.Format.NoRewind);
             Format.PutLong(set, 24, ring / unit);
             column.CopyTo(set, 28);
             return set;

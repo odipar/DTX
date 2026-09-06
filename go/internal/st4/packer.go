@@ -24,8 +24,9 @@ func (p Packer) Copies() bool {
 	return p.CopiesFlag
 }
 
-// Pack gives column as one complete ST4 data set.
-func (p Packer) Pack(column []byte, unit, ring int) ([]byte, error) {
+// Pack gives column as one complete ST4 data set, looping at unit loop or
+// ending where loop is -1.
+func (p Packer) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	if problem := CheckUnit(unit); problem != "" {
 		return nil, fmt.Errorf("%s", problem)
 	}
@@ -33,12 +34,41 @@ func (p Packer) Pack(column []byte, unit, ring int) ([]byte, error) {
 	// figure: 32512 units at k=4 would not fit the word.
 	offsetLimit := min(ring/unit, MaxOffsetUnits(unit))
 	units := Split(column, unit)
-	var parsed *Block
-	if p.CopiesFlag {
-		parsed = OptimizeCopies(units, unit, offsetLimit, maxOp, p.Seconds, false)
-	} else {
-		parsed = OptimizeEvents(units, unit, offsetLimit, false)
+	if loop < -1 || loop >= len(units) {
+		return nil, fmt.Errorf("the loop is unit -1 to %d of the column,"+
+			" not %d", len(units)-1, loop)
 	}
-	return CompressRepeating(parsed, units, unit, maxOp, -1, offsetLimit).
-		Container(), nil
+	// ST4 packs a loop two ways, and this makes the same test its own packer
+	// makes: the end marker's endless match where a back reference reaches
+	// the loop's first unit, and a replayed pass where it does not.
+	if loop >= 0 && len(units)-loop > offsetLimit {
+		return p.replayed(units, unit, offsetLimit, loop).Container(), nil
+	}
+	return CompressRepeating(p.parse(units, unit, offsetLimit), units, unit,
+		maxOp, loop, offsetLimit).Container(), nil
+}
+
+// replayed gives a column whose loop is longer than a back reference reaches.
+// The run before the loop and the loop are parsed apart, so nothing in the
+// loop reaches before the loop's first unit and every pass reads the same
+// history. The data set records that unit, and a reader puts the decoder's
+// registers away there and back at the column's end, every pass, which ST4's
+// decoders leave to the caller (abi.md 4).
+func (p Packer) replayed(units []uint32, unit, limit, loop int) Result {
+	var before *Block
+	if loop > 0 {
+		before = p.parse(units[:loop:loop], unit, limit)
+	}
+	return CompressRewinding(before, p.parse(units[loop:], unit, limit),
+		units, unit, maxOp, loop, limit)
+}
+
+// parse gives one parse of units, with the copy code where this packs it.
+// Neither optimizer reports progress: a tool writes what it wrote, and a
+// meter on standard output would stand in the middle of it.
+func (p Packer) parse(units []uint32, unit, limit int) *Block {
+	if p.CopiesFlag {
+		return OptimizeCopies(units, unit, limit, maxOp, p.Seconds, false)
+	}
+	return OptimizeEvents(units, unit, limit, false)
 }

@@ -67,15 +67,22 @@ DTX_S_D             equ     12
 ; stream records stand, the column a fill is at, the five figures the table
 ; gives, and where the rings begin. The decoder states stand at
 ; DTX_DECODERS, 32 a column, and the rings behind them, N a column.
-DTX_PAYLOAD         equ     20
-DTX_RECORDS         equ     24              ; where the stream records stand
-DTX_FILL            equ     28              ; a word: the column a fill is at
-DTX_CFIG            equ     30              ; C, a word
-DTX_RINGS           equ     32              ; where the rings begin, in the block
-DTX_ROWSFIG         equ     36              ; R
-DTX_REPEATFIG       equ     40              ; RR
-DTX_PERIODFIG       equ     44              ; P
-DTX_NFIG            equ     48              ; N
+DTX_PAYLOAD         equ     12
+DTX_RECORDS         equ     16              ; where the stream records stand
+DTX_FILL            equ     20              ; a word: the column a fill is at
+DTX_CFIG            equ     22              ; C, a word
+DTX_RINGS           equ     24              ; where the rings begin, in the block
+DTX_PERIODFIG       equ     28              ; P
+DTX_NFIG            equ     32              ; N
+DTX_ROWSDONE        equ     36              ; the rows every column has
+                                            ; produced, kept only where the
+                                            ; sets are replayed
+DTX_SAVEAT          equ     40              ; RR, the row a loop begins at
+DTX_ENDAT           equ     44              ; R, the rows a column gives
+DTX_SAVED           equ     48              ; where the decoders' registers
+                                            ; go, in the block, or 0 where
+                                            ; the sets loop by their end
+                                            ; marker and nothing is put away
 DTX_DECODERS        equ     52
 
 ; -----------------------------------------------------------------------------
@@ -182,9 +189,7 @@ DTX_store:
 ; worked out again after every call into it.
 
 DTX_seed:
-        move.l  #-1,DTX_ROW(a6)
         clr.w   DTX_TURN(a6)
-        move.l  DTX_PERIODFIG(a6),DTX_DECODED(a6)
         clr.w   DTX_FILL(a6)
 seed_column:
         bsr.s   DTX_record              ; a3 the record
@@ -199,6 +204,7 @@ seed_column:
         bsr.s   DTX_ring                ; a1 the ring's first byte
         move.w  DTX_NFIG+2(a6),d3       ; N, a ring's bytes, in a word
         bsr     ST4_init
+        bsr     DTX_first
         move.l  DTX_PERIODFIG(a6),d3
         DTX_BUDGET
         bsr     ST4_resume
@@ -209,8 +215,20 @@ seed_column:
         cmp.w   DTX_CFIG(a6),d4
         bcs.s   seed_column
 
+; The seed gave every column a period's rows, which the count starts from.
+; A loop that begins there is put away now, as one that begins at row 0 was
+; put away by DTX_first.
+        move.l  DTX_PERIODFIG(a6),DTX_ROWSDONE(a6)
+        tst.l   DTX_SAVED(a6)
+        beq.s   .pointer
+        move.l  DTX_ROWSDONE(a6),d3
+        cmp.l   DTX_SAVEAT(a6),d3
+        bne.s   .pointer
+        bsr     DTX_away
+
 ; The pointer a row below column 0's first row, so the advance into row 0
 ; steps like any other advance.
+.pointer:
         move.l  a6,d0
         add.l   DTX_RINGS(a6),d0
         subq.l  #DTX_WIDTH,d0
@@ -229,10 +247,9 @@ DTX_init:
         move.l  a1,DTX_PAYLOAD(a6)
         bsr     DTX_columns
         move.l  a3,DTX_RECORDS(a6)
-        move.l  4(a2),d0                ; R
-        move.l  d0,DTX_ROWSFIG(a6)
-        move.l  10(a2),d0               ; RR
-        move.l  d0,DTX_REPEATFIG(a6)
+        move.l  10(a2),DTX_SAVEAT(a6)   ; RR, the row a loop begins at
+        move.l  4(a2),DTX_ENDAT(a6)     ; R
+        clr.l   DTX_ROWSDONE(a6)
         move.w  8(a2),d1                ; C
         move.w  d1,DTX_CFIG(a6)
 
@@ -251,6 +268,25 @@ DTX_init:
         lsl.l   #5,d2
         addi.w  #DTX_DECODERS,d2
         move.l  d2,DTX_RINGS(a6)
+
+; Where the decoders' registers go, behind the rings, and 0 where nothing is
+; put away. Byte 20 of a data set gives the unit its loop begins at, or
+; $FFFFFFFF where the set's end marker loops it and no pass is replayed;
+; every set of a payload takes the same form, so column 0 defines it.
+        clr.l   DTX_SAVED(a6)
+        movea.l DTX_PAYLOAD(a6),a3
+        movea.l a3,a4
+        adda.l  4(a3),a4                ; column 0's data set
+        move.l  20(a4),d3
+        addq.l  #1,d3                   ; $FFFFFFFF and nothing else gives 0
+        beq.s   .marker
+        move.l  DTX_NFIG(a6),d3
+        moveq   #0,d4
+        move.w  d1,d4
+        mulu.w  d3,d4                   ; the rings, N a column
+        add.l   DTX_RINGS(a6),d4
+        move.l  d4,DTX_SAVED(a6)
+.marker:
 
         bsr     DTX_seed
         movea.l DTX_PARK(a6),a6
@@ -274,19 +310,14 @@ DTX_step:
         move.l  d0,DTX_POINTER(a6)
 
 ; The refill of the row's turn, which a jump and an advance reach through
-; the step above. At the turn's wrap a period's rows join the rows decoded,
-; and that shortens a column's last refill and stops the one after it.
+; the step above. Every data set of a DTX2 payload loops (R5.11), so no set
+; ends, no refill is the last and none is shortened: a refill is a whole
+; period, every period, and nothing here counts the rows decoded.
 DTX_refill:
         move.w  DTX_TURN(a6),d1
         cmp.w   DTX_CFIG(a6),d1
         bcc.s   DTX_turn                ; a turn past the last column
-        move.l  DTX_ROWSFIG(a6),d3
-        sub.l   DTX_DECODED(a6),d3      ; the rows this period's refills take
-        ble.s   DTX_turn                ; every row decoded: no refill
-        cmp.l   DTX_PERIODFIG(a6),d3
-        bcs.s   .rows
         move.l  DTX_PERIODFIG(a6),d3
-.rows:
         move.w  d1,DTX_FILL(a6)
         DTX_BUDGET
         bsr     DTX_state
@@ -301,16 +332,88 @@ DTX_turn:
         cmp.w   DTX_PERIODFIG+2(a6),d1
         bcs.s   .stored
         clr.w   d1
-        move.l  DTX_ROWSFIG(a6),d3      ; a period ended, so every column took
-        sub.l   DTX_DECODED(a6),d3      ; its refill: those rows are decoded
-        ble.s   .stored
-        cmp.l   DTX_PERIODFIG(a6),d3
-        bcs.s   .grew
-        move.l  DTX_PERIODFIG(a6),d3
-.grew:
-        add.l   d3,DTX_DECODED(a6)
+        move.w  d1,DTX_TURN(a6)
+
+; A period ended, so every column has a period's rows more. Where the sets
+; are replayed the two rows the pass turns on fall on a period (abi.md 4),
+; so this compare finds them exactly: at the row the loop begins the
+; decoders' registers go away, and at the column's rows they come back.
+        tst.l   DTX_SAVED(a6)
+        beq.s   .marker                 ; the sets loop by their end marker
+        move.l  DTX_ROWSDONE(a6),d3
+        add.l   DTX_PERIODFIG(a6),d3
+        move.l  d3,DTX_ROWSDONE(a6)
+        cmp.l   DTX_SAVEAT(a6),d3
+        beq.s   DTX_away
+        cmp.l   DTX_ENDAT(a6),d3
+        beq.s   DTX_back
+.marker:
+        rts
 .stored:
         move.w  d1,DTX_TURN(a6)
+        rts
+
+; -----------------------------------------------------------------------------
+; A replayed pass whose loop begins at row 0 begins where ST4_init leaves
+; the decoder, so those are the registers to put away. Every other loop
+; begins at a period, and the turn above finds it.
+
+DTX_first:
+        tst.l   DTX_SAVED(a6)
+        beq.s   .none
+        tst.l   DTX_SAVEAT(a6)
+        bne.s   .none
+        movea.l a6,a3
+        adda.l  DTX_SAVED(a6),a3
+        moveq   #0,d4
+        move.w  DTX_FILL(a6),d4
+        lsl.l   #5,d4
+        adda.l  d4,a3
+        movem.l d0-d2/a0-a2/a4-a5,(a3)
+.none:
+        rts
+
+; -----------------------------------------------------------------------------
+; The decoders' registers away and back, one column of eight longs at a time.
+; ST4 leaves a1, the write pointer, out of a replay: it walks the ring on and
+; the pass it belongs to is the caller's, not the stream's. So the copy back
+; steps over a1's long and the ring stands where the last refill left it.
+
+; Eight registers carry a column between the two, so the loop is two movem:
+; d5 counts the columns, since the eight take every other data register, and
+; a3 and a4 walk the two blocks. A movem to memory writes at a displacement
+; and never past a postincrement, so the destination steps by a lea.
+
+DTX_away:
+        lea     DTX_DECODERS(a6),a3
+        movea.l a6,a4
+        adda.l  DTX_SAVED(a6),a4
+        move.w  DTX_CFIG(a6),d5
+        subq.w  #1,d5
+.column:
+        movem.l (a3)+,d0-d4/a0-a2
+        movem.l d0-d4/a0-a2,(a4)
+        lea     32(a4),a4
+        dbra    d5,.column
+        rts
+
+; The copy back leaves the write pointer, which the save put in d4: the
+; three longs behind it go to 20 rather than to 16, so the decoder keeps the
+; ring position its last refill left and takes the rest of the pass back.
+
+DTX_back:
+        move.l  DTX_SAVEAT(a6),DTX_ROWSDONE(a6)
+        lea     DTX_DECODERS(a6),a3
+        movea.l a6,a4
+        adda.l  DTX_SAVED(a6),a4
+        move.w  DTX_CFIG(a6),d5
+        subq.w  #1,d5
+.column:
+        movem.l (a4)+,d0-d4/a0-a2
+        movem.l d0-d3,(a3)
+        movem.l a0-a2,20(a3)
+        lea     32(a3),a3
+        dbra    d5,.column
         rts
 
 ; -----------------------------------------------------------------------------
@@ -320,24 +423,13 @@ DTX_turn:
 DTX_jump:
         move.l  a6,DTX_PARK(a0)
         movea.l a0,a6
-jump_parked:
-        move.l  d0,-(a7)
-        move.l  DTX_ROW(a6),d4
-        bmi.s   .afresh
-        cmp.l   (a7),d4
-        bcs.s   .run                    ; the row stands below the target
-.afresh:
-        bsr     DTX_seed
+        move.l  d0,-(a7)                ; the rows still to step
+        bsr     DTX_seed                ; the cursor a row below row 0
 .run:
-        move.l  DTX_ROW(a6),d4
-        cmp.l   (a7),d4
-        beq.s   .there
-        addq.l  #1,d4
-        move.l  d4,DTX_ROW(a6)
         bsr     DTX_step
-        bra.s   .run
-.there:
-        move.l  (a7)+,d0
+        subq.l  #1,(a7)
+        bpl.s   .run
+        addq.l  #4,a7
         movea.l DTX_POINTER(a6),a1
         movea.l DTX_PARK(a6),a6
         rts
@@ -349,25 +441,7 @@ jump_parked:
 DTX_advance:
         move.l  a6,DTX_PARK(a0)
         movea.l a0,a6
-        move.l  DTX_ROW(a6),d0
-        addq.l  #1,d0
-        cmp.l   DTX_ROWSFIG(a6),d0
-        bne.s   .step
-        move.l  DTX_REPEATFIG(a6),d0
-        cmp.l   DTX_ROWSFIG(a6),d0
-        bcc.s   .over                   ; RR at R: the end, and it is sticky
-        bra.s   jump_parked             ; the repeat is a jump, and a6 and
-                                        ; DTX_PARK(a6) already stand as
-                                        ; DTX_jump's first two leave them
-.over:
-        moveq   #-1,d0
-        movea.l DTX_POINTER(a6),a1      ; the last row stands where it stood
-        movea.l DTX_PARK(a6),a6
-        rts
-.step:
-        move.l  d0,DTX_ROW(a6)
         bsr     DTX_step
-        move.l  DTX_ROW(a6),d0          ; a step clobbers d0 to d5
         movea.l DTX_POINTER(a6),a1
         movea.l DTX_PARK(a6),a6
         rts

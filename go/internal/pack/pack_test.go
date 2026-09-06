@@ -40,7 +40,14 @@ func packed(rows, columns, width, unit, ring int) []byte {
 
 // The same, whose payload defines that its columns contain copies, R5.10.
 func packedCopies(rows, columns, width, unit, ring int, copies bool) []byte {
-	head := header(dtx.DTX2, rows, rows, columns, width)
+	return sets(rows, rows, columns, width, unit, ring, copies, -1)
+}
+
+// The same at this repeat, whose sets record rewind as their loop: a rewind
+// of -1 loops a set by its end marker and any other replays its pass.
+func sets(rows, repeat, columns, width, unit, ring int, copies bool,
+	rewind int) []byte {
+	head := header(dtx.DTX2, rows, repeat, columns, width)
 	payload := make([]byte, 4+4*columns)
 	dtx.PutWord(payload, 0, ring)
 	payload[2] = byte(unit)
@@ -60,6 +67,7 @@ func packedCopies(rows, columns, width, unit, ring int, copies bool) []byte {
 		dtx.PutLong(set, 8, 28+bytes/4)
 		dtx.PutLong(set, 12, 28+bytes/2)
 		dtx.PutLong(set, 16, 28+bytes)
+		dtx.PutLong(set, 20, rewind)
 		dtx.PutLong(set, 24, ring/unit)
 		payload = append(payload, set...)
 	}
@@ -235,8 +243,8 @@ func TestTheCarriedCodeReadsZeroForEveryFieldACombineWrites(t *testing.T) {
 // walks every column of it. The figure is read back out of the image, where
 // a caller reads it.
 func TestTheStateBlockIsTheSameAtEveryWidth(t *testing.T) {
-	if got := StateBytes(); got != 20 {
-		t.Fatalf("the head and one pointer are %d bytes, not 20", got)
+	if got := StateBytes(); got != 12 {
+		t.Fatalf("the head and one pointer are %d bytes, not 12", got)
 	}
 	needsImages(t)
 	for _, width := range []int{1, 2, 4} {
@@ -246,9 +254,9 @@ func TestTheStateBlockIsTheSameAtEveryWidth(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got := dtx.GetLong(out, FormatAt+StateAt); got != 20 {
+				if got := dtx.GetLong(out, FormatAt+StateAt); got != 12 {
 					t.Fatalf("DTX%d of %d columns at a width of %d takes %d"+
-						" bytes, not 20", variant, columns, width, got)
+						" bytes, not 12", variant, columns, width, got)
 				}
 			}
 		}
@@ -440,6 +448,81 @@ func TestAPackedStateBlockContainsADecoderStateAndARingAColumn(t *testing.T) {
 	}
 	if got := PackedStateBytes(head, given); got != 52+32*2+2*960 {
 		t.Fatalf("the block is %d bytes, not a ring a column", got)
+	}
+}
+
+// A payload whose sets record a loop is replayed, and its block takes a
+// second decoder state a column, where the reader puts the registers away at
+// the row the loop begins, doc/abi.md 3.
+func TestAReplayedPayloadTakesASecondDecoderStateAColumn(t *testing.T) {
+	file := sets(64, 0, 2, 2, 1, 960, false, 0)
+	head, err := dtx.ReadHeader(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	given, err := ReadPacked(file, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !given.Replayed {
+		t.Fatal("a payload whose sets record a loop was not replayed")
+	}
+	if got := PackedStateBytes(head, given); got != 52+32*2+2*960+32*2 {
+		t.Fatalf("the block is %d bytes, not a ring and two decoder states"+
+			" a column", got)
+	}
+}
+
+// A refill takes a whole period and a replayed set puts the registers away at
+// RR and back at R, so both rows fall on a period: P divides RR and the rows
+// from RR to R, doc/abi.md 4.
+func TestAReplayedPayloadTakesAPeriodThatDividesTheRepeat(t *testing.T) {
+	// Three columns of two byte values at a ring of 960: P of 3 divides N by
+	// the width, and a replayed payload repeating at row 16 of 64 takes 4,
+	// the first period from C that divides 16 and the 48 rows to R.
+	for _, one := range []struct {
+		name   string
+		file   []byte
+		period int
+	}{
+		{"P is C where the sets loop by their end marker",
+			sets(64, 16, 3, 2, 1, 960, false, -1), 3},
+		{"P divides RR and the rows from it where the pass is replayed",
+			sets(64, 16, 3, 2, 1, 960, false, 32), 4},
+	} {
+		head, err := dtx.ReadHeader(one.file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		given, err := ReadPacked(one.file, head)
+		if err != nil {
+			t.Fatal(err)
+		}
+		period, err := Period(head, given)
+		if err != nil {
+			t.Fatalf("%s: %v", one.name, err)
+		}
+		if period != one.period {
+			t.Fatalf("%s: P is %d, not %d", one.name, period, one.period)
+		}
+	}
+	// A repeat of 3 leaves 61 rows to R, and no period from C of 2 divides
+	// both, so the package fails and the message names the rule.
+	file := sets(64, 3, 2, 2, 1, 960, false, 6)
+	head, err := dtx.ReadHeader(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	given, err := ReadPacked(file, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = Period(head, given); err == nil {
+		t.Fatal("a replayed payload repeating at row 3 took a period")
+	}
+	if !strings.HasSuffix(err.Error(), ", and RR of 3 and the rows from it"+
+		" to R divide by P, since these data sets are replayed") {
+		t.Fatalf("the error is %q", err)
 	}
 }
 

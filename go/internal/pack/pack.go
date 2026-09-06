@@ -20,11 +20,9 @@ import (
 
 // The state block's fields, from doc/abi.md 3.
 const (
-	Row     = 0
-	Turn    = 4
-	Decoded = 8
-	Park    = 12
-	Pointer = 16
+	Turn    = 0
+	Park    = 4
+	Pointer = 8
 )
 
 // The format block: what it runs to, where it stands behind the four slots,
@@ -45,6 +43,10 @@ const (
 
 // Stream is what one stream record runs to, one a column under DTX2.
 const Stream = 16
+
+// State is what one decoder state takes, and the copy of it a replay puts
+// away.
+const State = 32
 
 // PackedHead is what a packed reader's state block contains before its
 // decoder states.
@@ -72,7 +74,7 @@ func Decoders() int {
 
 // Ring gives where the rings stand in the state block.
 func Ring(header dtx.Header) int {
-	return Decoders() + 32*header.Columns
+	return Decoders() + State*header.Columns
 }
 
 // StateBytes gives the state block a plain reader takes.
@@ -83,9 +85,16 @@ func StateBytes() int {
 	return Plain
 }
 
-// PackedStateBytes gives the state block a packaged DTX2 reader takes.
+// PackedStateBytes gives the state block a packaged DTX2 reader takes. A
+// replayed payload takes a second decoder state a column behind the rings,
+// where the reader puts the registers away at the row its loop begins
+// (abi.md 4).
 func PackedStateBytes(header dtx.Header, given Packed) int {
-	return Ring(header) + given.Ring*header.Columns
+	out := Ring(header) + given.Ring*header.Columns
+	if given.Replayed {
+		out += State * header.Columns
+	}
+	return out
 }
 
 // Stride gives the stride from one column's value to the next, in the row an
@@ -116,19 +125,31 @@ func Period(header dtx.Header, given Packed) (int, error) {
 		return 0, fmt.Errorf("a column is %d times %d bytes, which does not"+
 			" divide by k of %d", rows, width, k)
 	}
+	// A replayed set puts the decoder's registers away where its loop begins
+	// and back at the column's end, and a refill takes a whole period, so
+	// both rows fall on a period (abi.md 4).
+	repeat := header.Repeat
+	lands := !given.Replayed
 	for p := columns; p <= rows; p++ {
 		budget := p * width / k
 		if n < 2*p*width {
 			break
 		}
 		if n%(p*width) == 0 && p*width%k == 0 &&
-			budget >= 1 && budget <= 65535 {
+			budget >= 1 && budget <= 65535 &&
+			(lands || (repeat%p == 0 && (rows-repeat)%p == 0)) {
 			return p, nil
 		}
 	}
+	replayed := ""
+	if !lands {
+		replayed = fmt.Sprintf(", and RR of %d and the rows from it to R"+
+			" divide by P, since these data sets are replayed", repeat)
+	}
 	return 0, fmt.Errorf("no period from C of %d to R of %d meets N of %d and"+
 		" k of %d: N divides by P times the width, is at least twice that,"+
-		" and the budget is a whole number of units", columns, rows, n, k)
+		" the budget is a whole number of units%s",
+		columns, rows, n, k, replayed)
 }
 
 // ColumnTable gives the table behind the image's code: one stream record a
@@ -296,9 +317,7 @@ func Figures(file []byte) (string, error) {
 		"; The state block, doc/abi.md 3.\n",
 		variant, variant, header.Rows, header.Columns, header.Width,
 		header.Repeat)
-	out.WriteString(equ("DTX_ROW", Row))
 	out.WriteString(equ("DTX_TURN", Turn))
-	out.WriteString(equ("DTX_DECODED", Decoded))
 	out.WriteString(equ("DTX_PARK", Park))
 	out.WriteString(equ("DTX_POINTER", Pointer))
 	out.WriteString("\n; What the code takes at assembly time.\n")

@@ -25,6 +25,7 @@ import (
 	"dtx/internal/dtx"
 	"dtx/internal/image"
 	"dtx/internal/pack"
+	"dtx/internal/st4"
 )
 
 // What -help prints: the synopsis, a line a flag with the default in
@@ -87,13 +88,16 @@ type plain struct{ copies bool }
 
 func (h plain) Copies() bool { return h.copies }
 
-func (h plain) Pack(column []byte, unit, ring int) ([]byte, error) {
+func (h plain) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	set := make([]byte, 28+len(column))
 	set[0], set[1], set[2], set[3] = 'S', '4', 7, byte(unit)
-	dtx.PutLong(set, 4, len(column)/unit)
+	dtx.PutLong(set, 4, len(column))
 	dtx.PutLong(set, 8, 28)
 	dtx.PutLong(set, 12, 28+len(column))
 	dtx.PutLong(set, 16, 28+len(column))
+	// Nothing decodes this set, so it does not loop where the table does:
+	// the end marker loops it and no pass is replayed.
+	dtx.PutLong(set, 20, st4.NoRewind)
 	dtx.PutLong(set, 24, ring/unit)
 	copy(set[28:], column)
 	return set, nil

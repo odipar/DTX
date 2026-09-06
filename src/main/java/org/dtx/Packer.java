@@ -22,8 +22,12 @@ public interface Packer {
      *     signature then gives (R5.2)
      * @param ring the bytes past which no back reference in the data set
      *     reaches (R5.4)
+     * @param loop the unit the set decodes back to when it reaches the end,
+     *     so that it decodes forever, or -1 where the set ends (R5.11). A
+     *     packer with no loop to give throws on a call that gives one: a
+     *     set that ends where the file defines a loop reads wrongly
      */
-    byte[] pack(byte[] column, int unit, int ring);
+    byte[] pack(byte[] column, int unit, int ring, int loop);
 
     /**
      * Whether a match beyond the ring copies from the column's own literal

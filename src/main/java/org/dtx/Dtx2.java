@@ -36,7 +36,8 @@ public final class Dtx2 {
      * @param ring {@code N}: the bytes a column unpacks through (R5.4)
      * @throws IllegalArgumentException where {@code unit} or {@code ring} is
      *     outside what the payload can define, or a column's bytes do not
-     *     divide by {@code unit}
+     *     divide by {@code unit}, or the table repeats at a row whose first
+     *     byte is not a unit of the column (R5.11)
      */
     public static byte[] write(Table table, Packer packer, int unit, int ring) {
         if (unit != 1 && unit != 2 && unit != 4) {
@@ -51,9 +52,10 @@ public final class Dtx2 {
                     + " times " + table.width() + " bytes, which does not"
                     + " divide by k of " + unit);
         }
+        int loop = loop(table, unit);
         byte[][] set = new byte[table.columns()][];
         for (int i = 0; i < table.columns(); i++) {
-            set[i] = packer.pack(table.column(i), unit, ring);
+            set[i] = packer.pack(table.column(i), unit, ring, loop);
         }
 
         // 2.3: `N`, `k`, the flags, then an offset a column
@@ -78,6 +80,32 @@ public final class Dtx2 {
                     set[i].length);
         }
         return out;
+    }
+
+    /**
+     * The unit every data set loops at (R5.11). Every set of a DTX2 payload
+     * loops, so no set ends and a reader decodes one row after another
+     * without a figure to count against: where {@code RR} is below
+     * {@code R} the set loops at that row, and where the table does not
+     * repeat it loops at its last unit, which gives row {@code R} minus one
+     * again for as long as a caller advances.
+     *
+     * @throws IllegalArgumentException where row {@code RR} does not begin a
+     *     unit of the column
+     */
+    static int loop(Table table, int unit) {
+        int units = table.rows() * table.width() / unit;
+        if (table.repeat() >= table.rows()) {
+            return units - 1;
+        }
+        int at = table.repeat() * table.width();
+        if (at % unit != 0) {
+            throw new IllegalArgumentException("the table repeats at row "
+                    + table.repeat() + ", which is byte " + at
+                    + " of a column and not a unit of one at k of " + unit
+                    + ": RR times the width divides by k (R5.11)");
+        }
+        return at / unit;
     }
 
     /**

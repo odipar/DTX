@@ -68,7 +68,7 @@ func TestATableIsPackagedAndTheLineGivesItsFigures(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(said, "DTX1 image") ||
-		!strings.Contains(said, "8 rows, 2 columns, state block 20 bytes") {
+		!strings.Contains(said, "8 rows, 2 columns, state block 12 bytes") {
 		t.Fatalf("the line is %q", said)
 	}
 	built, err := os.ReadFile(out)

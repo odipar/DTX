@@ -23,11 +23,9 @@ import java.nio.file.Path;
 public final class Packager {
 
     /** The state block's fields, from doc/abi.md 3. */
-    static final int ROW = 0;
-    static final int TURN = 4;
-    static final int DECODED = 8;
-    static final int PARK = 12;
-    static final int POINTER = 16;
+    static final int TURN = 0;
+    static final int PARK = 4;
+    static final int POINTER = 8;
 
     /** Where the format block stands: behind the four slots. */
     static final int FORMAT_AT = 16;
@@ -52,6 +50,9 @@ public final class Packager {
     /** What one stream record runs to, one a column under DTX2. */
     static final int STREAM = 16;
 
+    /** What one decoder state takes, and the copy of it a replay puts away. */
+    static final int STATE = 32;
+
     /** What a packed reader's state block contains before its decoder states. */
     static final int PACKED_HEAD = 52;
 
@@ -65,7 +66,8 @@ public final class Packager {
      * What a DTX2 payload defines: the ring, the unit, whether its columns
      * contain copies from the literal stream, and where each data set begins.
      */
-    record Packed(int ring, int unit, boolean copies, int[] at) {}
+    record Packed(int ring, int unit, boolean copies, boolean replayed,
+            int[] at) {}
 
     /**
      * What a DTX2 payload gives, SPEC.md 2.3.
@@ -84,8 +86,15 @@ public final class Packager {
         boolean copies = (file[payload + 3] & Dtx2.COPIES) != 0;
         int[] at = new int[header.columns()];
         int signature = 0x53340700 + unit;
+        boolean replayed = false;
         for (int i = 0; i < at.length; i++) {
             at[i] = Dtx.getLong(file, payload + 4 + 4 * i);
+            // Byte 20 of a data set gives the unit its loop begins at, or
+            // $FFFFFFFF where its end marker loops it. A set that records
+            // one is replayed by the reader (abi.md 4), and every set of a
+            // payload takes the same form: they are one table's columns, so
+            // one loop and one length.
+            replayed |= Dtx.getLong(file, payload + at[i] + 20) != -1;
             int said = Dtx.getLong(file, payload + at[i]);
             if (said != signature) {
                 throw new IllegalArgumentException(String.format(
@@ -95,7 +104,7 @@ public final class Packager {
                         i, said, signature));
             }
         }
-        return new Packed(ring, unit, copies, at);
+        return new Packed(ring, unit, copies, replayed, at);
     }
 
     /**
@@ -115,20 +124,29 @@ public final class Packager {
                     + " times " + width + " bytes, which does not divide by"
                     + " k of " + k);
         }
+        // A replayed set puts the decoder's registers away where its loop
+        // begins and back at the column's end, and a refill takes a whole
+        // period, so both rows fall on a period (abi.md 4).
+        int repeat = header.repeat();
+        boolean lands = !packed.replayed();
         for (int p = columns; p <= rows; p++) {
             long budget = (long) p * width / k;
             if (n < 2 * p * width) {
                 break;
             }
             if (n % (p * width) == 0 && (long) p * width % k == 0
-                    && budget >= 1 && budget <= 65535) {
+                    && budget >= 1 && budget <= 65535
+                    && (lands || (repeat % p == 0 && (rows - repeat) % p == 0))) {
                 return p;
             }
         }
         throw new IllegalArgumentException("no period from C of " + columns
                 + " to R of " + rows + " meets N of " + n + " and k of " + k
                 + ": N divides by P times the width, is at least twice that,"
-                + " and the budget is a whole number of units");
+                + " the budget is a whole number of units"
+                + (lands ? "" : ", and RR of " + repeat + " and the rows from"
+                        + " it to R divide by P, since these data sets are"
+                        + " replayed"));
     }
 
     /**
@@ -141,9 +159,15 @@ public final class Packager {
         return PLAIN;
     }
 
-    /** The state block a packaged DTX2 reader takes, in bytes. */
+    /**
+     * The state block a packaged DTX2 reader takes, in bytes. A replayed
+     * payload takes a second decoder state a column behind the rings, where
+     * the reader puts the registers away at the row its loop begins
+     * (abi.md 4).
+     */
     static int stateBytes(Dtx.Header header, Packed packed) {
-        return ring(header) + packed.ring() * header.columns();
+        return ring(header) + packed.ring() * header.columns()
+                + (packed.replayed() ? STATE * header.columns() : 0);
     }
 
     /**
@@ -201,7 +225,7 @@ public final class Packager {
         int rows = header.rows();
         int rowBytes = header.rowBytes();
         Packed packed = variant == Dtx.DTX2
-                ? packed(file, header) : new Packed(0, 0, false, new int[0]);
+                ? packed(file, header) : new Packed(0, 0, false, false, new int[0]);
         int period = variant == Dtx.DTX2 ? period(header, packed) : 1;
         // The payload defines whether its columns contain copies (R5.10), so
         // the decoder built for them is fixed by the file and not by a
@@ -220,9 +244,7 @@ public final class Packager {
                 .append("; Every instruction is the template's; nothing here"
                         + " is one.\n\n")
                 .append("; The state block, doc/abi.md 3.\n")
-                .append(equ("DTX_ROW", ROW))
                 .append(equ("DTX_TURN", TURN))
-                .append(equ("DTX_DECODED", DECODED))
                 .append(equ("DTX_PARK", PARK))
                 .append(equ("DTX_POINTER", POINTER))
                 .append("\n; What the code takes at assembly time.\n")
@@ -446,7 +468,7 @@ public final class Packager {
                     + columns + ": it would not land there");
         }
         Packed given = variant == Dtx.DTX2
-                ? packed(file, header) : new Packed(0, 0, false, new int[0]);
+                ? packed(file, header) : new Packed(0, 0, false, false, new int[0]);
         int unit = code[FORMAT_AT + UNIT_AT] & 0xFF;
         if (unit != given.unit()) {
             throw new IllegalStateException("the code decodes at a unit of "

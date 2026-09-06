@@ -60,21 +60,12 @@
 ; any other advance.
 
 DTX_init:
-        move.l  #-1,DTX_ROW(a0)
         clr.w   DTX_TURN(a0)
-        clr.l   DTX_DECODED(a0)
 
         bsr.s   DTX_payload             ; a1 the payload, a2 the header
         lea     _fmt(pc),a3
         moveq   #0,d2
         move.w  12(a3),d2               ; the row's bytes
-        move.l  4(a2),d3                ; R
-        move.l  10(a2),d5               ; RR
-
-; R and RR, into the compares that take them.
-        DTX_INSTALL_L d3,advance_rows
-        DTX_INSTALL_L d3,advance_end
-        DTX_INSTALL_L d5,advance_repeat
 
 ; The row's bytes, into the step and into the two mulu a jump takes. A row
 ; is C values of the width, so 1024 bytes at the widest table R6 takes,
@@ -93,7 +84,6 @@ DTX_init:
 ; mulu.w make that 32 by 16 product at any row's bytes.
 
 DTX_jump:
-        move.l  d0,DTX_ROW(a0)
         move.l  d0,d1
         swap    d1
 jump_high:
@@ -110,26 +100,13 @@ jump_low:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_advance. The move that leaves d0 sets N and Z, so bmi after the call.
-; a1 comes back the row's first value: the values of a DTX0 row stand one
-; after another, so the caller takes column i at i widths from it.
+; DTX_advance. One row on: a1 comes back the row's first value, and the
+; values of a DTX0 row stand one after another, so the caller takes column i
+; at i widths from it. Which row that is the caller counts (abi.md 2): no
+; call keeps a row number, and an advance past row R minus one reads past
+; the table.
 
 DTX_advance:
-        move.l  DTX_ROW(a0),d0
-        addq.l  #1,d0
-advance_rows:
-        cmpi.l  #0,d0                   ; installed: R
-        bne.s   advance_next
-advance_repeat:
-        move.l  #0,d0                   ; installed: RR
-advance_end:
-        cmpi.l  #0,d0                   ; installed: R
-        bcs.s   DTX_jump                ; RR below R: the repeat is a jump
-        moveq   #-1,d0                  ; the end, and it is sticky
-        movea.l DTX_POINTER(a0),a1      ; the last row stands where it stood
-        rts
-advance_next:
-        move.l  d0,DTX_ROW(a0)
         movea.l DTX_POINTER(a0),a1
 advance_step:
         adda.w  #0,a1                   ; installed: the row's bytes
