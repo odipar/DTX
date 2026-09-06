@@ -6,7 +6,7 @@
 
     <groupId>org.dtx</groupId>
     <artifactId>dtx</artifactId>
-    <version>0.5.0</version>
+    <version>0.6-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>23</maven.compiler.source>
