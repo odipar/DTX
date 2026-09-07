@@ -28,7 +28,10 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
-### Not yet cut
+### 0.6.0, 2026-09-07
+
+<https://github.com/odipar/DTX/releases/tag/v0.6.0>, built from the commit
+tagged `v0.6.0`.
 
 **No file changes, and no caller's code but one that read the block's
 fields from +36 on, or a decoder state's past its registers.**
