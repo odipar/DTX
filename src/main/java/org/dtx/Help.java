@@ -79,11 +79,11 @@ final class Help {
             """;
 
     static final String PACKAGE = """
-            dtx-package in.dtx out.bin [-aRMAC] [-s]
+            dtx-package in.dtx... out.bin [-aRMAC] [-s]
 
-            Packages a DTX file as a 68000 image: the code for its variant and,
-            under DTX1 and DTX2, its width, the column table and the file.
-            doc/abi.md gives the four calls into the image.
+            Packages one DTX file or several as a 68000 image: the code for their
+            variant and, under DTX1 and DTX2, their width, then a column table and
+            a file for each. doc/abi.md gives the four calls into the image.
 
               -aRMAC       assembles the code with the rmac at RMAC, in place of the
                            image the build made. The templates are read from 68k
@@ -96,6 +96,10 @@ final class Help {
 
               dtx-package t.dtx t.bin
                   the image of a table, from the code the build made
+              dtx-package a.dtx b.dtx both.bin
+                  one image of two tables, the code in it once, with a line
+                  saying where each table stands: a caller hands that to
+                  DTX_init
               dtx-package t.dtx t.bin -a/usr/local/bin/rmac
                   the same, with the code assembled from the templates by that
                   rmac

@@ -229,8 +229,24 @@ public static class Pack
     /// three it cannot write: the variant, the width, and under DTX2 the
     /// unit the decoder built into the code decodes at.</para>
     /// </summary>
-    public static byte[] Combine(byte[] code, byte[] file, Header header)
+    public static byte[] Combine(byte[] code, byte[] file, Header header) =>
+            Combine(code, new List<byte[]> { file }, header, out _);
+
+    /// <summary>
+    /// The same, of one table or several: the code once, then a column
+    /// table and a table's bytes for each. <paramref name="headers"/> comes
+    /// back naming where each table's header stands, the address a caller
+    /// hands DTX_init (doc/abi.md 2).
+    /// </summary>
+    public static byte[] Combine(byte[] code, List<byte[]> files, Header header,
+            out int[] headers)
     {
+        if (files.Count == 0)
+        {
+            throw new InvalidOperationException("no table: an image contains"
+                    + " one at least");
+        }
+        byte[] file = files[0];
         if (code.Length < FormatAt + FormatSize
                 || code[FormatAt] != 'D' || code[FormatAt + 1] != 'T'
                 || code[FormatAt + 2] != 'X')
@@ -270,23 +286,81 @@ public static class Pack
                     + $" {code[FormatAt + WidthAt]} bytes and the table's are"
                     + $" {header.Width}");
         }
-        byte[] entries = ColumnTable(file, header);
-        byte[] out_ = new byte[code.Length + entries.Length + file.Length];
-        code.CopyTo(out_, 0);
-        entries.CopyTo(out_, code.Length);
-        file.CopyTo(out_, code.Length + entries.Length);
-        Format.PutLong(out_, FormatAt + StateAt, header.Variant == Format.Dtx2
-                ? PackedStateBytes(header, given) : StateBytes(header));
-        // The table stands behind both, and only the packager has the
-        // figure: the column table's size moves with C, so the assembler
-        // could not have worked it out.
-        Format.PutLong(out_, FormatAt + TableAt, code.Length + entries.Length);
+        // Each table's column table stands immediately before it, and the
+        // pair begins on a long: init reaches the records at the header
+        // less 16C. The code ends on a long and a column table is a
+        // multiple of 16, so the first pair lands on a long without
+        // padding and a one table image comes out the bytes it always was.
+        int state = header.Variant == Format.Dtx2
+                ? PackedStateBytes(header, given) : StateBytes(header);
+        var body = new List<byte>(code);
+        headers = new int[files.Count];
+        for (int i = 0; i < files.Count; i++)
+        {
+            byte[] next = files[i];
+            Header its = header;
+            if (i > 0)
+            {
+                its = Format.ReadHeader(next);
+                Same(header, given, next, its);
+                state = Math.Max(state, its.Variant == Format.Dtx2
+                        ? PackedStateBytes(its, ReadPacked(next, its))
+                        : StateBytes(its));
+                while (body.Count % 4 != 0)
+                {
+                    body.Add(0);
+                }
+            }
+            body.AddRange(ColumnTable(next, its));
+            headers[i] = body.Count;
+            body.AddRange(next);
+        }
+        byte[] out_ = body.ToArray();
+        Format.PutLong(out_, FormatAt + StateAt, state);
+        // The first table stands behind both, and only the packager has
+        // the figure: the column table's size moves with C, so the
+        // assembler could not have worked it out.
+        Format.PutLong(out_, FormatAt + TableAt, headers[0]);
         Format.PutWord(out_, FormatAt + RowBytesAt, header.RowBytes);
         Format.PutWord(out_, FormatAt + PeriodAt,
                 header.Variant == Format.Dtx2 ? Period(header, given) : 1);
         Format.PutWord(out_, FormatAt + RingAt, given.Ring);
         Format.PutLong(out_, FormatAt + StrideAt, Stride(header, given));
         return out_;
+    }
+
+    /// <summary>
+    /// One image gives the variant, the width, the unit and, under DTX2, P
+    /// and N once (doc/abi.md 1), so every table past the first gives what
+    /// the first gives.
+    /// </summary>
+    private static void Same(Header first, Packed given, byte[] file,
+            Header header)
+    {
+        Apart("the variant", first.Variant, header.Variant);
+        if (first.Variant != Format.Dtx0)
+        {
+            Apart("the width", first.Width, header.Width);
+        }
+        if (first.Variant != Format.Dtx2)
+        {
+            return;
+        }
+        Packed its = ReadPacked(file, header);
+        Apart("the unit k", given.Unit, its.Unit);
+        Apart("the copies flag", given.Copies ? 1 : 0, its.Copies ? 1 : 0);
+        Apart("the ring N", given.Ring, its.Ring);
+        Apart("the period P", Period(first, given), Period(header, its));
+    }
+
+    private static void Apart(string what, int first, int next)
+    {
+        if (first != next)
+        {
+            throw new InvalidOperationException($"one image gives {what} once,"
+                    + $" and the first table gives {first} where another gives"
+                    + $" {next}");
+        }
     }
 
     /// <summary>
@@ -298,17 +372,30 @@ public static class Pack
     /// literal stream (R5.10). No word from a caller enters it, so no word
     /// can differ from the bytes.</para>
     /// </summary>
-    public static byte[] Image(byte[] file)
+    public static byte[] Image(byte[] file) =>
+            Image(new List<byte[]> { file }, out _);
+
+    /// <summary>
+    /// The same, of one table or several: the first file names the code and
+    /// every other meets it on what an image gives once, the variant, the
+    /// width, the unit and, under DTX2, the period and the ring.
+    /// </summary>
+    public static byte[] Image(List<byte[]> files, out int[] headers)
     {
-        Header header = Format.ReadHeader(file);
+        if (files.Count == 0)
+        {
+            throw new InvalidOperationException("no table: an image contains"
+                    + " one at least");
+        }
+        Header header = Format.ReadHeader(files[0]);
         if (header.Variant != Format.Dtx2)
         {
             return Combine(Images.Code(header.Variant, header.Width, 0, false),
-                    file, header);
+                    files, header, out headers);
         }
-        Packed given = ReadPacked(file, header);
+        Packed given = ReadPacked(files[0], header);
         return Combine(Images.Code(Format.Dtx2, header.Width, given.Unit,
-                given.Copies), file, header);
+                given.Copies), files, header, out headers);
     }
 
     /// <summary>One NAME equ VALUE line.</summary>

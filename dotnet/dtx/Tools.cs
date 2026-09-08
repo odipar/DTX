@@ -211,10 +211,10 @@ public static class Tools
             Console.Error.Write(Help.Package);
             return 2;
         }
-        string[] named = args[..2];
         string rmac = "";
         bool defines = false;
-        foreach (string arg in args[2..])
+        var named = new List<string>();
+        foreach (string arg in args)
         {
             // -aRMAC names the rmac to assemble with. A bare -a does not name
             // one, so it is a flag the tool does not read.
@@ -223,38 +223,79 @@ public static class Tools
                 rmac = arg[2..];
             }
             else if (arg == "-s") defines = true;
-            else
+            else if (arg.StartsWith("-", StringComparison.Ordinal))
             {
                 Console.Error.WriteLine($"dtx-package does not read {arg}");
                 return 2;
             }
+            else named.Add(arg);
         }
-        byte[] file = File.ReadAllBytes(named[0]);
+        if (named.Count < 2)
+        {
+            Console.Error.Write(Help.Package);
+            return 2;
+        }
+        // Every name but the last is a table, in the order the image lays
+        // them out; the last is what the image is written to.
+        string outName = named[^1];
+        named.RemoveAt(named.Count - 1);
+        if (defines && named.Count != 1)
+        {
+            Console.Error.WriteLine("dtx-package -s reads the figures of one"
+                    + $" table, and {named.Count} were named");
+            return 2;
+        }
+        var files = new List<byte[]>();
+        foreach (string name in named)
+        {
+            files.Add(File.ReadAllBytes(name));
+        }
+        byte[] file = files[0];
         Header header = Format.ReadHeader(file);
+        int[] headers = { 0 };
         if (defines)
         {
-            File.WriteAllText(named[1], Pack.Figures(file));
+            File.WriteAllText(outName, Pack.Figures(file));
         }
         else if (rmac.Length == 0)
         {
-            File.WriteAllBytes(named[1], Pack.Image(file));
+            File.WriteAllBytes(outName, Pack.Image(files, out headers));
         }
         else
         {
-            File.WriteAllBytes(named[1], Pack.Combine(
-                    Pack.Code(file, rmac, Pack.Templates()), file, header));
+            File.WriteAllBytes(outName, Pack.Combine(
+                    Pack.Code(file, rmac, Pack.Templates()), files, header,
+                    out headers));
         }
-        long bytes = new FileInfo(named[1]).Length;
-        int state = header.Variant == Format.Dtx2
-                ? Pack.PackedStateBytes(header, Pack.ReadPacked(file, header))
-                : Pack.StateBytes(header);
+        long bytes = new FileInfo(outName).Length;
         string what = defines ? "figures"
                 : rmac.Length == 0 ? "image" : "image assembled";
         Console.WriteLine($"{named[0]} -> DTX{header.Variant} {what} {bytes}"
                 + $" bytes, table {file.Length} bytes, {header.Rows} rows,"
-                + $" {header.Columns} columns, state block {state} bytes");
+                + $" {header.Columns} columns, state block"
+                + $" {StateOf(file, header)} bytes");
+        // A caller hands init the header of the table to read (abi.md 2), so
+        // the image says where each one stands.
+        for (int i = 1; !defines && i < named.Count; i++)
+        {
+            Header its = Format.ReadHeader(files[i]);
+            Console.WriteLine($"{named[i]} -> table {i + 1} at"
+                    + $" image+{headers[i]}, {files[i].Length} bytes,"
+                    + $" {its.Rows} rows, {its.Columns} columns, state block"
+                    + $" {StateOf(files[i], its)} bytes");
+        }
+        if (!defines && named.Count > 1)
+        {
+            Console.WriteLine($"table 1 stands at image+{headers[0]}");
+        }
         return 0;
     }
+
+    /// <summary>The state block a table's reader takes, in bytes.</summary>
+    private static int StateOf(byte[] file, Header header) =>
+            header.Variant == Format.Dtx2
+                    ? Pack.PackedStateBytes(header, Pack.ReadPacked(file, header))
+                    : Pack.StateBytes(header);
 
     /// <summary>
     /// The twenty-two 68000 images the packager combines from, one file a
