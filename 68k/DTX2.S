@@ -364,9 +364,6 @@ seed_column:
 ; them, and then a seed.
 
 DTX_init:
-        move.l  a6,DTX_PARK(a0)
-        movea.l a0,a6
-
         bsr     DTX_payload             ; a1 the payload, a2 the header
         move.l  a1,DTX_PAYLOAD(a6)
         bsr     DTX_columns
@@ -439,7 +436,6 @@ DTX_init:
 .marker:
 
         bsr     DTX_seed
-        movea.l DTX_PARK(a6),a6
         rts
 
 ; -----------------------------------------------------------------------------
@@ -534,8 +530,6 @@ DTX_step:
 ; stack stands across a step: the target is on the stack.
 
 DTX_jump:
-        move.l  a6,DTX_PARK(a0)
-        movea.l a0,a6
         move.l  d0,-(a7)                ; the rows still to step
         bsr     DTX_seed                ; the cursor a row below row 0
 .run:
@@ -544,7 +538,6 @@ DTX_jump:
         bpl.s   .run
         addq.l  #4,a7
         movea.l DTX_POINTER(a6),a1
-        movea.l DTX_PARK(a6),a6
         rts
 
 ; -----------------------------------------------------------------------------
@@ -552,10 +545,7 @@ DTX_jump:
 ; column 0's value for the row.
 
 DTX_advance:
-        move.l  a6,DTX_PARK(a0)
-        movea.l a0,a6
         DTX_ROW
-        movea.l DTX_PARK(a6),a6
         rts
 
 ; -----------------------------------------------------------------------------

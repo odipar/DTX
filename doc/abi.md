@@ -145,16 +145,23 @@ stands in the image once.
 
 ## 2. The four calls
 
-Under every variant `d6`, `d7`, `a6` and the stack beyond the return
-address stand, as they stand across an ST4 call. No call builds a stack
-frame.
+Under every variant `d6`, `d7` and the stack beyond the return address
+stand, as they stand across an ST4 call, and so does `a6`, which is the
+state block a call is given and gives back. No call builds a stack frame.
+
+**The block stands in `a6` and not in `a0`.** Under DTX2 the reader keeps
+its own figures there and ST4 leaves `a6` alone, so a block in `a6` is
+where the reader reads it: a block in `a0` cost a call three
+instructions, parking the caller's `a6` and taking it back, 36 cycles an
+advance. A caller whose own base is `a6` reaches the block at a fixed
+offset of it, and the `lea` that forms the argument writes `a6` itself.
 
 | call | in | out | clobbered |
 |---|---|---|---|
-| `DTX_init` | `a0` the state block, `a1` the header of the table to read | nothing | d0-d5, a0-a5 |
+| `DTX_init` | `a6` the state block, `a1` the header of the table to read | nothing | d0-d5, a0-a5 |
 | `DTX_metadata` | nothing | `a0` format block, `a1` the table's header, `d0.l` `R`, `d1.w` `C`, `d2.l` `RR`, `d3.l` the stride | d0-d3, a0-a1 |
-| `DTX_jump` | `a0`, `d0.l` the row | `a1` that row's first value | d0-d5, a0-a5 |
-| `DTX_advance` | `a0` | `a1` the row's first value | d0-d5, a0-a5 |
+| `DTX_jump` | `a6`, `d0.l` the row | `a1` that row's first value | d0-d5, a0-a5 |
+| `DTX_advance` | `a6` | `a1` the row's first value | d0-d5, a0-a5 |
 
 **No call keeps a row number.** An advance steps one row on and gives the
 address; a row is what a jump takes, and nothing else. A caller counts its
@@ -315,7 +322,7 @@ then.
 
 ## 3. The state block
 
-The caller supplies the block and passes it back in `a0` on every call
+The caller supplies the block and passes it back in `a6` on every call
 but `DTX_metadata`. Its size is the table's: the format block defines it
 at +4 once a table is combined in, the packager prints it, and a caller
 reads it out of the image. The block stands on a long.
@@ -324,7 +331,7 @@ reads it out of the image. The block stands on a long.
 |---|---|---|
 | +0 | 2 | the turns left in the period, `P` down to 1. Zero under DTX0 and DTX1 |
 | +2 | 2 | unused |
-| +4 | 4 | under DTX2 the caller's `a6`, parked for a refill; under DTX0 and DTX1 the payload of the table init was given |
+| +4 | 4 | under DTX0 and DTX1 the payload of the table init was given; unused under DTX2 |
 | +8 | 4 | the pointer, under every variant |
 
 One pointer, because every column is one width: under DTX1 and DTX2 the

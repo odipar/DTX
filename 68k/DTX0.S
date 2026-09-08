@@ -66,10 +66,10 @@
 ; table's or the reads are another's.
 
 DTX_init:
-        clr.w   DTX_TURN(a0)
+        clr.w   DTX_TURN(a6)
 
         bsr.s   DTX_payload             ; a1 the payload, a2 the header
-        move.l  a1,DTX_PAYLOAD(a0)      ; what a jump reaches it by
+        move.l  a1,DTX_PAYLOAD(a6)      ; what a jump reaches it by
         moveq   #0,d2
         move.w  8(a2),d2                ; C
         moveq   #0,d3
@@ -85,7 +85,7 @@ DTX_init:
 
 ; The pointer a row below row 0.
         suba.l  d2,a1
-        move.l  a1,DTX_POINTER(a0)
+        move.l  a1,DTX_POINTER(a6)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -105,9 +105,9 @@ jump_high:
 jump_low:
         mulu.w  #0,d3                   ; installed: the row's bytes
         add.l   d3,d1
-        movea.l DTX_PAYLOAD(a0),a1      ; the payload init was given
+        movea.l DTX_PAYLOAD(a6),a1      ; the payload init was given
         adda.l  d1,a1
-        move.l  a1,DTX_POINTER(a0)
+        move.l  a1,DTX_POINTER(a6)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -118,10 +118,10 @@ jump_low:
 ; the table.
 
 DTX_advance:
-        movea.l DTX_POINTER(a0),a1
+        movea.l DTX_POINTER(a6),a1
 advance_step:
         adda.w  #0,a1                   ; installed: the row's bytes
-        move.l  a1,DTX_POINTER(a0)
+        move.l  a1,DTX_POINTER(a6)
         rts
 
 ; -----------------------------------------------------------------------------
