@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A DTX file as a standalone 68000 image: the code, then the table's bytes,
@@ -446,21 +448,41 @@ public final class Packager {
         }
     }
 
+    /** An image and where each of its tables' headers stands in it, from
+     *  the image's first byte: what a caller hands {@code DTX_init} in
+     *  a1, one a table, in the order the tables were given. */
+    public record Packaged(byte[] image, int[] headers) {
+    }
+
     /**
-     * One image: this code, the column table, the table's bytes, and the
-     * format block written to define the three.
+     * One image: this code, then a column table and a table's bytes for
+     * each file, and the format block written to define the code and the
+     * first of them.
      *
      * <p>The code is the same bytes any table that follows it, so what a
-     * combine writes is the six fields the table gives. It checks the
-     * three it cannot write: the variant, the width the code reads values
-     * at, and under DTX2 the unit the decoder built into the code decodes
-     * at.
+     * combine writes is the six fields the first table gives. It checks
+     * the three it cannot write: the variant, the width the code reads
+     * values at, and under DTX2 the unit the decoder built into the code
+     * decodes at. Every table past the first meets the first as well, on
+     * the figures an image gives once (doc/abi.md 1): the variant, the
+     * width, the unit and, under DTX2, {@code P} and {@code N}.
      *
      * @throws IllegalStateException where the code is for another variant,
-     *     another width or another unit, or where it and its format block
-     *     differ on where the column table lands
+     *     another width or another unit, where it and its format block
+     *     differ on where the column table lands, or where two tables
+     *     differ on a figure the image gives once
      */
     static byte[] combine(byte[] code, byte[] file) {
+        return combine(code, List.of(file)).image();
+    }
+
+    /** The same, of one table or several. */
+    static Packaged combine(byte[] code, List<byte[]> files) {
+        if (files.isEmpty()) {
+            throw new IllegalStateException("no table: an image contains one"
+                    + " at least");
+        }
+        byte[] file = files.get(0);
         Dtx.Header header = Dtx.header(file);
         int variant = header.variant();
         if (code[FORMAT_AT] != 'D' || code[FORMAT_AT + 1] != 'T'
@@ -495,24 +517,80 @@ public final class Packager {
                     + header.width());
         }
         int rowBytes = header.rowBytes();
-        byte[] entries = columnTable(file);
-        byte[] image = new byte[code.length + entries.length + file.length];
+        // Each table's column table stands immediately before it, and the
+        // pair begins on a long: init reaches the records at the header
+        // less 16C, and a header on a long is what SPEC.md 1 asks of a
+        // table's own bytes.
+        int state = variant == Dtx.DTX2 ? stateBytes(header, given) : stateBytes();
+        int at = code.length;
+        int[] headers = new int[files.size()];
+        byte[][] entries = new byte[files.size()][];
+        for (int i = 0; i < files.size(); i++) {
+            byte[] next = files.get(i);
+            Dtx.Header its = Dtx.header(next);
+            if (i > 0) {
+                agrees(header, given, next, its);
+                state = Math.max(state, its.variant() == Dtx.DTX2
+                        ? stateBytes(its, packed(next, its)) : stateBytes());
+                // A pair begins on a long. The code ends on one and a
+                // column table is a multiple of 16, so the first pair lands
+                // on a long without this and a one table image comes out
+                // the bytes it always was.
+                at = Dtx.align(at, 4);
+            }
+            entries[i] = columnTable(next);
+            headers[i] = at + entries[i].length;
+            at = headers[i] + next.length;
+        }
+        byte[] image = new byte[at];
         System.arraycopy(code, 0, image, 0, code.length);
-        System.arraycopy(entries, 0, image, code.length, entries.length);
-        System.arraycopy(file, 0, image, code.length + entries.length,
-                file.length);
-        Dtx.putLong(image, FORMAT_AT + STATE_BYTES, variant == Dtx.DTX2
-                ? stateBytes(header, given) : stateBytes());
-        // The table stands behind both, and only the packager has the
-        // figure: the column table's size moves with C, so the assembler
-        // could not have worked it out.
-        Dtx.putLong(image, FORMAT_AT + TABLE_AT, code.length + entries.length);
+        for (int i = 0; i < files.size(); i++) {
+            System.arraycopy(entries[i], 0, image, headers[i] - entries[i].length,
+                    entries[i].length);
+            System.arraycopy(files.get(i), 0, image, headers[i],
+                    files.get(i).length);
+        }
+        Dtx.putLong(image, FORMAT_AT + STATE_BYTES, state);
+        // The first table stands behind both, and only the packager has
+        // the figure: the column table's size moves with C, so the
+        // assembler could not have worked it out.
+        Dtx.putLong(image, FORMAT_AT + TABLE_AT, headers[0]);
         Dtx.putWord(image, FORMAT_AT + ROWBYTES_AT, rowBytes);
         Dtx.putWord(image, FORMAT_AT + PERIOD_AT,
                 variant == Dtx.DTX2 ? period(header, given) : 1);
         Dtx.putWord(image, FORMAT_AT + RING_AT, given.ring());
         Dtx.putLong(image, FORMAT_AT + STRIDE_AT, stride(header, given));
-        return image;
+        return new Packaged(image, headers);
+    }
+
+    /** One image gives the variant, the width, the unit and, under DTX2,
+     *  {@code P} and {@code N} once (doc/abi.md 1), so every table past
+     *  the first gives what the first gives.
+     *
+     *  @throws IllegalStateException naming the figure two tables differ on
+     */
+    private static void agrees(Dtx.Header first, Packed given, byte[] file,
+                               Dtx.Header header) {
+        apart("the variant", first.variant(), header.variant());
+        if (first.variant() != Dtx.DTX0) {
+            apart("the width", first.width(), header.width());
+        }
+        if (first.variant() != Dtx.DTX2) {
+            return;
+        }
+        Packed its = packed(file, header);
+        apart("the unit k", given.unit(), its.unit());
+        apart("the copies flag", given.copies() ? 1 : 0, its.copies() ? 1 : 0);
+        apart("the ring N", given.ring(), its.ring());
+        apart("the period P", period(first, given), period(header, its));
+    }
+
+    private static void apart(String what, int first, int next) {
+        if (first != next) {
+            throw new IllegalStateException("one image gives " + what
+                    + " once, and the first table gives " + first
+                    + " where another gives " + next);
+        }
     }
 
     /**
@@ -525,14 +603,33 @@ public final class Packager {
      * the bytes.
      */
     public static byte[] image(byte[] file) {
+        return packaged(List.of(file)).image();
+    }
+
+    /**
+     * The same, of one table or several: the code every one of them takes,
+     * then a column table and a table's bytes for each, in the order given.
+     * What comes back names where each table's header stands, the address
+     * a caller hands {@code DTX_init} (doc/abi.md 2).
+     *
+     * <p>The first file names the code, and every other meets it: an image
+     * gives the variant, the width, the unit and, under DTX2, the period
+     * and the ring once.
+     */
+    public static Packaged packaged(List<byte[]> files) {
+        if (files.isEmpty()) {
+            throw new IllegalArgumentException("no table: an image contains"
+                    + " one at least");
+        }
+        byte[] file = files.get(0);
         Dtx.Header header = Dtx.header(file);
         if (header.variant() != Dtx.DTX2) {
             return combine(carriedCode(header.variant(), header.width(), 0,
-                    false), file);
+                    false), files);
         }
         Packed given = packed(file, header);
         return combine(carriedCode(Dtx.DTX2, header.width(), given.unit(),
-                given.copies()), file);
+                given.copies()), files);
     }
 
     /**
@@ -543,7 +640,7 @@ public final class Packager {
      * @param rmac the assembler to run
      */
     public static byte[] image(byte[] file, Path rmac) {
-        return combine(code(file, rmac), file);
+        return combine(code(file, rmac), List.of(file)).image();
     }
 
     /** Reads the DTX file named first and writes the image named second. */
@@ -567,34 +664,74 @@ public final class Packager {
         }
         String rmac = null;
         boolean defines = false;
-        for (int i = 2; i < args.length; i++) {
-            if (args[i].startsWith("-a") && args[i].length() > 2) {
-                rmac = args[i].substring(2);
-            } else if (args[i].equals("-s")) {
+        List<String> named = new ArrayList<>();
+        for (String arg : args) {
+            if (arg.startsWith("-a") && arg.length() > 2) {
+                rmac = arg.substring(2);
+            } else if (arg.equals("-s")) {
                 defines = true;
-            } else {
-                System.err.println("dtx-package does not read " + args[i]);
+            } else if (arg.startsWith("-")) {
+                System.err.println("dtx-package does not read " + arg);
                 System.exit(2);
                 return;
+            } else {
+                named.add(arg);
             }
         }
-        byte[] file = Files.readAllBytes(Path.of(args[0]));
-        Dtx.Header header = Dtx.header(file);
-        if (defines) {
-            Files.writeString(Path.of(args[1]), table(file));
-        } else if (rmac == null) {
-            Files.write(Path.of(args[1]), image(file));
-        } else {
-            Files.write(Path.of(args[1]), image(file, Path.of(rmac)));
+        if (named.size() < 2) {
+            System.err.print(Help.PACKAGE);
+            System.exit(2);
+            return;
         }
-        long bytes = Files.size(Path.of(args[1]));
+        // Every name but the last is a table, in the order the image lays
+        // them out; the last is what the image is written to.
+        String out = named.remove(named.size() - 1);
+        if (defines && named.size() != 1) {
+            System.err.println("dtx-package -s reads the figures of one"
+                    + " table, and " + named.size() + " were named");
+            System.exit(2);
+            return;
+        }
+        List<byte[]> files = new ArrayList<>();
+        for (String name : named) {
+            files.add(Files.readAllBytes(Path.of(name)));
+        }
+        byte[] file = files.get(0);
+        Dtx.Header header = Dtx.header(file);
+        int[] headers = {0};
+        if (defines) {
+            Files.writeString(Path.of(out), table(file));
+        } else if (rmac == null) {
+            Packaged made = packaged(files);
+            headers = made.headers();
+            Files.write(Path.of(out), made.image());
+        } else {
+            Packaged made = combine(code(file, Path.of(rmac)), files);
+            headers = made.headers();
+            Files.write(Path.of(out), made.image());
+        }
+        long bytes = Files.size(Path.of(out));
         int state = header.variant() == Dtx.DTX2
                 ? stateBytes(header, packed(file, header)) : stateBytes();
         System.out.printf("%s -> DTX%d %s %d bytes, table %d bytes,"
                 + " %d rows, %d columns, state block %d bytes%n",
-                args[0], header.variant(),
+                named.get(0), header.variant(),
                 defines ? "figures"
                         : rmac == null ? "image" : "image assembled",
                 bytes, file.length, header.rows(), header.columns(), state);
+        // A caller hands init the header of the table to read (abi.md 2),
+        // so the image says where each one stands.
+        for (int i = 1; !defines && i < named.size(); i++) {
+            byte[] next = files.get(i);
+            Dtx.Header its = Dtx.header(next);
+            System.out.printf("%s -> table %d at image+%d, %d bytes,"
+                    + " %d rows, %d columns, state block %d bytes%n",
+                    named.get(i), i + 1, headers[i], next.length, its.rows(),
+                    its.columns(), its.variant() == Dtx.DTX2
+                            ? stateBytes(its, packed(next, its)) : stateBytes());
+        }
+        if (!defines && named.size() > 1) {
+            System.out.printf("table 1 stands at image+%d%n", headers[0]);
+        }
     }
 }
