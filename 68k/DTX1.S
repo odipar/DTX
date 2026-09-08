@@ -63,14 +63,14 @@
 ; row 0.
 
 DTX_init:
-        clr.w   DTX_TURN(a0)
+        clr.w   DTX_TURN(a6)
 
         bsr.s   DTX_payload             ; a1 the payload
-        move.l  a1,DTX_PAYLOAD(a0)      ; what a jump reaches it by
+        move.l  a1,DTX_PAYLOAD(a6)      ; what a jump reaches it by
 ; The pointer a row below row 0, so the advance into row 0 steps like any
 ; other advance.
         subq.l  #DTX_WIDTH,a1
-        move.l  a1,DTX_POINTER(a0)
+        move.l  a1,DTX_POINTER(a6)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -82,9 +82,9 @@ DTX_init:
 DTX_jump:
         move.l  d0,d1
         DTX_SCALE d1
-        movea.l DTX_PAYLOAD(a0),a1      ; the payload init was given
+        movea.l DTX_PAYLOAD(a6),a1      ; the payload init was given
         adda.l  d1,a1
-        move.l  a1,DTX_POINTER(a0)
+        move.l  a1,DTX_POINTER(a6)
         rts
 
 ; -----------------------------------------------------------------------------
@@ -94,8 +94,8 @@ DTX_jump:
 ; minus one reads past the column.
 
 DTX_advance:
-        addq.l  #DTX_WIDTH,DTX_POINTER(a0)
-        movea.l DTX_POINTER(a0),a1
+        addq.l  #DTX_WIDTH,DTX_POINTER(a6)
+        movea.l DTX_POINTER(a6),a1
         rts
 
 ; -----------------------------------------------------------------------------

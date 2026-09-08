@@ -262,9 +262,11 @@ class Machine:
 
 
     def call(self, name, d0=0, a0=STATE, a1=0):
-        """One call through its slot, back at the sentinel. Init takes the
-        header of the table to read in a1 (doc/abi.md 2); every other call
-        leaves it at zero, the value a caller of those calls passes."""
+        """One call through its slot, back at the sentinel. The state block
+        stands in a6 (doc/abi.md 2), which the caller names a0 here for the
+        argument's sake. Init takes the header of the table to read in a1;
+        every other call leaves it at zero, the value a caller of those
+        calls passes."""
         mu = self.mu
         for r in D + A:
             mu.reg_write(r, 0)
@@ -272,9 +274,9 @@ class Machine:
         # it after.
         mu.reg_write(UC_M68K_REG_D6, 0x6D6D6D6D)
         mu.reg_write(UC_M68K_REG_D7, 0x7D7D7D7D)
-        mu.reg_write(UC_M68K_REG_A6, 0x00046000)
+        mu.reg_write(UC_M68K_REG_A6, a0)
         mu.reg_write(UC_M68K_REG_D0, d0 & 0xFFFFFFFF)
-        mu.reg_write(UC_M68K_REG_A0, a0)
+        mu.reg_write(UC_M68K_REG_A0, 0x0A0A0A0A)
         mu.reg_write(UC_M68K_REG_A1, a1 & 0xFFFFFFFF)
         sp = STACK + 0x8000
         mu.mem_write(sp - 4, struct.pack(">I", DONE))
@@ -289,7 +291,7 @@ class Machine:
             % ((name,) + self.misaligned[0])
         assert mu.reg_read(UC_M68K_REG_D6) == 0x6D6D6D6D, name + " moved d6"
         assert mu.reg_read(UC_M68K_REG_D7) == 0x7D7D7D7D, name + " moved d7"
-        assert mu.reg_read(UC_M68K_REG_A6) == 0x00046000, name + " moved a6"
+        assert mu.reg_read(UC_M68K_REG_A6) == a0, name + " moved a6"
         return {"d0": mu.reg_read(UC_M68K_REG_D0),
                 "d1": mu.reg_read(UC_M68K_REG_D1),
                 "d2": mu.reg_read(UC_M68K_REG_D2),

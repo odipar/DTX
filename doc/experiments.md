@@ -48,9 +48,9 @@ back than a ring of 64:
 | written as | file bytes | image bytes |
 |---|---|---|
 | DTX1 | 2064 | 2188 |
-| DTX2, N=64 | 2140 | 3660 |
-| DTX2, N=64, copies | 356 | 1908 |
-| DTX2, N=128, copies | 252 | 1804 |
+| DTX2, N=64 | 2140 | 3628 |
+| DTX2, N=64, copies | 356 | 1876 |
+| DTX2, N=128, copies | 252 | 1772 |
 
 Without copies the ring is too short for the pattern and DTX2 packs to
 more than DTX1. With them a match beyond the ring copies from the column's
