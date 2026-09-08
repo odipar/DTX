@@ -28,6 +28,49 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
+### 0.7.0, 2026-09-08
+
+<https://github.com/odipar/DTX/releases/tag/v0.7.0>, built from the commit
+tagged `v0.7.0`.
+
+**Every caller changes: `DTX_init` takes the header of the table to read in
+`a1`.** A caller that leaves `a1` where it stood seeds its block on the
+address that register stood at. A caller of an image of one table passes
+the image plus the format block's +8, which it may read at build time.
+
+- An image contains one table or several: the code once, then a column
+  table and a table's bytes for each, every pair on a long. Every table
+  in an image is of the variant and the width the code was built for, and
+  under DTX2 of its unit and copies flag, and shares `P` and `N` with the
+  rest; `R`, `C` and `RR` are each table's own. So a caller with several
+  tables of one shape takes the reader once rather than once a table.
+- `DTX_init` takes `a1`, the table's header. `DTX_payload` is handed that
+  header rather than deriving one, and under DTX2 the column table is
+  reached at the header less 16`C`, which is where the packager lays it.
+- Init parks the payload it was given, and `DTX_jump` reads it there
+  rather than deriving the format block's again. Under DTX0 and DTX1 the
+  block's +4 stands at that payload, where it parked the caller's `a6`
+  under DTX2 and stood unused under the plain two.
+- Under DTX0 init works the row's bytes out of the header it is given,
+  `C` times the width, where it read the format block's field: the figure
+  stands in three instructions, so it is the table the block was seeded
+  on.
+- The format block's +4, +8, +12, +20 and +24 give the first table's, and
+  +14, +16, +18 and +19 the image's. An image of one table is the bytes
+  it always was.
+- A jump costs less: 246 cycles to 186 under DTX0 and 138 to 78 under
+  DTX1, since it no longer walks the block. Init costs 210 to 248 under
+  DTX0 for the multiply, and 138 to 128 under DTX1 and 7,894 to 7,880
+  under DTX2 on the three column example. DTX1's code is 80 bytes where
+  it was 84 and DTX2's 1,444 at `k` of 1 where it was 1,448.
+- `Packager.packaged`, Go's `pack.Images` and C#'s `Pack.Image` take the
+  files and give back the image and where each table's header stands.
+  `dtx-package in.dtx... out.bin` takes the tables before the output and
+  prints where each stands.
+- Two sentences of abi.md that were wrong are corrected: DTX1 leaves its
+  own code unwritten, so a DTX1 image may stand in ROM, and no site is
+  written with `R` or `RR` for an advance's compares.
+
 ### 0.6.0, 2026-09-07
 
 <https://github.com/odipar/DTX/releases/tag/v0.6.0>, built from the commit
