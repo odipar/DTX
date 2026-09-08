@@ -63,11 +63,11 @@ public static class Help
             + "doc/tools.md, Write.\n";
 
     public const string Package =
-              "dtx-package in.dtx out.bin [-aRMAC] [-s]\n"
+              "dtx-package in.dtx... out.bin [-aRMAC] [-s]\n"
             + "\n"
-            + "Packages a DTX file as a 68000 image: the code for its variant and,\n"
-            + "under DTX1 and DTX2, its width, the column table and the file.\n"
-            + "doc/abi.md gives the four calls into the image.\n"
+            + "Packages one DTX file or several as a 68000 image: the code for their\n"
+            + "variant and, under DTX1 and DTX2, their width, then a column table and\n"
+            + "a file for each. doc/abi.md gives the four calls into the image.\n"
             + "\n"
             + "  -aRMAC       assembles the code with the rmac at RMAC, in place of the\n"
             + "               image the build made. The templates are read from 68k\n"
@@ -80,6 +80,10 @@ public static class Help
             + "\n"
             + "  dtx-package t.dtx t.bin\n"
             + "      the image of a table, from the code the build made\n"
+            + "  dtx-package a.dtx b.dtx both.bin\n"
+            + "      one image of two tables, the code in it once, with a line\n"
+            + "      saying where each table stands: a caller hands that to\n"
+            + "      DTX_init\n"
             + "  dtx-package t.dtx t.bin -a/usr/local/bin/rmac\n"
             + "      the same, with the code assembled from the templates by that\n"
             + "      rmac\n"

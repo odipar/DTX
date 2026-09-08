@@ -234,4 +234,32 @@ class ParityTest {
             same(one.name(), each("package", List.of(src.toString(), OUT), "p"));
         }
     }
+
+    @Test
+    void everyTreePackagesTheSameImageOfSeveralTables() throws IOException {
+        Path work = work();
+        // An image of several tables is where the trees could drift apart
+        // without a case of their own: the layout past the first table, the
+        // padding between the pairs, and which figures the format block
+        // gives (doc/abi.md 1).
+        record Case(String name, int variant, int width, int unit, boolean copies) {}
+        for (Case one : List.of(
+                new Case("DTX0, three tables", 0, 2, 1, false),
+                new Case("DTX1, three tables", 1, 2, 1, false),
+                new Case("DTX2, three tables", 2, 2, 1, false),
+                new Case("DTX2, three tables at k of 2", 2, 2, 2, false),
+                new Case("DTX2, three tables with copies", 2, 2, 1, true))) {
+            List<String> named = new ArrayList<>();
+            int[] rows = {24, 40, 9};
+            for (int i = 0; i < rows.length; i++) {
+                Path src = work.resolve("p" + i + ".dtx");
+                Files.write(src, Rig.write(work, Rig.numbers(rows[i], 3),
+                        one.variant(), one.width(), null, one.unit(), 960,
+                        one.copies()));
+                named.add(src.toString());
+            }
+            named.add(OUT);
+            same(one.name(), each("package", named, "p"));
+        }
+    }
 }

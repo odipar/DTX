@@ -197,22 +197,47 @@ func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
 // write: the variant, the width the code reads values at, under DTX1 and
 // DTX2, and the unit the decoder decodes at, zero under the plain variants.
 func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
+	out, _, err := CombineMany(code, [][]byte{file}, header)
+	return out, err
+}
+
+// CombineMany gives the image of one table or several, and where each
+// table's header stands in it: the code once, then a column table and a
+// table's bytes for each, every pair on a long. What comes back names the
+// address a caller hands DTX_init (doc/abi.md 2).
+//
+// The first file names the code and every other meets it on what an image
+// gives once (doc/abi.md 1): the variant, the width, the unit and, under
+// DTX2, the period and the ring.
+func CombineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int, error) {
+	out, at, err := combineMany(code, files, header)
+	if err != nil {
+		return nil, nil, err
+	}
+	return out, at, nil
+}
+
+func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int, error) {
+	if len(files) == 0 {
+		return nil, nil, fmt.Errorf("no table: an image contains one at least")
+	}
+	file := files[0]
 	if len(code) < FormatAt+Format {
-		return nil, fmt.Errorf("code of %d bytes does not contain a format block",
+		return nil, nil, fmt.Errorf("code of %d bytes does not contain a format block",
 			len(code))
 	}
 	if string(code[FormatAt:FormatAt+3]) != "DTX" {
-		return nil, fmt.Errorf("the code does not contain a format block at +16")
+		return nil, nil, fmt.Errorf("the code does not contain a format block at +16")
 	}
 	if int(code[FormatAt+3]) != header.Variant {
-		return nil, fmt.Errorf("the code reads DTX%d and the table is DTX%d",
+		return nil, nil, fmt.Errorf("the code reads DTX%d and the table is DTX%d",
 			code[FormatAt+3], header.Variant)
 	}
 	// The code ends where the format block puts the column table: the
 	// two match, or the image reads its own last instruction as a column.
 	columns := dtx.GetLong(code, FormatAt+ColumnsAt)
 	if columns != len(code) {
-		return nil, fmt.Errorf("the code runs to %d bytes and the format"+
+		return nil, nil, fmt.Errorf("the code runs to %d bytes and the format"+
 			" block puts the column table at %d: it would not land there",
 			len(code), columns)
 	}
@@ -220,46 +245,132 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 	if header.Variant == dtx.DTX2 {
 		var err error
 		if given, err = ReadPacked(file, header); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	if unit := int(code[FormatAt+UnitAt]); unit != given.Unit {
-		return nil, fmt.Errorf("the code decodes at a unit of %d and the"+
+		return nil, nil, fmt.Errorf("the code decodes at a unit of %d and the"+
 			" table was packed at %d", unit, given.Unit)
 	}
 	width := int(code[FormatAt+WidthAt])
 	if header.Variant != dtx.DTX0 && width != header.Width {
-		return nil, fmt.Errorf("the code reads values of %d bytes and the"+
+		return nil, nil, fmt.Errorf("the code reads values of %d bytes and the"+
 			" table's are %d", width, header.Width)
 	}
-	entries, err := ColumnTable(file, header)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]byte, 0, len(code)+len(entries)+len(file))
-	out = append(out, code...)
-	out = append(out, entries...)
-	out = append(out, file...)
 	state := StateBytes()
 	period := 1
+	var err error
 	if header.Variant == dtx.DTX2 {
 		if state, err = PackedStateBytes(header, given); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if period, err = Period(header, given); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
+	// Each table's column table stands immediately before it, and the pair
+	// begins on a long: init reaches the records at the header less 16C,
+	// and a header on a long is what SPEC.md 1 asks of a table's bytes.
+	// The code ends on a long and a column table is a multiple of 16, so
+	// the first pair lands on a long without padding and a one table image
+	// comes out the bytes it always was.
+	out := append([]byte{}, code...)
+	at := make([]int, len(files))
+	for i, next := range files {
+		its := header
+		if i > 0 {
+			if its, err = dtx.ReadHeader(next); err != nil {
+				return nil, nil, err
+			}
+			if err = same(header, given, next, its); err != nil {
+				return nil, nil, err
+			}
+			mine := StateBytes()
+			if its.Variant == dtx.DTX2 {
+				itsPacked, err := ReadPacked(next, its)
+				if err != nil {
+					return nil, nil, err
+				}
+				if mine, err = PackedStateBytes(its, itsPacked); err != nil {
+					return nil, nil, err
+				}
+			}
+			if mine > state {
+				state = mine
+			}
+			for len(out)%4 != 0 {
+				out = append(out, 0)
+			}
+		}
+		entries, err := ColumnTable(next, its)
+		if err != nil {
+			return nil, nil, err
+		}
+		out = append(out, entries...)
+		at[i] = len(out)
+		out = append(out, next...)
+	}
 	dtx.PutLong(out, FormatAt+StateAt, state)
-	// The table stands behind both, and only the packager has the figure:
-	// the column table's size moves with C, so the assembler could not have
-	// worked it out.
-	dtx.PutLong(out, FormatAt+TableAt, len(code)+len(entries))
+	// The first table stands behind both, and only the packager has the
+	// figure: the column table's size moves with C, so the assembler could
+	// not have worked it out.
+	dtx.PutLong(out, FormatAt+TableAt, at[0])
 	dtx.PutWord(out, FormatAt+RowBytesAt, header.RowBytes())
 	dtx.PutWord(out, FormatAt+PeriodAt, period)
 	dtx.PutWord(out, FormatAt+RingAt, given.Ring)
 	dtx.PutLong(out, FormatAt+StrideAt, Stride(header, given))
-	return out, nil
+	return out, at, nil
+}
+
+// same reads a table past the first against what an image gives once
+// (doc/abi.md 1), naming the figure two tables differ on.
+func same(first dtx.Header, given Packed, file []byte, header dtx.Header) error {
+	if first.Variant != header.Variant {
+		return apart("the variant", first.Variant, header.Variant)
+	}
+	if first.Variant != dtx.DTX0 && first.Width != header.Width {
+		return apart("the width", first.Width, header.Width)
+	}
+	if first.Variant != dtx.DTX2 {
+		return nil
+	}
+	its, err := ReadPacked(file, header)
+	if err != nil {
+		return err
+	}
+	if given.Unit != its.Unit {
+		return apart("the unit k", given.Unit, its.Unit)
+	}
+	if given.Copies != its.Copies {
+		return apart("the copies flag", boolAsInt(given.Copies), boolAsInt(its.Copies))
+	}
+	if given.Ring != its.Ring {
+		return apart("the ring N", given.Ring, its.Ring)
+	}
+	mine, err := Period(first, given)
+	if err != nil {
+		return err
+	}
+	yours, err := Period(header, its)
+	if err != nil {
+		return err
+	}
+	if mine != yours {
+		return apart("the period P", mine, yours)
+	}
+	return nil
+}
+
+func apart(what string, first, next int) error {
+	return fmt.Errorf("one image gives %s once, and the first table gives"+
+		" %d where another gives %d", what, first, next)
+}
+
+func boolAsInt(of bool) int {
+	if of {
+		return 1
+	}
+	return 0
 }
 
 // Image gives the image for this table, from the code this build contains.
@@ -269,23 +380,36 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 // whether they contain copies from the literal stream (R5.10). No word from
 // a caller enters it, so no word can differ from the bytes.
 func Image(file []byte) ([]byte, error) {
+	out, _, err := Images([][]byte{file})
+	return out, err
+}
+
+// Images gives the image of one table or several, and where each table's
+// header stands in it. The first file names the code and every other meets
+// it: an image gives the variant, the width, the unit and, under DTX2, the
+// period and the ring once.
+func Images(files [][]byte) ([]byte, []int, error) {
+	if len(files) == 0 {
+		return nil, nil, fmt.Errorf("no table: an image contains one at least")
+	}
+	file := files[0]
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	unit, copies := 0, false
 	if header.Variant == dtx.DTX2 {
 		given, err := ReadPacked(file, header)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		unit, copies = given.Unit, given.Copies
 	}
 	code, err := image.Code(header.Variant, header.Width, unit, copies)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return Combine(code, file, header)
+	return CombineMany(code, files, header)
 }
 
 // equ gives one NAME equ VALUE line.

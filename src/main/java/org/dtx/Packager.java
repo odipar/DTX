@@ -529,7 +529,7 @@ public final class Packager {
             byte[] next = files.get(i);
             Dtx.Header its = Dtx.header(next);
             if (i > 0) {
-                agrees(header, given, next, its);
+                same(header, given, next, its);
                 state = Math.max(state, its.variant() == Dtx.DTX2
                         ? stateBytes(its, packed(next, its)) : stateBytes());
                 // A pair begins on a long. The code ends on one and a
@@ -569,8 +569,8 @@ public final class Packager {
      *
      *  @throws IllegalStateException naming the figure two tables differ on
      */
-    private static void agrees(Dtx.Header first, Packed given, byte[] file,
-                               Dtx.Header header) {
+    private static void same(Dtx.Header first, Packed given, byte[] file,
+                             Dtx.Header header) {
         apart("the variant", first.variant(), header.variant());
         if (first.variant() != Dtx.DTX0) {
             apart("the width", first.width(), header.width());
