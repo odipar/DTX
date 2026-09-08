@@ -28,6 +28,32 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
+### 0.8.0, 2026-09-08
+
+<https://github.com/odipar/DTX/releases/tag/v0.8.0>, built from the commit
+tagged `v0.8.0`.
+
+**Every caller changes: the state block stands in `a6` and not in `a0`,
+on the three calls that take it.** `DTX_metadata` reads the image alone
+and is as it was.
+
+- Under DTX2 the reader keeps its own figures in `a6` and ST4 leaves
+  `a6` alone, so a block in `a0` cost a call three instructions: the
+  caller's `a6` parked, `a0` moved into it, and `a6` taken back. Those
+  are gone, and DTX0 and DTX1 reach their own fields through `a6` where
+  they reached them through `a0`.
+- An advance under DTX2 reads 640 to 892 cycles on three columns of two
+  byte values at `k` of 1 where it read 676 to 928, and 1,076 on twenty
+  where it read 1,112. DTX0's and DTX1's are as they were, at 70 and 66:
+  neither ever used `a6`.
+- DTX2's code is 1,412 bytes at `k` of 1 where it was 1,444, 1,408 at
+  `k` of 2 and 1,420 at `k` of 4.
+- The state block's long at +4 is unused under DTX2, where it parked
+  `a6`; under DTX0 and DTX1 it stands at the payload, as it did.
+- A caller whose own base is `a6` reaches the block at a fixed offset of
+  it, so the `lea` that forms the argument writes `a6` itself and costs
+  what the old one cost.
+
 ### 0.7.0, 2026-09-08
 
 <https://github.com/odipar/DTX/releases/tag/v0.7.0>, built from the commit
