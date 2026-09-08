@@ -260,8 +260,10 @@ class Machine:
         self.mu.mem_write(STATE, b"\x00" * max(0x1000, self.state_bytes))
 
 
-    def call(self, name, d0=0, a0=STATE):
-        """One call through its slot, back at the sentinel."""
+    def call(self, name, d0=0, a0=STATE, a1=0):
+        """One call through its slot, back at the sentinel. Init takes the
+        header of the table to read in a1 (doc/abi.md 2); every other call
+        leaves it at zero, the value a caller of those calls passes."""
         mu = self.mu
         for r in D + A:
             mu.reg_write(r, 0)
@@ -272,6 +274,7 @@ class Machine:
         mu.reg_write(UC_M68K_REG_A6, 0x00046000)
         mu.reg_write(UC_M68K_REG_D0, d0 & 0xFFFFFFFF)
         mu.reg_write(UC_M68K_REG_A0, a0)
+        mu.reg_write(UC_M68K_REG_A1, a1 & 0xFFFFFFFF)
         sp = STACK + 0x8000
         mu.mem_write(sp - 4, struct.pack(">I", DONE))
         mu.reg_write(UC_M68K_REG_A7, sp - 4)
@@ -360,7 +363,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
     assert got["a0"] == IMAGE + 16, "metadata gave the format block"
     assert got["a1"] == IMAGE + header_at, "metadata gave the header"
 
-    m.call("init")
+    m.call("init", a1=IMAGE + header_at)
 
     def values(got):
         """The row an advance or a jump points at, read as a caller reads
@@ -399,7 +402,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
 
     # the row an advance gives stands until the next advance (doc/abi.md 2):
     # under DTX2 the refill that would write over it is P advances away
-    m.call("init")
+    m.call("init", a1=IMAGE + header_at)
     before = None
     for r in range(rows):
         got = m.call("advance")
@@ -469,7 +472,7 @@ def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     given = m.call("metadata")
     rows, columns = given["d0"], given["d1"] & 0xFFFF
     width = image[header_at + 14]
-    m.call("init")
+    m.call("init", a1=IMAGE + header_at)
     out = []
     for r in range(rows):
         got = m.call("advance")
@@ -1013,9 +1016,10 @@ def measured(variant, width, unit, columns):
     image, _ = package(blob)
     state = struct.unpack(">I", image[20:24])[0]
     code = struct.unpack(">I", image[36:40])[0]
+    header_at = struct.unpack(">I", image[24:28])[0]
     m = Machine(image, state)
     cycles = Cycles(m)
-    init = cycles.call(m, "init")
+    init = cycles.call(m, "init", a1=IMAGE + header_at)
     advance = [cycles.call(m, "advance") for _ in range(8)]
     jump0 = cycles.call(m, "jump", d0=0)
     jump63 = cycles.call(m, "jump", d0=63)
@@ -1040,7 +1044,8 @@ def copy_cost(unit):
         image, _ = package(file)
         m = Machine(image, struct.unpack(">I", image[20:24])[0])
         cycles = Cycles(m)
-        total = cycles.call(m, "init")
+        total = cycles.call(m, "init",
+                           a1=IMAGE + struct.unpack(">I", image[24:28])[0])
         for _ in range(64):
             total += cycles.call(m, "advance")
         out.append(total)

@@ -120,12 +120,17 @@ DTX_D_SIZE          equ     48
         DTX_IMAGE 2,ST4_UNIT,DTX_WIDTH
 
 ; -----------------------------------------------------------------------------
-; The first stream record in a3. Where the column table stands is read out of
-; the format block, which repeats what the assembler worked out.
+; The first stream record in a3, out of the header in a2. A table's column
+; table stands immediately before it, one record of 16 bytes a column, so
+; the records begin 16C below the header. The format block's field gives the
+; first table's and is not read here: an image contains several tables and
+; init is given the header of the one to read.
 
 DTX_columns:
-        lea     _base(pc),a3
-        adda.l  _fmt-_base+20(a3),a3
+        move.w  8(a2),d0                ; C
+        lsl.w   #4,d0                   ; 16 bytes a record
+        movea.l a2,a3
+        suba.w  d0,a3
         rts
 
 ; -----------------------------------------------------------------------------

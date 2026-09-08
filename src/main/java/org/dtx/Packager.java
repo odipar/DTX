@@ -253,7 +253,14 @@ public final class Packager {
                 .append("; The state block, doc/abi.md 3.\n")
                 .append(equ("DTX_TURN", TURN))
                 .append(equ("DTX_PARK", PARK))
-                .append(equ("DTX_POINTER", POINTER))
+                .append(equ("DTX_POINTER", POINTER));
+        if (variant != Dtx.DTX2) {
+            // Nothing parks a6 under the plain variants, so the payload
+            // init was given stands in that long instead, which a jump
+            // reaches (abi.md 3). Under DTX2 the template names its own.
+            out.append(equ("DTX_PAYLOAD", PARK));
+        }
+        out
                 .append("\n; What the code takes at assembly time.\n")
                 .append(equ("DTX_WIDTH", width));
         if (variant == Dtx.DTX2) {

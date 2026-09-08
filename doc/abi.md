@@ -1,18 +1,31 @@
 # The DTX68 calling convention
 
-A DTX table packaged as a standalone 68000 binary: the code first, the
-table's bytes after it, and four calls that reach those bytes PC relative.
-No relocation, no operating system, nothing allocated while it runs.
+One or more DTX tables packaged as a standalone 68000 binary: the code
+first, a column table and a table's bytes for each after it, and four calls
+that reach those bytes PC relative. No relocation, no operating system,
+nothing allocated while it runs.
 
 **No call copies a value.** An advance gives the caller the address of the
 row's first value, and `DTX_metadata` gives the stride from one column's
 value to the next, so a caller reads the columns it needs where they
 stand. A packaged reader finds a row; the caller reads it.
 
-One image contains one table, so it contains the code for that table's
-variant. The variant is resolved at package time behind four slots: a
+An image contains the code for one variant, so every table in it is of
+that variant. The variant is resolved at package time behind four slots: a
 caller has one contract and one state block, and the code the packager
 emits behind the slots changes with the variant.
+
+**What an image's tables have in common.** The packager takes the code for
+the variant, the width, and under DTX2 the unit `k` and the copies flag, so
+those four are one figure across an image. Under DTX2 `P` and `N` are one
+across it too, since init takes them out of the format block and not out of
+a table. `R`, `C` and `RR` are each table's own, and init takes the header
+of the one to read (section 2), so a table's place and its shape reach the
+code from that header rather than from a field of the image.
+
+An image does not define where its tables end, and no call gives one: a
+caller takes each table's place from what the packager prints, and the
+format block names the first for a caller that has only the image.
 
 The code behind those slots does not move with the table's shape. `R`,
 `C` and `RR` reach it at run time, out of the table's own header, and init
@@ -53,8 +66,18 @@ In this order, from the image's first byte:
 | +16 | 28 | the format block, on a long |
 | +44 | .. | the bodies for the variant |
 | .. | 324, 328 or 330, and 354, 360 or 366 with the copy code | under DTX2, ST4's wrap decoder at `k` |
-| .. | .. | under DTX2 the column table, on a long. The plain variants do not have one |
-| .. | .. | the table's bytes, header and payload, on a long |
+| .. | .. | the tables, the pair below repeated one a table |
+
+One table, in this order:
+
+| at | bytes | contains |
+|---|---|---|
+| .. | 16`C` | under DTX2 that table's column table, on a long. The plain variants do not have one |
+| .. | .. | that table's bytes, header and payload, on a long |
+
+A table's column table stands immediately before that table's header, so
+init reaches it at the header less 16 times `C` and no field of the image
+names it. The first pair stands where the code ends.
 
 The four slots stand at +0, +4, +8 and +12, in the order the calls are
 numbered below, following ST4's own precedent. The dispatch is the whole
@@ -66,15 +89,21 @@ for it.
 | at | bytes | gives |
 |---|---|---|
 | +0 | 4 | `DTX` and the variant this image reads |
-| +4 | 4 | the state block's bytes |
-| +8 | 4 | the table's header, from the image's first byte |
-| +12 | 2 | the row's bytes, `C` times the width |
-| +14 | 2 | `P`, the period in rows. 1 under DTX0 and DTX1 |
-| +16 | 2 | `N`, a ring's bytes. Zero under DTX0 and DTX1 |
-| +18 | 1 | `k`. Zero under DTX0 and DTX1 |
+| +4 | 4 | the first table's state block bytes, and the largest of the image's |
+| +8 | 4 | the first table's header, from the image's first byte |
+| +12 | 2 | the first table's row bytes, `C` times the width |
+| +14 | 2 | `P`, the period in rows, which every table shares. 1 under DTX0 and DTX1 |
+| +16 | 2 | `N`, a ring's bytes, which every table shares. Zero under DTX0 and DTX1 |
+| +18 | 1 | `k`, which every table shares. Zero under DTX0 and DTX1 |
 | +19 | 1 | the width this image reads. Zero under DTX0, whose code does not move with it |
-| +20 | 4 | the column table, from the image's first byte |
-| +24 | 4 | the stride from one column's value to the next |
+| +20 | 4 | the first table's column table, from the image's first byte |
+| +24 | 4 | the first table's stride from one column's value to the next |
+
+The four fields that say *the first table's* are there for a caller that
+has only the image: they name the table the packager put first, and a
+caller of another table takes that table's figures out of its own header
+and out of what the packager printed. `P`, `N`, `k` and the width are the
+image's, one figure for every table in it.
 
 `R`, `C` and `RR` are not here. They stand in the table's own header, at
 the offsets SPEC.md 1 gives, and the field at +8 reaches it. The variant
@@ -122,7 +151,7 @@ frame.
 
 | call | in | out | clobbered |
 |---|---|---|---|
-| `DTX_init` | `a0` the state block | nothing | d0-d5, a0-a5 |
+| `DTX_init` | `a0` the state block, `a1` the header of the table to read | nothing | d0-d5, a0-a5 |
 | `DTX_metadata` | nothing | `a0` format block, `a1` the table's header, `d0.l` `R`, `d1.w` `C`, `d2.l` `RR`, `d3.l` the stride | d0-d3, a0-a1 |
 | `DTX_jump` | `a0`, `d0.l` the row | `a1` that row's first value | d0-d5, a0-a5 |
 | `DTX_advance` | `a0` | `a1` the row's first value | d0-d5, a0-a5 |
@@ -134,8 +163,12 @@ under DTX0 and DTX1 is three instructions, and no figure in the block is
 there for a call to compare against.
 
 ### 0. `DTX_init`, image+0
-Seeds the block. The cursor does not stand on a row, so the first advance
-gives row 0 (terminology.md).
+Seeds the block on the table whose header stands in `a1`. An image
+contains one table or several and this call names the one to read, so a
+block seeded here is a block on that table: every later call reads it, and
+nothing reaches a table by a field of the image. A caller with one table
+passes the image plus the format block's +8. The cursor does not stand on
+a row, so the first advance gives row 0 (terminology.md).
 
 Under DTX0 it writes one pointer, the payload minus the row's bytes. Under
 DTX1 it writes one pointer, the payload minus the width. With the pointer a
@@ -152,17 +185,22 @@ come, and leaves the pointer a row below row 0 of column 0's ring.
 
 After that preload a read alternates between the streams and does not touch a
 decoder: from row 0 onward every value a read takes is already in a ring.
-Init writes only the block and its own instructions. Under DTX0 and DTX1 the
-sites section 5 lists are written on every init, and under DTX2 with copies
-ST4's own init writes the ring's size into two of its instructions; a DTX2
-image without copies is not written and may stand in ROM. A 68030 caller
-flushes the instruction cache after `DTX_init`, and after a jump that runs
-from row 0, which seeds the decoders again.
+Init writes only the block and its own instructions. Under DTX0 the sites
+section 5 lists are written on every init, and under DTX2 with copies ST4's
+own init writes the ring's size into two of its instructions; a DTX1 image,
+and a DTX2 image without copies, is not written and may stand in ROM. A
+68030 caller flushes the instruction cache after `DTX_init`, and after a
+jump that runs from row 0, which seeds the decoders again.
 
-Two readers of one image run at once, a block each, and the values the
-two inits write are the same: one image contains one table. A call is not
-re-entrant on one block, and an interrupt that reads uses a block of its
-own.
+Two readers of one image run at once, a block each, where both blocks were
+seeded on one table: the values the two inits write into the code are then
+the same. Seeded on two tables they are not, and the variant says what
+follows. Under DTX1 the code stands unwritten, so the two run as they would
+on two images. Under DTX0 the row's bytes stand in three instructions, and
+under DTX2 with copies ST4's init writes the ring's size into two, so under
+those two one table is read at a time and a switch is an init. A call is
+not re-entrant on one block, and an interrupt that reads uses a block of
+its own.
 
 Init may be called again on a block at any time. `DTX_metadata` is the
 one call that may be made before it.
@@ -286,7 +324,7 @@ reads it out of the image. The block stands on a long.
 |---|---|---|
 | +0 | 2 | the turns left in the period, `P` down to 1. Zero under DTX0 and DTX1 |
 | +2 | 2 | unused |
-| +4 | 4 | the caller's `a6`, parked for a DTX2 refill |
+| +4 | 4 | under DTX2 the caller's `a6`, parked for a refill; under DTX0 and DTX1 the payload of the table init was given |
 | +8 | 4 | the pointer, under every variant |
 
 One pointer, because every column is one width: under DTX1 and DTX2 the
@@ -458,10 +496,11 @@ them.
 It folds the state block's offsets into the bodies, the width into DTX1's
 and DTX2's, and `k` and the copy code into DTX2's. Every figure that moves
 with the table it writes into the format block and the column table, and
-the code reads them at run time. The few a loop counts with, which the 20
-byte block of DTX0 and DTX1 does not contain, init writes into the
-instructions that take them: `R` and `RR` for the compares an advance
-takes, and the row's bytes a DTX0 advance steps by. A site is `lea`d PC
+the code reads them at run time. One figure a loop counts with is written
+into the instructions that take it instead: the row's bytes, which a DTX0
+advance steps by and a DTX0 jump multiplies by twice. Init works it out
+from the header it is given, `C` times the width, so it is the table this
+block was seeded on and not the image's first. A site is `lea`d PC
 relative into an address register and written through it, since a 68000
 reaches PC relative for a source and never for a destination.
 
