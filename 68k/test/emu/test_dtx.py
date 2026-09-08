@@ -27,6 +27,7 @@ one.
 """
 
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -260,8 +261,10 @@ class Machine:
         self.mu.mem_write(STATE, b"\x00" * max(0x1000, self.state_bytes))
 
 
-    def call(self, name, d0=0, a0=STATE):
-        """One call through its slot, back at the sentinel."""
+    def call(self, name, d0=0, a0=STATE, a1=0):
+        """One call through its slot, back at the sentinel. Init takes the
+        header of the table to read in a1 (doc/abi.md 2); every other call
+        leaves it at zero, the value a caller of those calls passes."""
         mu = self.mu
         for r in D + A:
             mu.reg_write(r, 0)
@@ -272,6 +275,7 @@ class Machine:
         mu.reg_write(UC_M68K_REG_A6, 0x00046000)
         mu.reg_write(UC_M68K_REG_D0, d0 & 0xFFFFFFFF)
         mu.reg_write(UC_M68K_REG_A0, a0)
+        mu.reg_write(UC_M68K_REG_A1, a1 & 0xFFFFFFFF)
         sp = STACK + 0x8000
         mu.mem_write(sp - 4, struct.pack(">I", DONE))
         mu.reg_write(UC_M68K_REG_A7, sp - 4)
@@ -360,7 +364,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
     assert got["a0"] == IMAGE + 16, "metadata gave the format block"
     assert got["a1"] == IMAGE + header_at, "metadata gave the header"
 
-    m.call("init")
+    m.call("init", a1=IMAGE + header_at)
 
     def values(got):
         """The row an advance or a jump points at, read as a caller reads
@@ -399,7 +403,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
 
     # the row an advance gives stands until the next advance (doc/abi.md 2):
     # under DTX2 the refill that would write over it is P advances away
-    m.call("init")
+    m.call("init", a1=IMAGE + header_at)
     before = None
     for r in range(rows):
         got = m.call("advance")
@@ -450,6 +454,76 @@ def numbers(rows, columns, span=251):
 # The round trip: text, through the writer, through the packager, through a
 # 68000, and back to the rows the text defines.
 
+def package_many(blobs):
+    """One image of several tables, and where each table's header stands in
+    it. The packager prints a line a table past the first, and the offsets
+    come off those lines: a caller of DTX_init takes them the same way."""
+    work = tempfile.mkdtemp(prefix="dtx68")
+    img = os.path.join(work, "t.bin")
+    names = []
+    for i, blob in enumerate(blobs):
+        src = os.path.join(work, "t%d.dtx" % i)
+        with open(src, "wb") as f:
+            f.write(blob)
+        names.append(src)
+    said = run(["java", "-cp", CLASSES, "org.dtx.Packager"] + names + [img])
+    at = [None] * len(blobs)
+    for line in said.splitlines():
+        m = re.search(r"table (\d+) at image\+(\d+)", line)
+        if m:
+            at[int(m.group(1)) - 1] = int(m.group(2))
+        m = re.search(r"table 1 stands at image\+(\d+)", line)
+        if m:
+            at[0] = int(m.group(1))
+    assert all(x is not None for x in at), \
+        "the packager did not say where every table stands:\n" + said
+    with open(img, "rb") as f:
+        return f.read(), at
+
+
+def one_image_several_tables():
+    """Two tables of one shape in one image, each read through init on its
+    own header (doc/abi.md 2). The code stands once and every row of both
+    comes back, so what a caller saves is the code and what it keeps is
+    every value."""
+    for variant, unit in ((0, 1), (1, 1), (2, 1), (2, 2)):
+        first = numbers(24, 3, span=97)
+        second = numbers(40, 3, span=61)
+        blobs = [write_table(csv, variant, 2, None, unit, 960)
+                 for csv in (first, second)]
+        image, at = package_many(blobs)
+        # The code stands once: the image is smaller than two images of the
+        # same tables by one code, less the header the second no longer
+        # repeats.
+        alone = sum(len(package(b)[0]) for b in blobs)
+        assert len(image) < alone, "an image of two is no smaller than two"
+        state = struct.unpack(">I", image[20:24])[0]
+        for csv, table in zip((first, second), at):
+            width, want = csv_rows(csv, 2)
+            columns = len(csv_values(csv)[0])
+            rows = struct.unpack(">I", image[table + 4:table + 8])[0]
+            # The format block gives the first table's stride, so a caller of
+            # another works out its own: the width under DTX0, the column's
+            # length on a word under DTX1, and the ring, which every table of
+            # an image shares, under DTX2 (doc/abi.md 1).
+            if variant == 0:
+                stride = width
+            elif variant == 1:
+                stride = (rows * width + 1) & ~1
+            else:
+                stride = struct.unpack(">H", image[16 + 16:16 + 18])[0]
+            m = Machine(image, state)
+            m.call("init", a1=IMAGE + table)
+            got = []
+            for _ in range(len(want)):
+                row = m.call("advance")
+                got.append(m.row(row["a1"], columns, stride, width))
+            assert got == want, ("the table at image+%d gave %s, not %s"
+                                 % (table, got[:2], want[:2]))
+        yield "DTX%d%s" % (variant, "" if variant != 2 else ", k=%d" % unit), \
+            len(image), alone
+
+
 def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     """Every row a packaged reader of this variant gives, and its image."""
     blob = write_table(csv, variant, width, repeat, unit, ring, copies)
@@ -469,7 +543,7 @@ def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     given = m.call("metadata")
     rows, columns = given["d0"], given["d1"] & 0xFFFF
     width = image[header_at + 14]
-    m.call("init")
+    m.call("init", a1=IMAGE + header_at)
     out = []
     for r in range(rows):
         got = m.call("advance")
@@ -1013,9 +1087,10 @@ def measured(variant, width, unit, columns):
     image, _ = package(blob)
     state = struct.unpack(">I", image[20:24])[0]
     code = struct.unpack(">I", image[36:40])[0]
+    header_at = struct.unpack(">I", image[24:28])[0]
     m = Machine(image, state)
     cycles = Cycles(m)
-    init = cycles.call(m, "init")
+    init = cycles.call(m, "init", a1=IMAGE + header_at)
     advance = [cycles.call(m, "advance") for _ in range(8)]
     jump0 = cycles.call(m, "jump", d0=0)
     jump63 = cycles.call(m, "jump", d0=63)
@@ -1040,7 +1115,8 @@ def copy_cost(unit):
         image, _ = package(file)
         m = Machine(image, struct.unpack(">I", image[20:24])[0])
         cycles = Cycles(m)
-        total = cycles.call(m, "init")
+        total = cycles.call(m, "init",
+                           a1=IMAGE + struct.unpack(">I", image[24:28])[0])
         for _ in range(64):
             total += cycles.call(m, "advance")
         out.append(total)
@@ -1163,6 +1239,14 @@ def main():
         except AssertionError as wrong:
             bad += 1
             print("  %-34s FAILED: %s" % (name, wrong))
+    print("one image, several tables")
+    try:
+        for tag, together, alone in one_image_several_tables():
+            print("  %-34s two tables in %d bytes against %d apart, %d saved"
+                  % (tag, together, alone, alone - together))
+    except AssertionError as wrong:
+        bad += 1
+        print("  FAILED: %s" % wrong)
     print("copies from the literal stream, at a small ring")
     for name, ring, copies in (("a small ring, plain", 64, False),
                                ("a small ring, copies", 64, True),

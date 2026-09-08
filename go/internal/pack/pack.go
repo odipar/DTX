@@ -334,6 +334,12 @@ func Figures(file []byte) (string, error) {
 	out.WriteString(equ("DTX_TURN", Turn))
 	out.WriteString(equ("DTX_PARK", Park))
 	out.WriteString(equ("DTX_POINTER", Pointer))
+	if variant != dtx.DTX2 {
+		// Nothing parks a6 under the plain variants, so the payload
+		// init was given stands in that long instead, which a jump
+		// reaches (abi.md 3). Under DTX2 the template names its own.
+		out.WriteString(equ("DTX_PAYLOAD", Park))
+	}
 	out.WriteString("\n; What the code takes at assembly time.\n")
 	out.WriteString(equ("DTX_WIDTH", header.Width))
 	if variant == dtx.DTX2 {

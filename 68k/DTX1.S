@@ -58,12 +58,15 @@
         .endm
 
 ; -----------------------------------------------------------------------------
-; DTX_init. It leaves the pointer a row below row 0.
+; DTX_init. a1 the header of the table to read (doc/abi.md 2). It parks that
+; table's payload for a jump to reach and leaves the pointer a row below
+; row 0.
 
 DTX_init:
         clr.w   DTX_TURN(a0)
 
         bsr.s   DTX_payload             ; a1 the payload
+        move.l  a1,DTX_PAYLOAD(a0)      ; what a jump reaches it by
 ; The pointer a row below row 0, so the advance into row 0 steps like any
 ; other advance.
         subq.l  #DTX_WIDTH,a1
@@ -72,12 +75,14 @@ DTX_init:
 
 ; -----------------------------------------------------------------------------
 ; DTX_jump. The pointer is the payload plus the row times the width, which is
-; a shift a width.
+; a shift a width. The payload is the one init parked, not the format
+; block's: an image contains several tables and a jump reads the one its
+; block was seeded on.
 
 DTX_jump:
         move.l  d0,d1
         DTX_SCALE d1
-        bsr.s   DTX_payload
+        movea.l DTX_PAYLOAD(a0),a1      ; the payload init was given
         adda.l  d1,a1
         move.l  a1,DTX_POINTER(a0)
         rts

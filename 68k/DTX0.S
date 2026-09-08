@@ -55,17 +55,26 @@
         .endm
 
 ; -----------------------------------------------------------------------------
-; DTX_init. It writes the table's figures into the instructions below and
-; leaves the pointer a row below row 0, so the advance into row 0 steps like
-; any other advance.
+; DTX_init. a1 the header of the table to read (doc/abi.md 2). It writes
+; that table's figures into the instructions below, parks its payload for a
+; jump to reach, and leaves the pointer a row below row 0, so the advance
+; into row 0 steps like any other advance.
+;
+; The row's bytes come out of the table's own header and not out of the
+; format block, which gives the first table's: an image contains several
+; tables, and the figure below stands in three instructions, so it is this
+; table's or the reads are another's.
 
 DTX_init:
         clr.w   DTX_TURN(a0)
 
         bsr.s   DTX_payload             ; a1 the payload, a2 the header
-        lea     _fmt(pc),a3
+        move.l  a1,DTX_PAYLOAD(a0)      ; what a jump reaches it by
         moveq   #0,d2
-        move.w  12(a3),d2               ; the row's bytes
+        move.w  8(a2),d2                ; C
+        moveq   #0,d3
+        move.b  14(a2),d3               ; W, the bytes a value takes
+        mulu.w  d3,d2                   ; the row's bytes
 
 ; The row's bytes, into the step and into the two mulu a jump takes. A row
 ; is C values of the width, so 1024 bytes at the widest table R6 takes,
@@ -81,7 +90,9 @@ DTX_init:
 
 ; -----------------------------------------------------------------------------
 ; DTX_jump. The pointer is the payload plus the row times the row's bytes: two
-; mulu.w make that 32 by 16 product at any row's bytes.
+; mulu.w make that 32 by 16 product at any row's bytes. The payload is the
+; one init parked, not the format block's: an image contains several tables
+; and a jump reads the one its block was seeded on.
 
 DTX_jump:
         move.l  d0,d1
@@ -94,7 +105,7 @@ jump_high:
 jump_low:
         mulu.w  #0,d3                   ; installed: the row's bytes
         add.l   d3,d1
-        bsr.s   DTX_payload
+        movea.l DTX_PAYLOAD(a0),a1      ; the payload init was given
         adda.l  d1,a1
         move.l  a1,DTX_POINTER(a0)
         rts

@@ -350,8 +350,15 @@ public static class Pack
                 .Append("; The state block, doc/abi.md 3.\n")
                 .Append(Equ("DTX_TURN", Turn))
                 .Append(Equ("DTX_PARK", Park))
-                .Append(Equ("DTX_POINTER", Pointer))
-                .Append("\n; What the code takes at assembly time.\n")
+                .Append(Equ("DTX_POINTER", Pointer));
+        if (variant != Format.Dtx2)
+        {
+            // Nothing parks a6 under the plain variants, so the payload
+            // init was given stands in that long instead, which a jump
+            // reaches (abi.md 3). Under DTX2 the template names its own.
+            out_.Append(Equ("DTX_PAYLOAD", Park));
+        }
+        out_.Append("\n; What the code takes at assembly time.\n")
                 .Append(Equ("DTX_WIDTH", header.Width));
         if (variant == Format.Dtx2)
         {
