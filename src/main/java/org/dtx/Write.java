@@ -2,15 +2,14 @@ package org.dtx;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * The tool that writes a table: {@code dtx-write in out}.
+ * The tool that writes a table: {@code dtx-write < in > out}.
  *
- * <p>The table comes from the first file, a DTX file of any variant or comma
- * separated text, and goes to the second as a DTX file of the variant
- * {@code -v} gives, or as text where the name ends in {@code .csv}. The
+ * <p>The table comes from standard input, a DTX file of any variant or comma
+ * separated text, and goes to standard output as a DTX file of the variant
+ * {@code -v} gives, or as comma separated text under {@code -text}. The
  * table is the same under every variant (R1.3), so one tool writes text as
  * DTX, rewrites a DTX file at another variant, unit or ring, and reads a DTX
  * file out as text. doc/tools.md, Write.
@@ -33,11 +32,6 @@ public final class Write {
             System.out.print(Help.WRITE);
             return;
         }
-        if (args.length < 2) {
-            System.err.print(Help.WRITE);
-            System.exit(2);
-            return;
-        }
         int variant = -1;
         String width = "";
         int repeat = -1;
@@ -45,9 +39,12 @@ public final class Write {
         int ring = 960;
         String packer = "";
         String copies = "";
-        for (int i = 2; i < args.length; i++) {
+        boolean toText = false;
+        for (int i = 0; i < args.length; i++) {
             String arg = args[i];
-            if (arg.startsWith("-v")) {
+            if (arg.equals("-text")) {
+                toText = true;
+            } else if (arg.startsWith("-v")) {
                 variant = number(arg);
             } else if (arg.startsWith("-w")) {
                 width = arg;
@@ -69,19 +66,18 @@ public final class Write {
                 return;
             }
         }
-        boolean toText = args[1].endsWith(".csv");
         if (toText && variant >= 0) {
-            System.err.println("-v" + variant + " names a DTX variant, and "
-                    + args[1] + " is text");
+            System.err.println("-v" + variant + " names a DTX variant, and"
+                    + " -text writes text");
             System.exit(2);
             return;
         }
-        byte[] in = Files.readAllBytes(Path.of(args[0]));
+        byte[] in = System.in.readAllBytes();
         Table table;
         if (isDtx(in)) {
             if (!width.isEmpty()) {
-                System.err.println(width + " gives text its width,"
-                        + " and " + args[0] + " is a DTX file with its own");
+                System.err.println(width + " gives text its width, and the"
+                        + " input is a DTX file with its own");
                 System.exit(2);
                 return;
             }
@@ -114,9 +110,15 @@ public final class Write {
                         "the variant is 0, 1 or 2, not " + variant);
             };
         }
-        Files.write(Path.of(args[1]), out);
-        System.out.printf("%s -> %s %d bytes, %d rows, %d columns,"
-                + " width %d, RR=%d%s%n", args[0],
+        System.out.write(out);
+        System.out.flush();
+        if (System.out.checkError()) {
+            System.err.println("cannot write standard output");
+            System.exit(2);
+            return;
+        }
+        System.err.printf("%s %d bytes, %d rows, %d columns,"
+                + " width %d, RR=%d%s%n",
                 toText ? "text" : "DTX" + variant, out.length,
                 table.rows(), table.columns(), table.width(), table.repeat(),
                 !toText && variant == Dtx.DTX2

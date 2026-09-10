@@ -175,7 +175,7 @@ func run(args []string) error {
 				return err
 			}
 		}
-		fmt.Printf("%-20s %5d bytes\n", name, len(code))
+		fmt.Fprintf(os.Stderr, "%-20s %5d bytes\n", name, len(code))
 	}
 	return nil
 }

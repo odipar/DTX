@@ -47,25 +47,25 @@ it: no assembler, no packer, no runtime.
 Write a table from comma separated text:
 
 ```bash
-dtx-write table.csv table.dtx -v1 -w2
+dtx-write -v1 -w2 < table.csv > table.dtx
 ```
 
 Package it as a standalone 68000 image, the code and the table in one file:
 
 ```bash
-dtx-package table.dtx table.bin
+dtx-package < table.dtx > table.bin
 ```
 
 Read it back out as text, which is how a DTX file is inspected:
 
 ```bash
-dtx-write table.dtx back.csv
+dtx-write -text < table.dtx > back.csv
 ```
 
 Convert between variants, or pack one at a unit and ring of your own:
 
 ```bash
-dtx-write table.dtx packed.dtx -v2 -k2 -m960
+dtx-write -v2 -k2 -m960 < table.dtx > packed.dtx
 ```
 
 There are three tools, and [doc/tools.md](doc/tools.md) gives every flag of

@@ -5,12 +5,13 @@
 // takes the one the table needs. No assembler runs. doc/tools.md defines the
 // tool and doc/abi.md the four calls into the image.
 //
-//	dtx-package in.dtx... out.bin
+//	dtx-package [in.dtx...] < in.dtx > out.bin
 package main
 
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"dtx/dtx"
@@ -20,30 +21,27 @@ import (
 // What -help prints: the synopsis, the one flag, an example, and the section
 // of doc/tools.md that describes the tool. The Java and C# trees also take
 // -aRMAC and -s, which this tool does not read.
-const help = `dtx-package in.dtx... out.bin
+const help = `dtx-package [in.dtx...] < in.dtx > out.bin
 
-Packages one DTX file or several as a 68000 image: the code for their
-variant and, under DTX1 and DTX2, their width, then a column table and a
-file for each. doc/abi.md gives the four calls into the image.
+Packages one DTX file or several as a 68000 image, on standard output: the
+code for their variant and, under DTX1 and DTX2, their width, then a column
+table and a file for each. One table comes in on standard input, and several
+are named. doc/abi.md gives the four calls into the image.
 
   -help        this text
 
 Examples
 
-  dtx-package t.dtx t.bin
+  dtx-package < t.dtx > t.bin
       the image of a table, from the code the build made
 
-  dtx-package a.dtx b.dtx both.bin
+  dtx-package a.dtx b.dtx > both.bin
       one image of two tables, the code in it once, with a line
       saying where each table stands: a caller hands that to
       DTX_init
 
 doc/tools.md, Package.
 `
-
-// errUsage is the run given no file to work on, which prints help to
-// standard error and exits with 2.
-var errUsage = errors.New("usage")
 
 // A misuse is a flag the tool does not read: the message goes to standard
 // error and the exit is 2, as the Java tree exits.
@@ -52,11 +50,7 @@ type misuse string
 func (m misuse) Error() string { return string(m) }
 
 func main() {
-	if err := run(os.Args[1:]); err != nil {
-		if errors.Is(err, errUsage) {
-			fmt.Fprint(os.Stderr, help)
-			os.Exit(2)
-		}
+	if err := run(os.Args[1:], os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		var m misuse
 		if errors.As(err, &m) {
@@ -66,7 +60,9 @@ func main() {
 	}
 }
 
-func run(args []string) error {
+// run packages the tables named, or the one on in, and writes the image to
+// out, its report going to standard error.
+func run(args []string, in io.Reader, out io.Writer) error {
 	for _, arg := range args {
 		if arg == "-help" || arg == "-h" {
 			fmt.Print(help)
@@ -80,40 +76,44 @@ func run(args []string) error {
 		}
 		named = append(named, arg)
 	}
-	if len(named) < 2 {
-		return errUsage
-	}
-	// Every name but the last is a table, in the order the image lays them
-	// out; the last is what the image is written to.
-	out_ := named[len(named)-1]
-	named = named[:len(named)-1]
+	// A name is a table, in the order the image lays them out. Where no
+	// name is given, one table comes in on standard input.
 	var files [][]byte
-	for _, name := range named {
-		file, err := os.ReadFile(name)
+	if len(named) == 0 {
+		file, err := io.ReadAll(in)
 		if err != nil {
 			return err
 		}
 		files = append(files, file)
+		named = append(named, "standard input")
+	} else {
+		for _, name := range named {
+			file, err := os.ReadFile(name)
+			if err != nil {
+				return err
+			}
+			files = append(files, file)
+		}
 	}
 	file := files[0]
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
 		return err
 	}
-	out, at, err := pack.Images(files)
+	image, at, err := pack.Images(files)
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(out_, out, 0o644); err != nil {
-		return err
+	if _, err := out.Write(image); err != nil {
+		return misuse("cannot write standard output")
 	}
 	state, err := stateOf(file, header)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s -> DTX%d image %d bytes, table %d bytes, %d rows,"+
+	fmt.Fprintf(os.Stderr, "%s -> DTX%d image %d bytes, table %d bytes, %d rows,"+
 		" %d columns, state block %d bytes\n",
-		named[0], header.Variant, len(out), len(file), header.Rows,
+		named[0], header.Variant, len(image), len(file), header.Rows,
 		header.Columns, state)
 	// A caller hands init the header of the table to read (abi.md 2), so
 	// the image says where each one stands.
@@ -126,12 +126,12 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s -> table %d at image+%d, %d bytes, %d rows,"+
+		fmt.Fprintf(os.Stderr, "%s -> table %d at image+%d, %d bytes, %d rows,"+
 			" %d columns, state block %d bytes\n",
 			named[i], i+1, at[i], len(files[i]), its.Rows, its.Columns, mine)
 	}
 	if len(named) > 1 {
-		fmt.Printf("table 1 stands at image+%d\n", at[0])
+		fmt.Fprintf(os.Stderr, "table 1 stands at image+%d\n", at[0])
 	}
 	return nil
 }

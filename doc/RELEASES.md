@@ -91,7 +91,7 @@ the image plus the format block's +8, which it may read at build time.
   it was 84 and DTX2's 1,444 at `k` of 1 where it was 1,448.
 - `Packager.packaged`, Go's `pack.Images` and C#'s `Pack.Image` take the
   files and give back the image and where each table's header stands.
-  `dtx-package in.dtx... out.bin` takes the tables before the output and
+  `dtx-package [in.dtx...] > out.bin` takes the tables it is named and
   prints where each stands.
 - Two sentences of abi.md that were wrong are corrected: DTX1 leaves its
   own code unwritten, so a DTX1 image may stand in ROM, and no site is

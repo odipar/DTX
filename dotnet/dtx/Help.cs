@@ -7,8 +7,8 @@ namespace Dtx;
 /// same but for dtx-package, which combines and does not assemble, so its
 /// help lists neither -a nor -s; ParityTest compares them.
 ///
-/// <para>A tool given no file to work on prints the same text to standard
-/// error and exits with 2.</para>
+/// <para>A tool reads its input on standard input, so -help is what prints
+/// this text.</para>
 /// </summary>
 public static class Help
 {
@@ -23,11 +23,11 @@ public static class Help
     }
 
     public const string Write =
-              "dtx-write in out [-vV] [-wW] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]\n"
+              "dtx-write [-vV] [-wW] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]] [-text]\n"
             + "\n"
-            + "Writes the table in the first file to the second. The first is a DTX file\n"
-            + "of any variant, or comma separated text; the second is a DTX file of\n"
-            + "variant V, or text where its name ends in .csv.\n"
+            + "Writes the table on standard input to standard output. The input is a DTX\n"
+            + "file of any variant, or comma separated text; the output is a DTX file of\n"
+            + "variant V, or comma separated text under -text.\n"
             + "\n"
             + "  -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for\n"
             + "               text)\n"
@@ -41,33 +41,35 @@ public static class Help
             + "  -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)\n"
             + "  -copies[S]   DTX2: copies from the literal stream, with S seconds of\n"
             + "               search for a better parse\n"
+            + "  -text        writes the table as comma separated text\n"
             + "  -help        this text\n"
             + "\n"
             + "Examples\n"
             + "\n"
-            + "  dtx-write t.csv t.dtx -v1 -w2\n"
+            + "  dtx-write -v1 -w2 < t.csv > t.dtx\n"
             + "      text into a DTX1 file of two byte values\n"
-            + "  dtx-write t.csv t.dtx -v1\n"
+            + "  dtx-write -v1 < t.csv > t.dtx\n"
             + "      the same, at the narrowest width every value of the text fits\n"
-            + "  dtx-write t.csv t.dtx -v2 -w1 -k1 -m960\n"
+            + "  dtx-write -v2 -w1 -k1 -m960 < t.csv > t.dtx\n"
             + "      text into a DTX2 file of one byte values, at a unit of 1 and\n"
             + "      a ring of 960 bytes\n"
-            + "  dtx-write t.csv t.dtx -v0 -w4 -r32\n"
+            + "  dtx-write -v0 -w4 -r32 < t.csv > t.dtx\n"
             + "      text into a DTX0 file of four byte values, repeating at row 32\n"
-            + "  dtx-write t.dtx again.dtx -k2 -copies\n"
+            + "  dtx-write -k2 -copies < t.dtx > again.dtx\n"
             + "      a DTX2 file repacked at a unit of 2, with copies from the\n"
             + "      literal stream. The width is the file's own\n"
-            + "  dtx-write t.dtx t.csv\n"
+            + "  dtx-write -text < t.dtx > t.csv\n"
             + "      a DTX file of any variant read out as text\n"
             + "\n"
             + "doc/tools.md, Write.\n";
 
     public const string Package =
-              "dtx-package in.dtx... out.bin [-aRMAC] [-s]\n"
+              "dtx-package [in.dtx...] [-aRMAC] [-s] < in.dtx > out.bin\n"
             + "\n"
-            + "Packages one DTX file or several as a 68000 image: the code for their\n"
-            + "variant and, under DTX1 and DTX2, their width, then a column table and\n"
-            + "a file for each. doc/abi.md gives the four calls into the image.\n"
+            + "Packages one DTX file or several as a 68000 image, on standard output:\n"
+            + "the code for their variant and, under DTX1 and DTX2, their width, then a\n"
+            + "column table and a file for each. One table comes in on standard input,\n"
+            + "and several are named. doc/abi.md gives the four calls into the image.\n"
             + "\n"
             + "  -aRMAC       assembles the code with the rmac at RMAC, in place of the\n"
             + "               image the build made. The templates are read from 68k\n"
@@ -78,16 +80,16 @@ public static class Help
             + "\n"
             + "Examples\n"
             + "\n"
-            + "  dtx-package t.dtx t.bin\n"
+            + "  dtx-package < t.dtx > t.bin\n"
             + "      the image of a table, from the code the build made\n"
-            + "  dtx-package a.dtx b.dtx both.bin\n"
+            + "  dtx-package a.dtx b.dtx > both.bin\n"
             + "      one image of two tables, the code in it once, with a line\n"
             + "      saying where each table stands: a caller hands that to\n"
             + "      DTX_init\n"
-            + "  dtx-package t.dtx t.bin -a/usr/local/bin/rmac\n"
+            + "  dtx-package -a/usr/local/bin/rmac < t.dtx > t.bin\n"
             + "      the same, with the code assembled from the templates by that\n"
             + "      rmac\n"
-            + "  dtx-package t.dtx t.i -s\n"
+            + "  dtx-package -s < t.dtx > t.i\n"
             + "      the table's figures as assembler equates, for a build of your\n"
             + "      own\n"
             + "\n"

@@ -19,7 +19,9 @@ built=$classes/.built
 # under 68k/ dates it as a source does.
 if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" "$root/68k" \
         -newer "$built" -print -quit 2>/dev/null)" ]; then
-    (cd "$root" && mvn -q process-classes)
+    # The build reads standard input, which a tool's input comes in on,
+    # so it is given none.
+    (cd "$root" && mvn -q process-classes </dev/null)
     : > "$built"
 fi
 

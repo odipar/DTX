@@ -14,6 +14,11 @@ dist/
 # an assembler run by hand leaves an object file beside the source
 *.o
 
+# a go build run by hand leaves the executable beside the module
+/go/dtx-write
+/go/dtx-package
+/go/dtx-blobs
+
 # the C# tree's build outputs
 dotnet/bin/
 dotnet/obj/

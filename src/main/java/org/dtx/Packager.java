@@ -657,11 +657,6 @@ public final class Packager {
             System.out.print(Help.PACKAGE);
             return;
         }
-        if (args.length < 2) {
-            System.err.print(Help.PACKAGE);
-            System.exit(2);
-            return;
-        }
         String rmac = null;
         boolean defines = false;
         List<String> named = new ArrayList<>();
@@ -678,42 +673,49 @@ public final class Packager {
                 named.add(arg);
             }
         }
-        if (named.size() < 2) {
-            System.err.print(Help.PACKAGE);
-            System.exit(2);
-            return;
-        }
-        // Every name but the last is a table, in the order the image lays
-        // them out; the last is what the image is written to.
-        String out = named.remove(named.size() - 1);
-        if (defines && named.size() != 1) {
+        if (defines && named.size() > 1) {
             System.err.println("dtx-package -s reads the figures of one"
                     + " table, and " + named.size() + " were named");
             System.exit(2);
             return;
         }
+        // A name is a table, in the order the image lays them out. Where
+        // no name is given, one table comes in on standard input.
         List<byte[]> files = new ArrayList<>();
-        for (String name : named) {
-            files.add(Files.readAllBytes(Path.of(name)));
+        if (named.isEmpty()) {
+            files.add(System.in.readAllBytes());
+            named.add("standard input");
+        } else {
+            for (String name : named) {
+                files.add(Files.readAllBytes(Path.of(name)));
+            }
         }
         byte[] file = files.get(0);
         Dtx.Header header = Dtx.header(file);
         int[] headers = {0};
+        byte[] image;
         if (defines) {
-            Files.writeString(Path.of(out), table(file));
+            image = table(file).getBytes(java.nio.charset.StandardCharsets.UTF_8);
         } else if (rmac == null) {
             Packaged made = packaged(files);
             headers = made.headers();
-            Files.write(Path.of(out), made.image());
+            image = made.image();
         } else {
             Packaged made = combine(code(file, Path.of(rmac)), files);
             headers = made.headers();
-            Files.write(Path.of(out), made.image());
+            image = made.image();
         }
-        long bytes = Files.size(Path.of(out));
+        System.out.write(image);
+        System.out.flush();
+        if (System.out.checkError()) {
+            System.err.println("cannot write standard output");
+            System.exit(2);
+            return;
+        }
+        long bytes = image.length;
         int state = header.variant() == Dtx.DTX2
                 ? stateBytes(header, packed(file, header)) : stateBytes();
-        System.out.printf("%s -> DTX%d %s %d bytes, table %d bytes,"
+        System.err.printf("%s -> DTX%d %s %d bytes, table %d bytes,"
                 + " %d rows, %d columns, state block %d bytes%n",
                 named.get(0), header.variant(),
                 defines ? "figures"
@@ -724,14 +726,14 @@ public final class Packager {
         for (int i = 1; !defines && i < named.size(); i++) {
             byte[] next = files.get(i);
             Dtx.Header its = Dtx.header(next);
-            System.out.printf("%s -> table %d at image+%d, %d bytes,"
+            System.err.printf("%s -> table %d at image+%d, %d bytes,"
                     + " %d rows, %d columns, state block %d bytes%n",
                     named.get(i), i + 1, headers[i], next.length, its.rows(),
                     its.columns(), its.variant() == Dtx.DTX2
                             ? stateBytes(its, packed(next, its)) : stateBytes());
         }
         if (!defines && named.size() > 1) {
-            System.out.printf("table 1 stands at image+%d%n", headers[0]);
+            System.err.printf("table 1 stands at image+%d%n", headers[0]);
         }
     }
 }
