@@ -67,11 +67,11 @@ public static class Tools
     }
 
     /// <summary>
-    /// The tool that writes a table: dtx-write in out.
+    /// The tool that writes a table: dtx-write &lt; in &gt; out.
     ///
-    /// <para>The table comes from the first file, a DTX file of any variant
-    /// or comma separated text, and goes to the second as a DTX file of the
-    /// variant -v gives, or as text where the name ends in .csv. The table
+    /// <para>The table comes from standard input, a DTX file of any variant
+    /// or comma separated text, and goes to standard output as a DTX file of
+    /// the variant -v gives, or as comma separated text under -text. The table
     /// is the same under every variant (R1.3), so one tool writes text as
     /// DTX, rewrites a DTX file at another variant, unit or ring, and reads
     /// a DTX file out as text. doc/tools.md, Write.</para>
@@ -98,17 +98,13 @@ public static class Tools
             Console.Write(Help.Write);
             return 0;
         }
-        if (args.Length < 2)
-        {
-            Console.Error.Write(Help.Write);
-            return 2;
-        }
-        string[] named = args[..2];
         int variant = -1, repeat = -1, unit = 1, ring = 960;
         string width = "", packer = "", copies = "";
-        foreach (string arg in args[2..])
+        bool toText = false;
+        foreach (string arg in args)
         {
-            if (arg.StartsWith("-v", StringComparison.Ordinal)) variant = Number(arg);
+            if (arg == "-text") toText = true;
+            else if (arg.StartsWith("-v", StringComparison.Ordinal)) variant = Number(arg);
             else if (arg.StartsWith("-w", StringComparison.Ordinal)) width = arg;
             else if (arg.StartsWith("-r", StringComparison.Ordinal)) repeat = Number(arg);
             else if (arg.StartsWith("-k", StringComparison.Ordinal)) unit = Number(arg);
@@ -124,21 +120,20 @@ public static class Tools
                 return 2;
             }
         }
-        bool toText = named[1].EndsWith(".csv", StringComparison.Ordinal);
         if (toText && variant >= 0)
         {
             Console.Error.WriteLine($"-v{variant} names a DTX variant, and"
-                    + $" {named[1]} is text");
+                    + " -text writes text");
             return 2;
         }
-        byte[] in_ = File.ReadAllBytes(named[0]);
+        byte[] in_ = Read();
         Table table;
         if (IsDtx(in_))
         {
             if (width.Length != 0)
             {
-                Console.Error.WriteLine($"{width} gives text its width,"
-                        + $" and {named[0]} is a DTX file with its own");
+                Console.Error.WriteLine($"{width} gives text its width, and"
+                        + " the input is a DTX file with its own");
                 return 2;
             }
             table = Variants.Read(in_);
@@ -173,13 +168,29 @@ public static class Tools
             _ => throw new ArgumentException(
                     $"the variant is 0, 1 or 2, not {variant}"),
         };
-        File.WriteAllBytes(named[1], out_);
+        Write(out_);
         string packing = !toText && variant == Format.Dtx2
                 ? $", k={unit}, N={ring}" : "";
-        Console.WriteLine($"{named[0]} -> {(toText ? "text" : $"DTX{variant}")}"
+        Console.Error.WriteLine($"{(toText ? "text" : $"DTX{variant}")}"
                 + $" {out_.Length} bytes, {table.Rows} rows, {table.Columns}"
                 + $" columns, width {table.Width}, RR={table.Repeat}{packing}");
         return 0;
+    }
+
+    /// <summary>Everything on standard input.</summary>
+    private static byte[] Read()
+    {
+        using var said = new MemoryStream();
+        Console.OpenStandardInput().CopyTo(said);
+        return said.ToArray();
+    }
+
+    /// <summary>A file on standard output: the tool's output.</summary>
+    private static void Write(byte[] file)
+    {
+        using Stream out_ = Console.OpenStandardOutput();
+        out_.Write(file, 0, file.Length);
+        out_.Flush();
     }
 
     /// <summary>Whether file opens with DTX.</summary>
@@ -206,11 +217,6 @@ public static class Tools
             Console.Write(Help.Package);
             return 0;
         }
-        if (args.Length < 2)
-        {
-            Console.Error.Write(Help.Package);
-            return 2;
-        }
         string rmac = "";
         bool defines = false;
         var named = new List<string>();
@@ -230,47 +236,50 @@ public static class Tools
             }
             else named.Add(arg);
         }
-        if (named.Count < 2)
-        {
-            Console.Error.Write(Help.Package);
-            return 2;
-        }
-        // Every name but the last is a table, in the order the image lays
-        // them out; the last is what the image is written to.
-        string outName = named[^1];
-        named.RemoveAt(named.Count - 1);
-        if (defines && named.Count != 1)
+        if (defines && named.Count > 1)
         {
             Console.Error.WriteLine("dtx-package -s reads the figures of one"
                     + $" table, and {named.Count} were named");
             return 2;
         }
+        // A name is a table, in the order the image lays them out. Where
+        // no name is given, one table comes in on standard input.
         var files = new List<byte[]>();
-        foreach (string name in named)
+        if (named.Count == 0)
         {
-            files.Add(File.ReadAllBytes(name));
+            files.Add(Read());
+            named.Add("standard input");
+        }
+        else
+        {
+            foreach (string name in named)
+            {
+                files.Add(File.ReadAllBytes(name));
+            }
         }
         byte[] file = files[0];
         Header header = Format.ReadHeader(file);
         int[] headers = { 0 };
+        byte[] image;
         if (defines)
         {
-            File.WriteAllText(outName, Pack.Figures(file));
+            image = Encoding.UTF8.GetBytes(Pack.Figures(file));
         }
         else if (rmac.Length == 0)
         {
-            File.WriteAllBytes(outName, Pack.Image(files, out headers));
+            image = Pack.Image(files, out headers);
         }
         else
         {
-            File.WriteAllBytes(outName, Pack.Combine(
+            image = Pack.Combine(
                     Pack.Code(file, rmac, Pack.Templates()), files, header,
-                    out headers));
+                    out headers);
         }
-        long bytes = new FileInfo(outName).Length;
+        Write(image);
+        long bytes = image.Length;
         string what = defines ? "figures"
                 : rmac.Length == 0 ? "image" : "image assembled";
-        Console.WriteLine($"{named[0]} -> DTX{header.Variant} {what} {bytes}"
+        Console.Error.WriteLine($"{named[0]} -> DTX{header.Variant} {what} {bytes}"
                 + $" bytes, table {file.Length} bytes, {header.Rows} rows,"
                 + $" {header.Columns} columns, state block"
                 + $" {StateOf(file, header)} bytes");
@@ -279,14 +288,14 @@ public static class Tools
         for (int i = 1; !defines && i < named.Count; i++)
         {
             Header its = Format.ReadHeader(files[i]);
-            Console.WriteLine($"{named[i]} -> table {i + 1} at"
+            Console.Error.WriteLine($"{named[i]} -> table {i + 1} at"
                     + $" image+{headers[i]}, {files[i].Length} bytes,"
                     + $" {its.Rows} rows, {its.Columns} columns, state block"
                     + $" {StateOf(files[i], its)} bytes");
         }
         if (!defines && named.Count > 1)
         {
-            Console.WriteLine($"table 1 stands at image+{headers[0]}");
+            Console.Error.WriteLine($"table 1 stands at image+{headers[0]}");
         }
         return 0;
     }
@@ -345,7 +354,7 @@ public static class Tools
             {
                 File.WriteAllBytes(Path.Combine(at, name), code);
             }
-            Console.WriteLine($"{name,-20} {code.Length,5} bytes");
+            Console.Error.WriteLine($"{name,-20} {code.Length,5} bytes");
         }
         return 0;
     }

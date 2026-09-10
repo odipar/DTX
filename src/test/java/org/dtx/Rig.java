@@ -184,12 +184,39 @@ final class Rig {
             Files.writeString(text, csv);
             List<String> argv = new ArrayList<>(List.of("java", "-cp",
                     root().resolve("target/classes").toString(),
-                    "org.dtx.Write", text.toString(), out.toString()));
+                    "org.dtx.Write"));
             argv.addAll(writeArgs(variant, width, repeat, unit, ring, copies));
-            run(argv);
+            filter(argv, text, out);
             return Files.readAllBytes(out);
         } catch (IOException failed) {
             throw new UncheckedIOException(failed);
+        }
+    }
+
+    /**
+     * One tool run as a filter: its input from {@code in}, or none where
+     * that is null, and its output into {@code out}. What it reported on
+     * standard error comes back, and a run that fails stops the test.
+     */
+    static String filter(List<String> argv, @Nullable Path in, Path out) {
+        try {
+            ProcessBuilder built = new ProcessBuilder(argv).directory(root().toFile())
+                    .redirectOutput(out.toFile());
+            if (in != null) {
+                built.redirectInput(in.toFile());
+            }
+            Process ran = built.start();
+            String said = new String(ran.getErrorStream().readAllBytes(),
+                    StandardCharsets.UTF_8);
+            if (ran.waitFor() != 0) {
+                throw new IllegalStateException(argv.get(0) + " gave " + said.trim());
+            }
+            return said;
+        } catch (IOException failed) {
+            throw new UncheckedIOException(failed);
+        } catch (InterruptedException stopped) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(stopped);
         }
     }
 }

@@ -61,18 +61,17 @@ class ParityTest {
         return at;
     }
 
-    /** One tool run in every tree, at out.java, out.go and out.cs. */
-    private static Map<String, byte[]> each(String tool, List<String> argv,
-            String out) throws IOException {
+    /** One tool run in every tree, its input from {@code in} and what it
+     *  wrote on standard output at out.java, out.go and out.cs. */
+    private static Map<String, byte[]> each(String tool, @Nullable Path in,
+            List<String> argv, String out) throws IOException {
         Map<String, byte[]> written = new LinkedHashMap<>();
         Path work = work();
         for (String tree : List.of("java", "go", "cs")) {
             List<String> command = command(tree, tool);
+            command.addAll(argv);
             Path at = work.resolve(tree + "-" + out);
-            for (String one : argv) {
-                command.add(OUT.equals(one) ? at.toString() : one);
-            }
-            Rig.run(command);
+            Rig.filter(command, in, at);
             written.put(tree, Files.readAllBytes(at));
         }
         return written;
@@ -123,9 +122,6 @@ class ParityTest {
         }
     }
 
-    /** Where a tool's output stands, as a marker in an argument list. */
-    private static final String OUT = "@out";
-
     @Test
     void everyTreeWritesTheSameFile() throws IOException {
         Path text = work().resolve("t.csv");
@@ -142,12 +138,10 @@ class ParityTest {
                 new Case("DTX2, k of 4 at a width of 4", 2, 4, null, 4, 960, false),
                 new Case("DTX2, k of 1 at a width of 4", 2, 4, null, 1, 960, false),
                 new Case("DTX2, with copies", 2, 2, null, 1, 960, true))) {
-            List<String> argv = new ArrayList<>();
-            argv.add(text.toString());
-            argv.add(OUT);
-            argv.addAll(Rig.writeArgs(one.variant(), one.width(), one.repeat(),
-                    one.unit(), one.ring(), one.copies()));
-            same(one.name(), each("write", argv, "w"));
+            List<String> argv = new ArrayList<>(Rig.writeArgs(one.variant(),
+                    one.width(), one.repeat(), one.unit(), one.ring(),
+                    one.copies()));
+            same(one.name(), each("write", text, argv, "w"));
         }
     }
 
@@ -169,11 +163,9 @@ class ParityTest {
                 new Case("DTX2 to DTX2, copies at a ring of 64", packed, List.of("-m64", "-copies"), "r.dtx"),
                 new Case("DTX2 to DTX0", packed, List.of("-v0"), "r.dtx"),
                 new Case("DTX2 to DTX1, repeating at 16", packed, List.of("-v1", "-r16"), "r.dtx"),
-                new Case("DTX2 to text", packed, List.of(), "r.csv"),
-                new Case("DTX1 to text", plain, List.of(), "r.csv"))) {
-            List<String> argv = new ArrayList<>(List.of(one.in().toString(), OUT));
-            argv.addAll(one.flags());
-            same(one.name(), each("write", argv, one.out()));
+                new Case("DTX2 to text", packed, List.of("-text"), "r.csv"),
+                new Case("DTX1 to text", plain, List.of("-text"), "r.csv"))) {
+            same(one.name(), each("write", one.in(), one.flags(), one.out()));
         }
     }
 
@@ -231,7 +223,7 @@ class ParityTest {
             Files.write(src, Rig.write(work, Rig.numbers(one.rows(), one.columns()),
                     one.variant(), one.width(), one.repeat(), one.unit(),
                     one.ring(), one.copies()));
-            same(one.name(), each("package", List.of(src.toString(), OUT), "p"));
+            same(one.name(), each("package", src, List.of(), "p"));
         }
     }
 
@@ -258,8 +250,7 @@ class ParityTest {
                         one.copies()));
                 named.add(src.toString());
             }
-            named.add(OUT);
-            same(one.name(), each("package", named, "p"));
+            same(one.name(), each("package", null, named, "p"));
         }
     }
 }

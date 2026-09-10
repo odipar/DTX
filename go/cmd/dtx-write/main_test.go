@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -27,9 +27,32 @@ func numbers(rows, columns int) string {
 	return out.String()
 }
 
-// printed runs the tool over args and gives what it wrote to standard output
-// and the error it gave. The tool prints one line a run, and a test reads it
-// where a caller reads it.
+// ran runs the tool over args with in on standard input, and gives what it
+// wrote to standard output, what it reported on standard error, and the
+// error it gave. A caller reads the three the same way.
+func ran(t *testing.T, in string, args ...string) ([]byte, string, error) {
+	t.Helper()
+	file, err := os.CreateTemp(t.TempDir(), "said")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	was := os.Stderr
+	os.Stderr = file
+	err = run(args, strings.NewReader(in), &out)
+	os.Stderr = was
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	said, read := os.ReadFile(file.Name())
+	if read != nil {
+		t.Fatal(read)
+	}
+	return out.Bytes(), string(said), err
+}
+
+// printed runs the tool and gives what it printed to standard output, for a
+// run that writes a text rather than a table.
 func printed(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	file, err := os.CreateTemp(t.TempDir(), "said")
@@ -38,38 +61,28 @@ func printed(t *testing.T, args ...string) (string, error) {
 	}
 	was := os.Stdout
 	os.Stdout = file
-	ran := run(args)
+	gave := run(args, strings.NewReader(""), os.Stdout)
 	os.Stdout = was
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
-	said, err := os.ReadFile(file.Name())
-	if err != nil {
-		t.Fatal(err)
+	said, read := os.ReadFile(file.Name())
+	if read != nil {
+		t.Fatal(read)
 	}
-	return string(said), ran
+	return string(said), gave
 }
 
-// A text file is written as a DTX file of the variant and width given, and
-// the line gives the figures of the table written.
-func TestATextFileIsWrittenAndTheLineGivesItsFigures(t *testing.T) {
-	work := t.TempDir()
-	text := filepath.Join(work, "t.csv")
-	if err := os.WriteFile(text, []byte(numbers(8, 2)), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	out := filepath.Join(work, "t.dtx")
-	said, err := printed(t, text, out, "-v1", "-w2")
+// Text is written as a DTX file of the variant and width given, and the
+// report gives the figures of the table written.
+func TestATextIsWrittenAndTheReportGivesItsFigures(t *testing.T) {
+	file, said, err := ran(t, numbers(8, 2), "-v1", "-w2")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(said, "DTX1") ||
 		!strings.Contains(said, "8 rows, 2 columns, width 2, RR=8") {
-		t.Fatalf("the line is %q", said)
-	}
-	file, err := os.ReadFile(out)
-	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("the report is %q", said)
 	}
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
@@ -86,45 +99,26 @@ func TestATextFileIsWrittenAndTheLineGivesItsFigures(t *testing.T) {
 // A DTX file is written out as text, with the comment Text writes, and that
 // text reads back to the table it came from.
 func TestADtxFileIsWrittenOutAsTextAndReadsBack(t *testing.T) {
-	work := t.TempDir()
-	text := filepath.Join(work, "t.csv")
-	if err := os.WriteFile(text, []byte("# a note\n"+numbers(8, 2)),
-		0o644); err != nil {
-		t.Fatal(err)
-	}
 	for _, width := range []int{1, 2, 4} {
-		at := "w" + strconv.Itoa(width)
-		file := filepath.Join(work, "p-"+at+".dtx")
-		if _, err := printed(t, text, file, "-v1", "-w"+strconv.Itoa(width),
-			"-r3"); err != nil {
+		file, _, err := ran(t, "# a note\n"+numbers(8, 2), "-v1",
+			"-w"+strconv.Itoa(width), "-r3")
+		if err != nil {
 			t.Fatal(err)
 		}
-		out := filepath.Join(work, "out-"+at+".csv")
-		if _, err := printed(t, file, out); err != nil {
-			t.Fatal(err)
-		}
-		said, err := os.ReadFile(out)
+		text, _, err := ran(t, string(file), "-text")
 		if err != nil {
 			t.Fatal(err)
 		}
 		want := "# 8 rows, 2 columns, width " + strconv.Itoa(width) +
 			", RR 3\nc0,c1\n0,0\n0,1\n"
-		if !strings.HasPrefix(string(said), want) {
-			t.Fatalf("at a width of %d the text opens %q", width, said)
+		if !strings.HasPrefix(string(text), want) {
+			t.Fatalf("at a width of %d the text opens %q", width, text)
 		}
-		back := filepath.Join(work, "back-"+at+".dtx")
-		if _, err := printed(t, out, back, "-v1"); err != nil {
-			t.Fatal(err)
-		}
-		first, err := os.ReadFile(file)
+		again, _, err := ran(t, string(text), "-v1")
 		if err != nil {
 			t.Fatal(err)
 		}
-		again, err := os.ReadFile(back)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(first) != string(again) {
+		if !bytes.Equal(file, again) {
 			t.Fatalf("at a width of %d the table did not come back through"+
 				" text, with the width and repeat the comment gives", width)
 		}
@@ -133,20 +127,11 @@ func TestADtxFileIsWrittenOutAsTextAndReadsBack(t *testing.T) {
 
 // The repeat of a DTX file is changed and the variant it was read at kept.
 func TestTheRepeatOfADtxFileIsChangedAndItsVariantKept(t *testing.T) {
-	work := t.TempDir()
-	text := filepath.Join(work, "t.csv")
-	if err := os.WriteFile(text, []byte(numbers(8, 2)), 0o644); err != nil {
+	plain, _, err := ran(t, numbers(8, 2), "-v1")
+	if err != nil {
 		t.Fatal(err)
 	}
-	plain := filepath.Join(work, "p.dtx")
-	if _, err := printed(t, text, plain, "-v1"); err != nil {
-		t.Fatal(err)
-	}
-	repeating := filepath.Join(work, "r.dtx")
-	if _, err := printed(t, plain, repeating, "-r2"); err != nil {
-		t.Fatal(err)
-	}
-	file, err := os.ReadFile(repeating)
+	file, _, err := ran(t, string(plain), "-r2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,12 +149,6 @@ func TestTheRepeatOfADtxFileIsChangedAndItsVariantKept(t *testing.T) {
 // main exits 2 on, as the Java tree exits. -copiesS with letters behind it
 // is one of those: a search of no seconds would pack another file.
 func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
-	work := t.TempDir()
-	text := filepath.Join(work, "t.csv")
-	if err := os.WriteFile(text, []byte(numbers(4, 2)), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	out := filepath.Join(work, "t.dtx")
 	for _, one := range []struct {
 		flags []string
 		want  string
@@ -177,8 +156,7 @@ func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 		{[]string{"-z"}, "dtx-write does not read -z"},
 		{[]string{"-v2", "-copiesx"}, "dtx-write does not read -copiesx"},
 	} {
-		args := append([]string{text, out}, one.flags...)
-		_, err := printed(t, args...)
+		_, _, err := ran(t, numbers(4, 2), one.flags...)
 		var m misuse
 		if !errors.As(err, &m) {
 			t.Fatalf("%v gave %v, not a misuse", one.flags, err)
@@ -189,12 +167,17 @@ func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 	}
 }
 
-// A run given no file to work on gives the usage, which main prints to
-// standard error and exits 2 on. -help prints the one text and nothing else.
-func TestNoFileToWorkOnGivesTheUsageAndHelpPrintsTheOneText(t *testing.T) {
-	if _, err := printed(t); !errors.Is(err, errUsage) {
-		t.Fatalf("no argument gave %v, not the usage", err)
+// -text and -v together name two forms for one output, which is a misuse.
+func TestTextAndAVariantTogetherAreAMisuse(t *testing.T) {
+	_, _, err := ran(t, numbers(4, 2), "-v1", "-text")
+	var m misuse
+	if !errors.As(err, &m) {
+		t.Fatalf("-v1 -text gave %v, not a misuse", err)
 	}
+}
+
+// -help prints the one text and nothing else.
+func TestHelpPrintsTheOneText(t *testing.T) {
 	said, err := printed(t, "-help")
 	if err != nil {
 		t.Fatal(err)

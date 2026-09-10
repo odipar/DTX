@@ -189,7 +189,7 @@ public final class Blobs {
             for (Path at : into) {
                 Files.write(at.resolve(build.name()), code);
             }
-            System.out.printf("%-20s %5d bytes%n", build.name(), code.length);
+            System.err.printf("%-20s %5d bytes%n", build.name(), code.length);
         }
     }
 }

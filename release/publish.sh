@@ -116,8 +116,8 @@ if [ -n "$host" ] && [ -d "$OUT/$host" ]; then
     # One build a width, so each width takes another image out of the
     # executable. The three cover DTX1's three.
     for w in 1 2 4; do
-        "$OUT/$host/dtx-write" "$try/t.csv" "$try/t.dtx" -v1 -w"$w"
-        "$OUT/$host/dtx-package" "$try/t.dtx" "$try/t$w.bin"
+        "$OUT/$host/dtx-write" -v1 -w"$w" < "$try/t.csv" > "$try/t.dtx"
+        "$OUT/$host/dtx-package" < "$try/t.dtx" > "$try/t$w.bin"
         echo "tried: width $w, $(wc -c < "$try/t$w.bin" | tr -d ' ') bytes" \
              "of image from $OUT/$host, outside the repository"
     done

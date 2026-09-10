@@ -7,8 +7,8 @@ package org.dtx;
  * but for dtx-package, which combines and does not assemble, so its help
  * lists neither -a nor -s; {@code ParityTest} compares them.
  *
- * <p>A tool given no file to work on prints the same text to standard error
- * and exits with 2.
+ * <p>A tool reads its input on standard input, so {@code -help} is what
+ * prints this text.
  */
 final class Help {
 
@@ -38,11 +38,11 @@ final class Help {
     }
 
     static final String WRITE = """
-            dtx-write in out [-vV] [-wW] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]]
+            dtx-write [-vV] [-wW] [-rRR] [-kK] [-mN] [-pPACKER] [-copies[S]] [-text]
 
-            Writes the table in the first file to the second. The first is a DTX file
-            of any variant, or comma separated text; the second is a DTX file of
-            variant V, or text where its name ends in .csv.
+            Writes the table on standard input to standard output. The input is a DTX
+            file of any variant, or comma separated text; the output is a DTX file of
+            variant V, or comma separated text under -text.
 
               -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for
                            text)
@@ -56,34 +56,36 @@ final class Help {
               -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)
               -copies[S]   DTX2: copies from the literal stream, with S seconds of
                            search for a better parse
+              -text        writes the table as comma separated text
               -help        this text
 
             Examples
 
-              dtx-write t.csv t.dtx -v1 -w2
+              dtx-write -v1 -w2 < t.csv > t.dtx
                   text into a DTX1 file of two byte values
-              dtx-write t.csv t.dtx -v1
+              dtx-write -v1 < t.csv > t.dtx
                   the same, at the narrowest width every value of the text fits
-              dtx-write t.csv t.dtx -v2 -w1 -k1 -m960
+              dtx-write -v2 -w1 -k1 -m960 < t.csv > t.dtx
                   text into a DTX2 file of one byte values, at a unit of 1 and
                   a ring of 960 bytes
-              dtx-write t.csv t.dtx -v0 -w4 -r32
+              dtx-write -v0 -w4 -r32 < t.csv > t.dtx
                   text into a DTX0 file of four byte values, repeating at row 32
-              dtx-write t.dtx again.dtx -k2 -copies
+              dtx-write -k2 -copies < t.dtx > again.dtx
                   a DTX2 file repacked at a unit of 2, with copies from the
                   literal stream. The width is the file's own
-              dtx-write t.dtx t.csv
+              dtx-write -text < t.dtx > t.csv
                   a DTX file of any variant read out as text
 
             doc/tools.md, Write.
             """;
 
     static final String PACKAGE = """
-            dtx-package in.dtx... out.bin [-aRMAC] [-s]
+            dtx-package [in.dtx...] [-aRMAC] [-s] < in.dtx > out.bin
 
-            Packages one DTX file or several as a 68000 image: the code for their
-            variant and, under DTX1 and DTX2, their width, then a column table and
-            a file for each. doc/abi.md gives the four calls into the image.
+            Packages one DTX file or several as a 68000 image, on standard output:
+            the code for their variant and, under DTX1 and DTX2, their width, then a
+            column table and a file for each. One table comes in on standard input,
+            and several are named. doc/abi.md gives the four calls into the image.
 
               -aRMAC       assembles the code with the rmac at RMAC, in place of the
                            image the build made. The templates are read from 68k
@@ -94,16 +96,16 @@ final class Help {
 
             Examples
 
-              dtx-package t.dtx t.bin
+              dtx-package < t.dtx > t.bin
                   the image of a table, from the code the build made
-              dtx-package a.dtx b.dtx both.bin
+              dtx-package a.dtx b.dtx > both.bin
                   one image of two tables, the code in it once, with a line
                   saying where each table stands: a caller hands that to
                   DTX_init
-              dtx-package t.dtx t.bin -a/usr/local/bin/rmac
+              dtx-package -a/usr/local/bin/rmac < t.dtx > t.bin
                   the same, with the code assembled from the templates by that
                   rmac
-              dtx-package t.dtx t.i -s
+              dtx-package -s < t.dtx > t.i
                   the table's figures as assembler equates, for a build of your
                   own
 

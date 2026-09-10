@@ -4,6 +4,19 @@ Each tool is written three times, once in each tree, and the three write
 the same bytes. `ParityTest` runs all of them over a corpus and compares
 the files.
 
+`dtx-write` and `dtx-package` read their input on standard input and write
+their output on standard output; their reports and their faults go to
+standard error, and `dtx-blobs` writes its twenty-two images into the
+directories it is named. So a conversion composes in a pipe, and a
+redirected run contains the output alone:
+
+```
+bin/dtx-write -v2 -k1 < in.csv | bin/dtx-package > out.bin
+```
+
+The exits are the three of them: 0 the tool completed, 1 the input is
+wrong, 2 the call is wrong.
+
 In Java each is a script under `bin/`. A script builds first where a source
 is newer than the last build, and then runs the tool out of
 `target/classes`. Paths reach the tool as the caller gave them, so a
@@ -21,8 +34,7 @@ that tool, with every argument its own.
 
 Every tool prints its synopsis, a line a flag with the default in
 parentheses, examples, and the section of this document that describes it
-on `-help`, and prints the same to standard error where it is given no
-file to work on. The Java and C# trees print one text, and the Go tree the
+on `-help`. The Java and C# trees print one text, and the Go tree the
 same but for `dtx-package`, which combines and does not assemble, so its
 help lists neither `-a` nor `-s`. `ParityTest` compares them.
 
@@ -41,14 +53,14 @@ DTX file at another variant, unit or ring, and reads a DTX file out as
 text.
 
 ```
-bin/dtx-write in.csv out.dtx -v2 -k1 -m960
-bin/dtx-write in.dtx out.dtx -k2 -copies
-bin/dtx-write in.dtx out.csv
+bin/dtx-write -v2 -k1 -m960 < in.csv > out.dtx
+bin/dtx-write -k2 -copies < in.dtx > out.dtx
+bin/dtx-write -text < in.dtx > out.csv
 ```
 
-The first file is read as a DTX file where it opens with `DTX`, and as text
-otherwise. The second is written as text where its name ends in `.csv`, and
-as a DTX file otherwise. The table is the same under every variant (R1.3),
+The input is read as a DTX file where it opens with `DTX`, and as text
+otherwise. The output is text under `-text`, and a DTX file otherwise. The
+table is the same under every variant (R1.3),
 so what comes out of a DTX file has the rows, the width, `R` and `RR` of
 what went in, and a DTX2 file written from a DTX2 file is that table packed
 at the unit and ring the flags give. A DTX2 file is unpacked with the copy
@@ -159,7 +171,8 @@ the format block, and appends the table's bytes. No assembler runs, and a
 caller who takes a release does not install one.
 
 ```
-bin/dtx-package in.dtx out.bin
+bin/dtx-package < in.dtx > out.bin
+bin/dtx-package a.dtx b.dtx > both.bin
 ```
 
 The Go one contains the twenty-two images, so it needs neither this
@@ -168,7 +181,7 @@ the two flags below:
 
 ```
 go build -o dtx-package ./cmd/dtx-package    # under go/
-./dtx-package in.dtx out.bin
+./dtx-package < in.dtx > out.bin
 ```
 
 | flag | gives |
