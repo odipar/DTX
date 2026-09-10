@@ -35,7 +35,7 @@ carried
     /org/st4/
     /dotnet/nt4/
     ST4_wrap.S
-    /go/internal/st4/
+    /go/st4/
 
 own
     beside.go

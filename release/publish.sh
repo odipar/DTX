@@ -40,7 +40,7 @@ fi
 
 # What go:embed takes: only this release's images, so an executable cannot
 # contain an older release's image by accident.
-IMAGES=go/internal/image/data
+IMAGES=go/image/data
 rm -f "$IMAGES"/*.bin
 rm -rf "$OUT/release"
 mkdir -p "$OUT/release"

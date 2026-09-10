@@ -109,7 +109,7 @@ public static class Help
             + "\n"
             + "  dtx-blobs build/68k\n"
             + "      the twenty-two images into build/68k, with the rmac on the path\n"
-            + "  dtx-blobs build/68k go/internal/image/data -a/usr/local/bin/rmac\n"
+            + "  dtx-blobs build/68k go/image/data -a/usr/local/bin/rmac\n"
             + "      into two directories, with that rmac\n"
             + "\n"
             + "doc/tools.md, Build the images.\n";

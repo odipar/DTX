@@ -15,9 +15,9 @@ import (
 	"strconv"
 	"strings"
 
+	"dtx/dtx"
 	"dtx/internal/csv"
-	"dtx/internal/dtx"
-	"dtx/internal/st4"
+	"dtx/st4"
 )
 
 // What -help prints: the synopsis, a line a flag with the default in

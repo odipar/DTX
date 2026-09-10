@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"dtx/internal/st4"
+	"dtx/st4"
 )
 
 func table(t *testing.T, rows, columns, width int) *Table {

@@ -3,7 +3,7 @@ package csv
 import (
 	"testing"
 
-	"dtx/internal/dtx"
+	"dtx/dtx"
 )
 
 // The text of the tests here: a comment, a blank line, three rows of three

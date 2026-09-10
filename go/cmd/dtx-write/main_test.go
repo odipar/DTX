@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"dtx/internal/dtx"
+	"dtx/dtx"
 )
 
 // numbers gives comma separated text of rows rows and columns columns, the
