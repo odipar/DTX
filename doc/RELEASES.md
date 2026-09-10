@@ -28,6 +28,32 @@ assembler, and no image is tracked in the tree.
 
 ## Published
 
+### 0.9.0, 2026-09-10
+
+<https://github.com/odipar/DTX/releases/tag/v0.9.0>, built from the commit
+tagged `v0.9.0`.
+
+**Every caller of the two converting tools changes: they read standard
+input and write standard output.** The library is as it was: no class, no
+image and no packaged byte moves.
+
+- `dtx-write` reads the table on standard input and writes it on standard
+  output. `-text` writes the table as comma separated text, in place of
+  the `.csv` the output name used to end in, and `-text` with `-v` is a
+  wrong call.
+- `dtx-package` reads one table on standard input, or several as names,
+  and writes the image on standard output. `-s` writes the figures there
+  too.
+- `dtx-blobs` writes the twenty-two images into the directories it is
+  named, so it keeps its arguments; its listing moves to standard error.
+- Every report, fault and usage goes to standard error, so a conversion
+  composes in a pipe: `dtx-write -v2 -k1 < in.csv | dtx-package > out.bin`.
+- The exits are the three they were: 0 done, 1 the input is wrong, 2 the
+  call is wrong.
+- `go/internal/dtx`, `pack`, `st4` and `image` moved to `go/dtx`,
+  `go/pack`, `go/st4` and `go/image`, so another Go module imports them:
+  Go forbids a module from importing another module's `internal`.
+
 ### 0.8.0, 2026-09-08
 
 <https://github.com/odipar/DTX/releases/tag/v0.8.0>, built from the commit
