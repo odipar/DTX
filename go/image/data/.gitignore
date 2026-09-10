@@ -1,2 +1,0 @@
-# The 68000 images are build output: the Maven build writes them here.
-*.bin

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"dtx/dtx"
-	"dtx/image"
-	"dtx/pack"
+	"github.com/odipar/dtx/go/dtx"
+	"github.com/odipar/dtx/go/image"
+	"github.com/odipar/dtx/go/pack"
 )
 
 // ran runs the tool over args with in on standard input, and gives the image

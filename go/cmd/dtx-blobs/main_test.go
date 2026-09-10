@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"dtx/dtx"
-	"dtx/image"
-	"dtx/pack"
+	"github.com/odipar/dtx/go/dtx"
+	"github.com/odipar/dtx/go/image"
+	"github.com/odipar/dtx/go/pack"
 )
 
 // printed runs the tool over args and gives what it wrote to standard output

@@ -16,9 +16,9 @@ import (
 	"strconv"
 	"strings"
 
-	"dtx/dtx"
-	"dtx/internal/csv"
-	"dtx/st4"
+	"github.com/odipar/dtx/go/dtx"
+	"github.com/odipar/dtx/go/internal/csv"
+	"github.com/odipar/dtx/go/st4"
 )
 
 // What -help prints: the synopsis, a line a flag with the default in

@@ -1,11 +1,14 @@
 The 68000 images a standalone build contains.
 
 The Maven build writes the twenty-two here, as it writes them to build/68k
-and into the classes the jar is made of, so a Go executable built after it
-needs neither this repository nor an assembler beside it.
+and into the classes the jar is made of, and they are committed: a module
+fetched by its import path contains the files a commit has in it, so a
+caller who runs `go get github.com/odipar/dtx/go` has the images an
+executable embeds.
 
-A tree built without them does not contain one, and Read then gives nil
-back: a caller resolves an image as it otherwise would, out of build/68k
-beside the templates DTX_68K names.
+ImageTest reads them against a fresh assembly of 68k/, so an image that
+does not match what rmac writes today fails the build.
 
-The .bin files are build output and are not committed.
+A tree without them does not contain one, and Read then gives nil back: a
+caller resolves an image as it otherwise would, out of build/68k beside
+the templates DTX_68K names.
