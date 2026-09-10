@@ -3,7 +3,7 @@ package dtx
 import (
 	"fmt"
 
-	"dtx/internal/st4"
+	"dtx/st4"
 )
 
 // WriteDtx0 gives table as a DTX0 file: R rows, each column 0 through

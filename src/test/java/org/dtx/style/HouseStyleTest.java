@@ -125,7 +125,7 @@ final class HouseStyleTest {
         assertEquals(List.of("an unwanted byte"), wanting.not());
         assertEquals("Shape", style.constructs().get(1).rule());
         assertTrue(style.isCarried(Path.of("src/main/java/org/st4/A.java")));
-        assertTrue(!style.isCarried(Path.of("go/internal/st4/packer.go")));
+        assertTrue(!style.isCarried(Path.of("go/st4/packer.go")));
         assertTrue(!style.isCarried(Path.of("src/main/java/org/dtx/A.java")));
     }
 

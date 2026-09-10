@@ -206,7 +206,7 @@ each of them three times:
 |---|---|
 | the classes the jar is made of | the Java packager, off the classpath |
 | `build/68k` | the C# assembly, which embeds them from there |
-| `go/internal/image/data` | `go:embed`, which reads only inside its own module |
+| `go/image/data` | `go:embed`, which reads only inside its own module |
 They are plain files and nothing about them is Java's, so a port in another
 language builds from the same twenty-two. A Go executable built after the
 Maven build contains all of them and needs neither this repository nor an
@@ -279,7 +279,7 @@ in a release.
 
 Writing DTX2 needs an ST4 packer, and each tree contains one:
 `src/main/java/org/st4` and `dotnet/nt4`, both taken from
-odipar/ST4@498aa25, and `go/internal/st4`, taken from odipar/YMX@611e321,
+odipar/ST4@498aa25, and `go/st4`, taken from odipar/YMX@611e321,
 which is that same packer in Go. No code is edited here: the Go copy's
 package comment is edited to name where the copy came from, and `beside.go`
 and `packer.go` are added beside it. The three pack the same bytes, which

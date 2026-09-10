@@ -126,7 +126,7 @@ final class Help {
 
               dtx-blobs build/68k
                   the twenty-two images into build/68k, with the rmac on the path
-              dtx-blobs build/68k go/internal/image/data -a/usr/local/bin/rmac
+              dtx-blobs build/68k go/image/data -a/usr/local/bin/rmac
                   into two directories, with that rmac
 
             doc/tools.md, Build the images.

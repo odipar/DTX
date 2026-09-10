@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"dtx/internal/dtx"
-	"dtx/internal/image"
-	"dtx/internal/pack"
+	"dtx/dtx"
+	"dtx/image"
+	"dtx/pack"
 )
 
 // printed runs the tool over args and gives what it wrote to standard output

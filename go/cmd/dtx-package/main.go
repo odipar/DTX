@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"os"
 
-	"dtx/internal/dtx"
-	"dtx/internal/pack"
+	"dtx/dtx"
+	"dtx/pack"
 )
 
 // What -help prints: the synopsis, the one flag, an example, and the section

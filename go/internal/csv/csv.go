@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	"dtx/internal/dtx"
+	"dtx/dtx"
 )
 
 // Table gives the rows of text at the given width, repeating at repeat.

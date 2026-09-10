@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"strings"
 
-	"dtx/internal/dtx"
-	"dtx/internal/image"
+	"dtx/dtx"
+	"dtx/image"
 )
 
 // The state block's fields, from doc/abi.md 3.

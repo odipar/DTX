@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"dtx/internal/dtx"
-	"dtx/internal/image"
+	"dtx/dtx"
+	"dtx/image"
 )
 
 // A header of R rows and C columns at this width, SPEC.md 1.
