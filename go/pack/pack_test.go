@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"dtx/dtx"
-	"dtx/image"
+	"github.com/odipar/dtx/go/dtx"
+	"github.com/odipar/dtx/go/image"
 )
 
 // A header of R rows and C columns at this width, SPEC.md 1.

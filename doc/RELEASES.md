@@ -23,8 +23,12 @@ script's one argument. The pom names the release being cut, and moves to
 the next `-SNAPSHOT` once it is.
 
 The images are built from `68k/` by rmac on the machine that cuts the
-release, and nowhere else: a caller who takes a release does not run an
-assembler, and no image is tracked in the tree.
+release, so the caller's machine has an assembler to install or not as it
+pleases. They are committed under `go/image/data`: a Go module fetched by
+its import path contains the files a commit has in it, and an executable
+built from one embeds these. `ImageTest` reads them against a fresh
+assembly, so an image that does not match what rmac writes today fails the
+build.
 
 ## Published
 

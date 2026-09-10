@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"dtx/dtx"
+	"github.com/odipar/dtx/go/dtx"
 )
 
 // numbers gives comma separated text of rows rows and columns columns, the

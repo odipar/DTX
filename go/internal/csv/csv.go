@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	"dtx/dtx"
+	"github.com/odipar/dtx/go/dtx"
 )
 
 // Table gives the rows of text at the given width, repeating at repeat.

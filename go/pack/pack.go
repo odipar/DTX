@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"strings"
 
-	"dtx/dtx"
-	"dtx/image"
+	"github.com/odipar/dtx/go/dtx"
+	"github.com/odipar/dtx/go/image"
 )
 
 // The state block's fields, from doc/abi.md 3.

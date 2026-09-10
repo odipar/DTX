@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"dtx/st4"
+	"github.com/odipar/dtx/go/st4"
 )
 
 func table(t *testing.T, rows, columns, width int) *Table {

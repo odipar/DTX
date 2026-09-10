@@ -14,8 +14,8 @@ import (
 	"io"
 	"os"
 
-	"dtx/dtx"
-	"dtx/pack"
+	"github.com/odipar/dtx/go/dtx"
+	"github.com/odipar/dtx/go/pack"
 )
 
 // What -help prints: the synopsis, the one flag, an example, and the section

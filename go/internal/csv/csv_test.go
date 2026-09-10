@@ -3,7 +3,7 @@ package csv
 import (
 	"testing"
 
-	"dtx/dtx"
+	"github.com/odipar/dtx/go/dtx"
 )
 
 // The text of the tests here: a comment, a blank line, three rows of three
