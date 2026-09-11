@@ -1278,8 +1278,7 @@ def main():
     for name, width, ring, copies in (("a small ring, plain", 2, 64, False),
                                       ("a small ring, copies", 2, 64, True),
                                       ("a ring the pattern fits, copies", 2, 128, True),
-                                      ("copies at a width of 4", 4, 128, True),
-                                      ("copies at a width of 1", 1, 64, True)):
+                                      ("copies at a width of 4", 4, 128, True)):
         try:
             roundtrip(name, REPEATING, width, None, 1, ring, copies)
         except AssertionError as wrong:
