@@ -156,21 +156,36 @@ def csv_rows(csv, width=None):
 # --------------------------------------------------------------------------
 # The tools.
 
-def run(argv):
-    done = subprocess.run(argv, capture_output=True, text=True)
+def ran(argv, stdin=None):
+    """One tool, and both streams back: the file on standard output and the
+    report on standard error."""
+    done = subprocess.run(argv, input=stdin, capture_output=True)
     if done.returncode != 0:
-        raise SystemExit("%s gave %s%s" % (argv[0], done.stdout, done.stderr))
+        raise SystemExit("%s gave %s%s" % (argv[0],
+                                           done.stdout.decode(errors="replace"),
+                                           done.stderr.decode(errors="replace")))
+    return done.stdout, done.stderr.decode(errors="replace")
+
+
+def run(argv, stdin=None):
+    """One tool, the input on standard input and the output back.
+
+    The writer is a filter (doc/tools.md): it reads the text or the DTX file
+    on standard input and writes the file on standard output, with the report
+    on standard error. So the rig hands it bytes and reads bytes.
+    """
+    done = subprocess.run(argv, input=stdin, capture_output=True)
+    if done.returncode != 0:
+        raise SystemExit("%s gave %s%s" % (argv[0],
+                                           done.stdout.decode(errors="replace"),
+                                           done.stderr.decode(errors="replace")))
     return done.stdout
 
 
 def write_table(csv, variant, width=None, repeat=None, unit=1, ring=960,
                 copies=False):
     """A .dtx file of `csv`, through the Java writer."""
-    work = tempfile.mkdtemp(prefix="dtx68")
-    text, out = os.path.join(work, "t.csv"), os.path.join(work, "t.dtx")
-    with open(text, "w") as f:
-        f.write(csv)
-    argv = ["java", "-cp", CLASSES, "org.dtx.Write", text, out, "-v%d" % variant]
+    argv = ["java", "-cp", CLASSES, "org.dtx.Write", "-v%d" % variant]
     if width:
         argv.append("-w%d" % width)
     if repeat is not None:
@@ -183,9 +198,7 @@ def write_table(csv, variant, width=None, repeat=None, unit=1, ring=960,
             argv.append("-p" + ST4)
         if copies:
             argv.append("-copies")
-    run(argv)
-    with open(out, "rb") as f:
-        return f.read()
+    return run(argv, csv.encode())
 
 
 def package(blob):
@@ -200,16 +213,15 @@ def package(blob):
     calls at ST4_resume's address in it.
     """
     work = tempfile.mkdtemp(prefix="dtx68")
-    src = os.path.join(work, "t.dtx")
-    img = os.path.join(work, "t.bin")
     lst = os.path.join(work, "t.lst")
-    with open(src, "wb") as f:
-        f.write(blob)
     # No -copies: the payload defines it (R5.10), so the packager reads
-    # which decoder the table needs out of the file.
-    run(["java", "-cp", CLASSES, "org.dtx.Packager", src, img])
-    run(["java", "-cp", CLASSES, "org.dtx.Packager", src,
-         os.path.join(work, "DTX_table.i"), "-s"])
+    # which decoder the table needs out of the file. The packager is a
+    # filter too, so the image and the figures come back on standard
+    # output and the rig writes the figures where rmac includes them from.
+    image = run(["java", "-cp", CLASSES, "org.dtx.Packager"], blob)
+    figures = run(["java", "-cp", CLASSES, "org.dtx.Packager", "-s"], blob)
+    with open(os.path.join(work, "DTX_table.i"), "wb") as f:
+        f.write(figures)
     run([RMAC, "-m68000", "-fr", "+o3", "-i" + work,
          "-i" + os.path.join(ROOT, "68k"), "-l*" + lst,
          "-o", os.path.join(work, "code.bin"),
@@ -225,8 +237,7 @@ def package(blob):
                     at[cell[c]] = int(cell[c + 1], 16)
                 except ValueError:
                     pass
-    with open(img, "rb") as f:
-        return f.read(), at
+    return image, at
 
 
 # --------------------------------------------------------------------------
@@ -461,14 +472,15 @@ def package_many(blobs):
     it. The packager prints a line a table past the first, and the offsets
     come off those lines: a caller of DTX_init takes them the same way."""
     work = tempfile.mkdtemp(prefix="dtx68")
-    img = os.path.join(work, "t.bin")
     names = []
     for i, blob in enumerate(blobs):
         src = os.path.join(work, "t%d.dtx" % i)
         with open(src, "wb") as f:
             f.write(blob)
         names.append(src)
-    said = run(["java", "-cp", CLASSES, "org.dtx.Packager"] + names + [img])
+    # Several tables are named, one is standard input (doc/tools.md), and
+    # the image comes back on standard output with the report beside it.
+    image, said = ran(["java", "-cp", CLASSES, "org.dtx.Packager"] + names)
     at = [None] * len(blobs)
     for line in said.splitlines():
         m = re.search(r"table (\d+) at image\+(\d+)", line)
@@ -479,8 +491,7 @@ def package_many(blobs):
             at[0] = int(m.group(1))
     assert all(x is not None for x in at), \
         "the packager did not say where every table stands:\n" + said
-    with open(img, "rb") as f:
-        return f.read(), at
+    return image, at
 
 
 def one_image_several_tables():
@@ -488,10 +499,11 @@ def one_image_several_tables():
     own header (doc/abi.md 2). The code stands once and every row of both
     comes back, so what a caller saves is the code and what it keeps is
     every value."""
-    for variant, unit in ((0, 1), (1, 1), (2, 1), (2, 2)):
+    for variant, unit, width in ((0, 1, 2), (1, 1, 2), (2, 1, 2), (2, 2, 2),
+                                 (0, 1, 4), (1, 1, 4), (2, 1, 4)):
         first = numbers(24, 3, span=97)
         second = numbers(40, 3, span=61)
-        blobs = [write_table(csv, variant, 2, None, unit, 960)
+        blobs = [write_table(csv, variant, width, None, unit, 960)
                  for csv in (first, second)]
         image, at = package_many(blobs)
         # The code stands once: the image is smaller than two images of the
@@ -501,7 +513,7 @@ def one_image_several_tables():
         assert len(image) < alone, "an image of two is no smaller than two"
         state = struct.unpack(">I", image[20:24])[0]
         for csv, table in zip((first, second), at):
-            width, want = csv_rows(csv, 2)
+            _, want = csv_rows(csv, width)
             columns = len(csv_values(csv)[0])
             rows = struct.unpack(">I", image[table + 4:table + 8])[0]
             # The format block gives the first table's stride, so a caller of
@@ -522,7 +534,8 @@ def one_image_several_tables():
                 got.append(m.row(row["a1"], columns, stride, width))
             assert got == want, ("the table at image+%d gave %s, not %s"
                                  % (table, got[:2], want[:2]))
-        yield "DTX%d%s" % (variant, "" if variant != 2 else ", k=%d" % unit), \
+        yield "DTX%d, W=%d%s" % (variant, width,
+                                 "" if variant != 2 else ", k=%d" % unit), \
             len(image), alone
 
 
@@ -614,6 +627,8 @@ ROUND = [
     ("R not a multiple of P", numbers(50, 3), 1, None, 1, 960),
     ("twenty columns", numbers(64, 20), 2, None, 1, 960),
     ("a long table", numbers(300, 2), 2, None, 1, 960),
+    ("a small ring at a width of 4", numbers(64, 2), 4, None, 1, 64),
+    ("an odd R at a width of 4", numbers(51, 2), 4, None, 1, 960),
 ]
 
 # A column that repeats a pattern further back than the ring reaches: what
@@ -655,6 +670,16 @@ PACKED = [
     # splits the refill the row falls inside, so RR and R divide by nothing.
     ("a replayed pass from row 101", numbers(512, 2), 2, 101, 1, 64),
     ("a replayed pass of 511 rows", numbers(511, 2), 2, 0, 1, 64),
+    # A width of 4 through the paths a width of 1 or 2 reached alone: a
+    # ring that wraps often, a loop the ring does not fit, and a table
+    # whose R is odd. The ring stands on a long and N divides by P times
+    # the width, so every value of every column stands on its width; these
+    # walk the pointer round a ring and past a loop to read it back.
+    ("a small ring at a width of 4", numbers(64, 2), 4, None, 1, 64),
+    ("a replayed pass at a width of 4", numbers(512, 2), 4, 0, 1, 960),
+    ("an odd R at a width of 4", numbers(51, 2), 4, None, 1, 960),
+    ("an odd R at a width of 2", numbers(51, 3), 2, None, 1, 960),
+    ("k of 2 at a width of 4", numbers(64, 2), 4, None, 2, 960),
     # A table shorter than a period: where its sets end the seed decodes R
     # rows and the first period's budget is 0, and where they loop it
     # decodes a period's rows round the loop.
@@ -1250,11 +1275,13 @@ def main():
         bad += 1
         print("  FAILED: %s" % wrong)
     print("copies from the literal stream, at a small ring")
-    for name, ring, copies in (("a small ring, plain", 64, False),
-                               ("a small ring, copies", 64, True),
-                               ("a ring the pattern fits, copies", 128, True)):
+    for name, width, ring, copies in (("a small ring, plain", 2, 64, False),
+                                      ("a small ring, copies", 2, 64, True),
+                                      ("a ring the pattern fits, copies", 2, 128, True),
+                                      ("copies at a width of 4", 4, 128, True),
+                                      ("copies at a width of 1", 1, 64, True)):
         try:
-            roundtrip(name, REPEATING, 2, None, 1, ring, copies)
+            roundtrip(name, REPEATING, width, None, 1, ring, copies)
         except AssertionError as wrong:
             bad += 1
             print("  %-32s FAILED: %s" % (name, wrong))
