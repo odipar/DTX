@@ -312,6 +312,13 @@ widths, so at a width of 2 or 4 the pointer and every column off it stand
 on that width's boundary and a 68000 takes the move whole. At a width of 1
 no boundary applies.
 
+A 68000 faults on a word or a long at an odd address and Unicorn's model
+does not, so `68k/test/emu/test_dtx.py` watches every access the reader
+makes and reports a misaligned one as the hardware would. It runs both
+widths through the paths a pointer moves in: a ring that wraps, a loop the
+ring does not fit, a table whose `R` is odd, a unit of 2 and 4, a copy
+from the literal stream, and two tables in one image.
+
 **The pointer stands until the next advance.** Under DTX0 and DTX1 it
 points into the table's own bytes, which nothing writes. Under DTX2 it
 points into a ring, and the refill that would write over it does not come
