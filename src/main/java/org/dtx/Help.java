@@ -75,6 +75,15 @@ final class Help {
                   literal stream. The width is the file's own
               dtx-write -text < t.dtx > t.csv
                   a DTX file of any variant read out as text
+              dtx-write -v2 -k1 < t.csv | dtx-package > t.bin
+                  text into a DTX2 file and on into its image, with no file
+                  between the two
+              dtx-write -v2 -copies5 < t.csv > t.dtx
+                  text into a DTX2 file with copies from the literal stream,
+                  five seconds of search for a better parse
+              dtx-write -v2 -p/usr/local/bin/st4 < t.csv > t.dtx
+                  the same packed by that ST4 executable, in place of the
+                  copy carried here
 
             doc/tools.md, Write.
             """;
@@ -130,6 +139,8 @@ final class Help {
                   the twenty-two images into build/68k, with the rmac on the path
               dtx-blobs build/68k go/image/data -a/usr/local/bin/rmac
                   into two directories, with that rmac
+              dtx-blobs -t/src/dtx/68k build/68k
+                  the templates read from that directory rather than 68k
 
             doc/tools.md, Build the images.
             """;

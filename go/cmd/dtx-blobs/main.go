@@ -48,6 +48,8 @@ Examples
       the twenty-two images into build/68k, with the rmac on the path
   dtx-blobs build/68k go/image/data -a/usr/local/bin/rmac
       into two directories, with that rmac
+  dtx-blobs -t/src/dtx/68k build/68k
+      the templates read from that directory rather than 68k
 
 doc/tools.md, Build the images.
 `

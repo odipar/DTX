@@ -60,6 +60,15 @@ public static class Help
             + "      literal stream. The width is the file's own\n"
             + "  dtx-write -text < t.dtx > t.csv\n"
             + "      a DTX file of any variant read out as text\n"
+            + "  dtx-write -v2 -k1 < t.csv | dtx-package > t.bin\n"
+            + "      text into a DTX2 file and on into its image, with no file\n"
+            + "      between the two\n"
+            + "  dtx-write -v2 -copies5 < t.csv > t.dtx\n"
+            + "      text into a DTX2 file with copies from the literal stream,\n"
+            + "      five seconds of search for a better parse\n"
+            + "  dtx-write -v2 -p/usr/local/bin/st4 < t.csv > t.dtx\n"
+            + "      the same packed by that ST4 executable, in place of the\n"
+            + "      copy carried here\n"
             + "\n"
             + "doc/tools.md, Write.\n";
 
@@ -113,6 +122,8 @@ public static class Help
             + "      the twenty-two images into build/68k, with the rmac on the path\n"
             + "  dtx-blobs build/68k go/image/data -a/usr/local/bin/rmac\n"
             + "      into two directories, with that rmac\n"
+            + "  dtx-blobs -t/src/dtx/68k build/68k\n"
+            + "      the templates read from that directory rather than 68k\n"
             + "\n"
             + "doc/tools.md, Build the images.\n";
 }
