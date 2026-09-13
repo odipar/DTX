@@ -32,6 +32,24 @@ build.
 
 ## Published
 
+### 0.10.1, 2026-09-13
+
+<https://github.com/odipar/DTX/releases/tag/v0.10.1>, built from the commit
+tagged `v0.10.1`.
+
+Four more examples in `-help`. The library, the images and the packaging
+are 0.10.0's, so a table this release packages is the bytes that one
+packaged.
+
+- `dtx-write` gains the pipe into `dtx-package`: 0.9.0 made the tools
+  filters so they would compose, and no example showed two of them
+  composing. It gains `-copies` with a search of seconds besides, and
+  `-pPACKER`, an ST4 executable of the caller's.
+- `dtx-blobs` gains `-tTEMPLATES`, the one flag of its three with no
+  example.
+- `dtx-package` keeps the four it had. They cover both its flags and both
+  shapes of input, and a fifth would say what one of them says.
+
 ### 0.10.0, 2026-09-13
 
 <https://github.com/odipar/DTX/releases/tag/v0.10.0>, built from the commit
