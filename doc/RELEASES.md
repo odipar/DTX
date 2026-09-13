@@ -32,6 +32,44 @@ build.
 
 ## Published
 
+### 0.10.0, 2026-09-13
+
+<https://github.com/odipar/DTX/releases/tag/v0.10.0>, built from the commit
+tagged `v0.10.0`.
+
+The Go module is fetched by its import path, and the rig reaches the tools
+again. The library is as it was: no class, no image and no packaged byte
+moves, so a table this release packages is the bytes 0.9.0 packaged.
+
+- **The Go module is `github.com/odipar/dtx/go`**, which is the path a
+  caller fetches it by: a module in a repository's `go/` has the path of
+  that directory, and the name `dtx` reached no one. Every import follows.
+  A version is a tag of the directory, `go/v0.10.0` beside `v0.10.0`.
+- **The twenty-two images are committed under `go/image/data`.** A module
+  fetched by its path contains the files a commit has in it, so a tree
+  without them built an executable that embedded none. `ImageTest` reads
+  them against a fresh assembly of `68k/`, so an image that does not match
+  what rmac writes today fails the build.
+- **The rig reaches the tools again.** 0.9.0 made the two tools filters
+  and the rig went on naming files, so it stopped at its first table and
+  the alignment check of issue #73 had not run since. The rig hands the
+  tools bytes on standard input now. With it running, every table passes
+  at every width, and the check bites: inverted to fault on an aligned
+  access it reports one at the first read.
+- Both widths reach the paths a pointer moves in, which a width of 1 or 2
+  reached alone: a ring that wraps at a width of 4, a loop the ring does
+  not fit at 4, an odd `R` at 2 and at 4, a unit of 2 at a width of 4, a
+  copy from the literal stream at 1 and at 4, and two tables in one image
+  at 4. Twelve cases, and no address odd in any.
+- **`RigCallsTest` runs on every build.** The rig takes four minutes, so
+  no build runs it, and that is how its calls went unread. The test
+  imports the rig and runs the two helpers that reach a tool, over a table
+  of two rows: no emulator, no assembler, under a second.
+- The copy case at a width of 1 is out of the rig. No boundary applies at
+  a width of 1, so it read the copy path a second time and cost 1.2
+  seconds. The width of 4 stays, which is the copy path where a 68000
+  aligns.
+
 ### 0.9.0, 2026-09-10
 
 <https://github.com/odipar/DTX/releases/tag/v0.9.0>, built from the commit
