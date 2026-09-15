@@ -55,7 +55,7 @@ public final class Write {
             } else if (arg.startsWith("-m")) {
                 ring = number(arg);
             } else if (arg.startsWith("-copies")) {
-                // the packer's own: a match beyond the ring copies from the
+                // the packer's flag: a match beyond the ring copies from the
                 // literal stream, and -copiesS searches S seconds for a
                 // better parse. YMX spells it the same way.
                 copies = "-c" + arg.substring(7);

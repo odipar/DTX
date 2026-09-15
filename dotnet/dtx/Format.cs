@@ -34,7 +34,7 @@ public static class Format
 
     /// <summary>
     /// The flags bit at payload byte 3 that marks every column was packed
-    /// with copies from its own literal stream, R5.10.
+    /// with copies from its literal stream, R5.10.
     /// </summary>
     public const int CopiesFlag = 1;
 

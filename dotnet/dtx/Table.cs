@@ -98,17 +98,17 @@ public sealed class Table
 /// <para>DTX2 defines a column as an ST4 data set (R5.1) and does not
 /// define how ST4 packs. St4Packer packs with the copy in this
 /// repository, St4Beside runs a packer beside it, and a caller that writes DTX2
-/// may supply one of its own.</para>
+/// may supply a separate one.</para>
 /// </summary>
 public interface IPacker
 {
     /// <summary>
-    /// column as one complete ST4 data set: its own header, and the length
+    /// column as one complete ST4 data set: its header, and the length
     /// of what it unpacks to.
     /// </summary>
     /// <param name="column">the bytes of DTX1's column</param>
     /// <param name="unit">the unit to pack at, 1, 2 or 4, which the data
-    /// set's own signature then gives (R5.2)</param>
+    /// set's signature then gives (R5.2)</param>
     /// <param name="ring">the bytes past which no back reference in the data
     /// set reaches (R5.4)</param>
     /// <param name="loop">the unit the set decodes back to when it reaches
@@ -119,7 +119,7 @@ public interface IPacker
     byte[] Pack(byte[] column, int unit, int ring, int loop);
 
     /// <summary>
-    /// Whether a match beyond the ring copies from the column's own literal
+    /// Whether a match beyond the ring copies from the column's literal
     /// stream, which ST4 packs with -c.
     ///
     /// <para>A decoder built without the copy code reads such a column

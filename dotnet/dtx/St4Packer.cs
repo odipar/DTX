@@ -32,7 +32,7 @@ public sealed class St4Packer : IPacker
     }
 
     /// <summary>
-    /// A packer that so that a match beyond the ring copies from the column's own
+    /// A packer under which a match beyond the ring copies from the column's
     /// literal stream, which packs a small ring far smaller.
     /// </summary>
     /// <param name="copies">whether to pack copies</param>
@@ -66,7 +66,7 @@ public sealed class St4Packer : IPacker
             throw new ArgumentException($"the loop is unit -1 to"
                     + $" {units.Length - 1} of the column, not {loop}");
         }
-        // ST4 packs a loop two ways, and this makes the same test its own
+        // ST4 packs a loop two ways, and this makes the same test its
         // packer makes: the end marker's endless match where a back
         // reference reaches the loop's first unit, and a replayed pass
         // where it does not.
@@ -112,7 +112,7 @@ public sealed class St4Packer : IPacker
 ///
 /// <para><see cref="St4Packer"/> packs with the copy in this repository,
 /// and a tool takes it where none is named. This runs another: an ST4
-/// build of its own, named by <c>-p</c>, so a packer newer than the copy
+/// separate build, named by <c>-p</c>, so a packer newer than the copy
 /// here is used through this.</para>
 /// </summary>
 public sealed class St4Beside : IPacker
@@ -162,7 +162,7 @@ public sealed class St4Beside : IPacker
             }
             if (loop >= 0)
             {
-                // st4 -r takes the loop's own unit, and works out for itself
+                // st4 -r takes the loop's unit, and works out for itself
                 // whether a back reference reaches the loop's first unit or
                 // the pass has to be replayed
                 start.ArgumentList.Add(

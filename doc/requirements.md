@@ -40,7 +40,7 @@ before what it describes, and what things are called comes before both.
   not change with the variant: the same `R`, `C` and `RR`, the same width,
   and the same rows in the same order.
 - **R1.4** Nothing about what a column contains. A format built on this one
-  defines that in its own repository.
+  defines that in its repository.
 
 ## R2. The variants
 
@@ -85,7 +85,7 @@ before what it describes, and what things are called comes before both.
 - **R5.1** The rows laid out column by column, each column packed with
   ST4.
 - **R5.2** One unit `k` for a payload. The `k` the payload defines and the
-  `k` in every data set's own signature are the same, and a reader checks
+  `k` in every data set's signature are the same, and a reader checks
   one against the other.
 - **R5.3** A reader has one ST4 decoder, built for that `k`, and takes
   every column of the payload through it. ST4 code is built for a unit,
@@ -108,7 +108,7 @@ before what it describes, and what things are called comes before both.
   has `N` bytes of a column at a time, not the column.
 - **R5.9** An ST4 data set begins on a long.
 - **R5.10** The payload defines whether its columns contain copies from their
-  own literal streams. A decoder built without the copy code reads such a
+  literal streams. A decoder built without the copy code reads such a
   column wrongly, and no data set defines which kind it is, so a reader that
   took it from anywhere but the file could be given one that differs from the
   bytes.
@@ -135,7 +135,7 @@ otherwise.
 - **R6.4** `RR` names a row of the table, 0 to `R` minus one, or is `R`
   itself where the table does not repeat.
 - **R6.5** A reader given a table that breaks any of these, or R5.6, or a
-  payload whose data sets do not give its own `k` and ST4's format
+  payload whose data sets do not give its `k` and ST4's format
   version 7, reports it and does not read further. What it reports is
   SPEC.md's.
 
@@ -144,7 +144,7 @@ otherwise.
 What R1 to R6 do not yet define. Each is open, and none of it is fixed by
 [doc/SPEC.md](SPEC.md), which defines the format R1 to R6 require.
 
-- Whether a table defines its own length, and whether a reader needs one to
+- Whether a table defines its length, and whether a reader needs one to
   read it.
 - What a reader reports of a table it will not read. R6.5 has it report and
   not read further, and leaves what it reports to SPEC.md, which has not

@@ -9,7 +9,7 @@ const maxOp = 65535
 // Packer packs a column with the port in this package, so a tool writes
 // DTX2 with no packer beside it.
 //
-// CopiesFlag so that a match beyond the ring copies from the column's own literal
+// CopiesFlag so that a match beyond the ring copies from the column's literal
 // stream, which packs a small ring far smaller. Seconds searches that long
 // beyond the opening passes for a better parse, or zero for those passes
 // alone: a search of no seconds is the same parse every run, one of some
@@ -38,7 +38,7 @@ func (p Packer) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 		return nil, fmt.Errorf("the loop is unit -1 to %d of the column,"+
 			" not %d", len(units)-1, loop)
 	}
-	// ST4 packs a loop two ways, and this makes the same test its own packer
+	// ST4 packs a loop two ways, and this makes the same test its packer
 	// makes: the end marker's endless match where a back reference reaches
 	// the loop's first unit, and a replayed pass where it does not.
 	if loop >= 0 && len(units)-loop > offsetLimit {

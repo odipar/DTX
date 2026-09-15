@@ -5,7 +5,7 @@
 // defines how they are built and doc/abi.md what each of them does.
 //
 // The files are build output. The Maven build writes them into data/, which
-// go:embed reads only inside its own module. A tree built without them does
+// go:embed reads only inside its module. A tree built without them does
 // not contain one: Read gives nil back and the caller resolves an image as it
 // otherwise would.
 package image

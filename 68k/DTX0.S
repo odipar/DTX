@@ -11,13 +11,13 @@
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, RR and the row's bytes reach it at
 ; run time rather than at assembly time: DTX_init reads them out of the format
-; block and the table's own header and writes them into the instructions that
+; block and the table's header and writes them into the instructions that
 ; take them. Every DTX0 image contains the same instructions, byte for byte;
 ; the table behind them differs.
 ;
 ; That costs a read-only image. The code writes to itself at init, so it
 ; stands in RAM rather than ROM, and a 68030 caller flushes the instruction
-; cache after DTX_init. A 68000 writes to its own code freely.
+; cache after DTX_init. A 68000 writes to its code freely.
 ;
 ; DTX0 lays the rows one after another, so one pointer walks them and a read is
 ; one run of bytes. The width every value takes does not reach this file: a row
@@ -26,7 +26,7 @@
 ; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here contains them: _columns is the
 ; last label and the code ends on a long, so the packager appends the .dtx
 ; file to what rmac writes and _columns is where it lands. DTX0 does not have
-; a column table, so under this variant the table's own header is the first
+; a column table, so under this variant the table's header is the first
 ; byte there.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
@@ -60,7 +60,7 @@
 ; jump to reach, and leaves the pointer a row below row 0, so the advance
 ; into row 0 steps like any other advance.
 ;
-; The row's bytes come out of the table's own header and not out of the
+; The row's bytes come out of the table's header and not out of the
 ; format block, which gives the first table's: an image contains several
 ; tables, and the figure below stands in three instructions, so it is this
 ; table's or the reads are another's.

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
  * (tools.md) the rig went on naming files and stopped at its first table.
  * The check was in the rig and the rig was not run.
  *
- * <p>So this makes the rig's own calls, out of the rig's own code: it
+ * <p>So this makes the rig's calls, out of the rig's code: it
  * imports the module and runs the two helpers that reach a tool, over a
  * table of two rows. No emulator runs and no assembler, and it takes under
  * a second. It catches a tool's interface moving under the rig, the fault
@@ -68,7 +68,7 @@ final class RigCallsTest {
         }
     }
 
-    /** The rig's own text, for the argument shapes it builds. */
+    /** The rig's text, for the argument shapes it builds. */
     private static String rig() throws IOException {
         return Files.readString(Rig.root().resolve(RIG));
     }
@@ -82,7 +82,7 @@ final class RigCallsTest {
     }
 
     /** The flags in the rig that belong to another program: the JVM's
-     *  classpath, and the assembler's own, which rmac reads. */
+     *  classpath, and the assembler's, which rmac reads. */
     private static final List<String> ANOTHER_PROGRAMS =
             List.of("-cp", "-fr", "-i", "-o");
 

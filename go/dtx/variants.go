@@ -11,7 +11,7 @@ import (
 //
 // A value falls where the width puts it, so under a width of 1 a row can
 // begin on an odd offset and a reader takes it as bytes (R3.4). Under a
-// width of 2 or 4 every value stands on its own boundary.
+// width of 2 or 4 every value stands on its boundary.
 func WriteDtx0(t *Table) []byte {
 	head := t.Header(DTX0)
 	width := t.Width()
@@ -133,7 +133,7 @@ func Read(file []byte) (*Table, error) {
 const MaxRing = 65535
 
 // CopiesFlag is the flags bit at payload byte 3 that marks every column was
-// packed with copies from its own literal stream, R5.10.
+// packed with copies from its literal stream, R5.10.
 const CopiesFlag = 1
 
 // A Packer makes one ST4 data set of one column.
@@ -142,7 +142,7 @@ const CopiesFlag = 1
 // ST4 packs: the copy of ST4 carried in internal/st4 packs, or a packer
 // beside it that -p names.
 type Packer interface {
-	// Pack gives column as one complete ST4 data set: its own header, and
+	// Pack gives column as one complete ST4 data set: its header, and
 	// the length of what it unpacks to. loop is the unit the set decodes
 	// back to when it reaches the end, so that it decodes forever, or -1
 	// where the set ends (R5.11). It is an error to give a loop to a packer
@@ -151,7 +151,7 @@ type Packer interface {
 	Pack(column []byte, unit, ring, loop int) ([]byte, error)
 
 	// Copies gives whether a match beyond the ring copies from the
-	// column's own literal stream, which ST4 packs with -c. The packer
+	// column's literal stream, which ST4 packs with -c. The packer
 	// defines it: a flag carried beside a file could differ from the
 	// bytes in it, and one the packer wrote cannot (R5.10).
 	Copies() bool
@@ -257,7 +257,7 @@ type Packed struct {
 // ReadPacked reads those out of a DTX2 payload, SPEC.md 2.3.
 //
 // It checks the data sets against it. Every set opens with $53 $34 $07 k, so
-// one compare against the payload's own k checks ST4's signature, its format
+// one compare against the payload's k checks ST4's signature, its format
 // version and R5.2 at once.
 func ReadPacked(file []byte, header Header) (Packed, error) {
 	payload := header.Length()
@@ -305,7 +305,7 @@ func ReadPacked(file []byte, header Header) (Packed, error) {
 // the next offset above it, or to the end of the file.
 //
 // It is an error where the file is not DTX2, a data set does not open with
-// the payload's own unit (R5.2), or a column unpacks to other than R times
+// the payload's unit (R5.2), or a column unpacks to other than R times
 // the width.
 func ReadDtx2(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)

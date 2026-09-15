@@ -6,8 +6,8 @@ using System.IO;
 /// arguments - what <c>java -cp target/classes &lt;class&gt;</c> is to the
 /// Java tree, <c>dotnet dtx.dll &lt;tool&gt;</c> is to this one.
 ///
-/// <para>Published under a tool's own name, the executable is that tool and
-/// every argument is its own.</para>
+/// <para>Published under a tool's name, the executable is that tool and
+/// every argument is separate.</para>
 /// </summary>
 public static class Program
 {

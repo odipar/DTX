@@ -12,7 +12,7 @@ decision, and this section is here so that the decision is informed.
 What it is built on is not new. ST4, which a DTX2 column is packed with, is
 derived from Einar Saukas's ZX1 through ST1, and its 68000 decoder is
 carried here rather than rewritten. The 68000 reader is measured against
-the timings in Motorola's own manual.
+the timings in Motorola's manual.
 
 ## What the format is
 
@@ -24,7 +24,7 @@ reader and not to the format, so the specification defines what the bytes
 are and what a reader takes out of them, and no more than that.
 
 DTX does not define what a column contains. A format built on DTX defines
-that, in its own repository and against what this one defines.
+that, in its repository and against what this one defines.
 
 Three variants lay one table out three ways, and a file names which:
 
@@ -62,14 +62,14 @@ Read it back out as text, which is how a DTX file is inspected:
 dtx-write -text < table.dtx > back.csv
 ```
 
-Convert between variants, or pack one at a unit and ring of your own:
+Convert between variants, or pack one at a unit and ring you set:
 
 ```bash
 dtx-write -v2 -k2 -m960 < table.dtx > packed.dtx
 ```
 
 There are three tools, and [doc/tools.md](doc/tools.md) gives every flag of
-each. `-help` on any of them prints its own usage and examples.
+each. `-help` on any of them prints its usage and examples.
 
 | tool | what it does |
 |---|---|
@@ -168,7 +168,7 @@ The format may be implemented freely. `doc/SPEC.md` is the contract, and an
 independent reader or writer owes only the acknowledgement.
 
 The readers, writers and tests under `src/`, `go/`, `dotnet/` and `68k/`
-can be used freely within your own programs, for any platform, including
+can be used freely within your programs, for any platform, including
 commercial releases, on the one condition that your documentation indicates
 somewhere that you have used DTX. See [LICENSE](LICENSE) for the whole of
 it, and for the BSD 3-Clause License that covers the carried ST4 compressor.

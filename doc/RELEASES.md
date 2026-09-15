@@ -123,10 +123,10 @@ tagged `v0.8.0`.
 on the three calls that take it.** `DTX_metadata` reads the image alone
 and is as it was.
 
-- Under DTX2 the reader keeps its own figures in `a6` and ST4 leaves
+- Under DTX2 the reader keeps its figures in `a6` and ST4 leaves
   `a6` alone, so a block in `a0` cost a call three instructions: the
   caller's `a6` parked, `a0` moved into it, and `a6` taken back. Those
-  are gone, and DTX0 and DTX1 reach their own fields through `a6` where
+  are gone, and DTX0 and DTX1 reach their fields through `a6` where
   they reached them through `a0`.
 - An advance under DTX2 reads 640 to 892 cycles on three columns of two
   byte values at `k` of 1 where it read 676 to 928, and 1,076 on twenty
@@ -154,7 +154,7 @@ the image plus the format block's +8, which it may read at build time.
   table and a table's bytes for each, every pair on a long. Every table
   in an image is of the variant and the width the code was built for, and
   under DTX2 of its unit and copies flag, and shares `P` and `N` with the
-  rest; `R`, `C` and `RR` are each table's own. So a caller with several
+  rest; `R`, `C` and `RR` are each table's. So a caller with several
   tables of one shape takes the reader once rather than once a table.
 - `DTX_init` takes `a1`, the table's header. `DTX_payload` is handed that
   header rather than deriving one, and under DTX2 the column table is
@@ -180,7 +180,7 @@ the image plus the format block's +8, which it may read at build time.
   `dtx-package [in.dtx...] > out.bin` takes the tables it is named and
   prints where each stands.
 - Two sentences of abi.md that were wrong are corrected: DTX1 leaves its
-  own code unwritten, so a DTX1 image may stand in ROM, and no site is
+  code unwritten, so a DTX1 image may stand in ROM, and no site is
   written with `R` or `RR` for an advance's compares.
 
 ### 0.6.0, 2026-09-07
@@ -227,7 +227,7 @@ before, and no tool's output changes but the state block's size.
   rows of three two byte columns an advance is 658 to 1002 cycles where
   it was 1180 to 1358, and on twenty columns 1094 where it was 1616.
 - A replayed pass puts each column's registers away, and takes them back,
-  at that column's own refill, in the period after the loop's row and the
+  at that column's refill, in the period after the loop's row and the
   period after the pass's row. It copied every column's in one call, 170
   cycles a column, on the row before each.
 - The state block is 72 plus 48`P` plus `NC` under DTX2, and 32`C` more
@@ -253,7 +253,7 @@ all: a DTX2 table that repeats. What broke is the 68000 side.
 
 - An advance gives the address of the row's first value and nothing else.
   It gave the row in `d0` as well, or $FFFFFFFF at the end. A row is what a
-  jump takes, and a caller counts its own rows against the `R` and `RR`
+  jump takes, and a caller counts its rows against the `R` and `RR`
   that `DTX_metadata` gives.
 - The state block is 12 bytes under DTX0 and DTX1 where it was 20, and 56
   plus 32`C` plus `NC` under DTX2 where it was 52. A caller reads its size
@@ -292,7 +292,7 @@ What changed since 0.3.0:
 <https://github.com/odipar/DTX/releases/tag/v0.3.0>, built from the commit
 tagged `v0.3.0`.
 
-**It reads 0.2.0's files, and 0.2.0 reads its own.** The format, the four
+**It reads 0.2.0's files, and 0.2.0 reads 0.3.0's.** The format, the four
 calls and the state block are what 0.2.0 defined; what changed is the code
 behind the calls and what the tools print.
 
@@ -358,7 +358,7 @@ What changed since 0.1.0:
 <https://github.com/odipar/DTX/releases/tag/v0.1.0>, built from the commit
 tagged `v0.1.0`. The first release, so this lists what there is rather than
 what changed: DTX0, DTX1 and DTX2 as SPEC.md defined them at that tag, each
-column of its own width; one 68000 image a build, eight in one zip, under the
+column of its width; one 68000 image a build, eight in one zip, under the
 calling convention of abi.md; the four tools of tools.md, as executables for
 the six platforms; and the ST4 packer carried in each tree, so a DTX2 table
 packs with nothing installed beside the tools.

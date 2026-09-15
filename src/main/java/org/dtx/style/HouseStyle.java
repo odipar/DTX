@@ -21,7 +21,7 @@ import org.dtx.style.Construct.Match;
  *
  * <p>The documents and sources are found rather than listed: a list is a
  * place a new file is not. What is carried from another repository is not
- * read, since a copy follows its own tree's style, and the documents that
+ * read, since a copy follows its tree's style, and the documents that
  * give the rules are not read either, since they quote what they strike.
  *
  * @param constructs every construct struck, in the order STRUCK.md lists
@@ -30,7 +30,7 @@ import org.dtx.style.Construct.Match;
  *     lowered
  * @param carried fragments of a path that mark a file as carried from
  *     another repository
- * @param own ends of a path that mark a file as the tree's own despite
+ * @param own ends of a path that mark a file as the tree's despite
  *     standing among carried ones
  */
 public record HouseStyle(List<Construct> constructs, List<String> names,
@@ -129,7 +129,7 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
     }
 
     /**
-     * {@code line} lowered, with the names blanked to their own length, so
+     * {@code line} lowered, with the names blanked to their length, so
      * an offset into the result is an offset into the line.
      */
     public String lower(String line) {
@@ -183,7 +183,7 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
 
     /**
      * The hits in a document. A paragraph runs to a blank line, a table row,
-     * an indented block or a fence, and each of those is read on its own:
+     * an indented block or a fence, and each of those is read alone:
      * joining them would put words side by side that no sentence puts there.
      */
     public List<Hit> document(Path file, List<String> lines) {

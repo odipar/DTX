@@ -22,7 +22,7 @@ final class Rig {
     private Rig() {
     }
 
-    /** The repository's own directory, found from the working one. */
+    /** The repository's directory, found from the working one. */
     static Path root() {
         Path at = Path.of("").toAbsolutePath();
         while (at != null && !Files.isDirectory(at.resolve("68k"))) {
@@ -77,7 +77,7 @@ final class Rig {
         }
     }
 
-    /** The same, in the repository's own directory. */
+    /** The same, in the repository's directory. */
     static String run(List<String> argv) {
         return run(root(), argv);
     }

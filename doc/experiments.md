@@ -54,7 +54,7 @@ back than a ring of 64:
 
 Without copies the ring is too short for the pattern and DTX2 packs to
 more than DTX1. With them a match beyond the ring copies from the column's
-own literal stream, and the file is under a fifth of DTX1's. The image
+literal stream, and the file is under a fifth of DTX1's. The image
 moves less than the file, since the code inside it does not move.
 
 ## What the copy code costs
@@ -71,7 +71,7 @@ In an image the difference is 32, 32 and 36 bytes: the decoder stands on a
 long, and the 30 rounds up to one. In cycles, on a column without copies,
 the copy code costs what performance.md's last table gives, about 0.2
 percent, at every `k`: the two decoders differ at init, where the one with
-the copy code writes the ring's size into two of its own instructions, and
+the copy code writes the ring's size into two of its instructions, and
 not in a row.
 
 ## ST4_wrap against ST4_ring

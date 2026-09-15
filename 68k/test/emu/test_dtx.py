@@ -495,8 +495,8 @@ def package_many(blobs):
 
 
 def one_image_several_tables():
-    """Two tables of one shape in one image, each read through init on its
-    own header (doc/abi.md 2). The code stands once and every row of both
+    """Two tables of one shape in one image, each read through init on a
+    separate header (doc/abi.md 2). The code stands once and every row of both
     comes back, so what a caller saves is the code and what it keeps is
     every value."""
     for variant, unit, width in ((0, 1, 2), (1, 1, 2), (2, 1, 2), (2, 2, 2),
@@ -517,7 +517,7 @@ def one_image_several_tables():
             columns = len(csv_values(csv)[0])
             rows = struct.unpack(">I", image[table + 4:table + 8])[0]
             # The format block gives the first table's stride, so a caller of
-            # another works out its own: the width under DTX0, the column's
+            # another derives it: the width under DTX0, the column's
             # length on a word under DTX1, and the ring, which every table of
             # an image shares, under DTX2 (doc/abi.md 1).
             if variant == 0:
@@ -692,7 +692,7 @@ PACKED = [
 # 68000 cycles. Every instruction the machine runs is given the cycles the
 # M68000 user's manual's tables give it, out of its opcode words and, for a
 # branch or a loop, out of where the machine went next. The cycles are the
-# processor's own, with no wait state: a machine whose bus rounds an access
+# processor's, with no wait state: a machine whose bus rounds an access
 # up, as an Atari ST's does, takes longer.
 
 class Unknown(Exception):

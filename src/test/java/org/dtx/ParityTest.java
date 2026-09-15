@@ -231,7 +231,7 @@ class ParityTest {
     void everyTreePackagesTheSameImageOfSeveralTables() throws IOException {
         Path work = work();
         // An image of several tables is where the trees could drift apart
-        // without a case of their own: the layout past the first table, the
+        // without a separate case: the layout past the first table, the
         // padding between the pairs, and which figures the format block
         // gives (doc/abi.md 1).
         record Case(String name, int variant, int width, int unit, boolean copies) {}

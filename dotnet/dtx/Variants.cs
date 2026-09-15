@@ -9,7 +9,7 @@ public static class Variants
     ///
     /// <para>A value falls where the width puts it, so at a width of 1 a row
     /// can begin on an odd offset and a reader takes it as bytes (R3.4). At
-    /// a width of 2 or 4 every value stands on its own boundary.</para>
+    /// a width of 2 or 4 every value stands on its boundary.</para>
     /// </summary>
     public static byte[] WriteDtx0(Table table)
     {
@@ -228,7 +228,7 @@ public static class Variants
     /// offset above it, or to the end of the file.
     /// </summary>
     /// <exception cref="ArgumentException">where the file is not DTX2, a
-    /// data set does not open with the payload's own unit (R5.2), or a
+    /// data set does not open with the payload's unit (R5.2), or a
     /// column unpacks to other than R times the width</exception>
     public static Table ReadDtx2(byte[] file)
     {

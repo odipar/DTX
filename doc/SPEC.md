@@ -130,7 +130,7 @@ columns of three, and a pad byte after the first two.
 ### 2.3 DTX2, column by column and packed
 
 `C` ST4 data sets, one a column. A column's data set packs the bytes of
-DTX1's column `i` and is complete: its own ST4 header, and the
+DTX1's column `i` and is complete: its ST4 header, and the
 length of what it unpacks to.
 
 Every data set in a payload is packed at one unit and unpacks through a
@@ -141,7 +141,7 @@ sets are:
 |---|---|---|
 | 0 | 2 | `N`, the bytes of the ring a column unpacks through |
 | 2 | 1 | `k`, the unit every data set is packed at: 1, 2 or 4 |
-| 3 | 1 | the flags: bit 0 marks a payload whose columns contain copies from their own literal streams. The other bits are zero |
+| 3 | 1 | the flags: bit 0 marks a payload whose columns contain copies from their literal streams. The other bits are zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
 R5.8 needs `N`. A reader takes it once and has a ring of that many bytes,
@@ -156,7 +156,7 @@ pointer arithmetic runs every column (R5.4, R5.5).
 2, and one of one byte values at a unit of 4.
 
 **The flags byte.** Bit 0 marks a payload whose every column was packed so
-that a match beyond the ring copies from that column's own literal stream,
+that a match beyond the ring copies from that column's literal stream,
 which ST4 packs with `-c`. A decoder built without the copy code reads such
 a column wrongly, and nothing in an ST4 data set defines which kind it is, so
 the payload defines it (R5.10). In a payload that defines it every column
@@ -208,7 +208,7 @@ is defined in full in [ST4](https://github.com/odipar/ST4).
   +----+--+--+------+------+------+========+=========+=======+
      2  1  1     4      4      4    col 0    col 1     col 2
    \    4     /\  the offsets, 4C /\ each on a long, each with
-                                      its own header and length
+                                      its header and length
 ```
 
 A reader unpacks a column through its ring rather than into `R` times `W`

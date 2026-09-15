@@ -80,7 +80,7 @@ func main() {
 }
 
 // plain does not pack: it hands the column back inside an ST4 data set and
-// defines the build's own copies flag.
+// defines the build's copies flag.
 //
 // The assembler reads only a data set's four stream offsets, not the streams,
 // so a data set whose streams are the column itself fixes every figure the

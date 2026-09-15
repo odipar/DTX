@@ -234,7 +234,7 @@ func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int,
 			code[FormatAt+3], header.Variant)
 	}
 	// The code ends where the format block puts the column table: the
-	// two match, or the image reads its own last instruction as a column.
+	// two match, or the image reads its last instruction as a column.
 	columns := dtx.GetLong(code, FormatAt+ColumnsAt)
 	if columns != len(code) {
 		return nil, nil, fmt.Errorf("the code runs to %d bytes and the format"+
@@ -423,7 +423,7 @@ func equ(name string, value int) string {
 
 // Figures gives what one table gives, as a template reads it: the equates,
 // and no instruction. R, C and RR reach the code at run time instead, out of
-// the table's own header, and what is left is the width, the row's bytes and
+// the table's header, and what is left is the width, the row's bytes and
 // the state block, and under DTX2 the period, N, the unit and the copy code
 // (doc/tools.md).
 func Figures(file []byte) (string, error) {
@@ -461,7 +461,7 @@ func Figures(file []byte) (string, error) {
 	if variant != dtx.DTX2 {
 		// Nothing parks a6 under the plain variants, so the payload
 		// init was given stands in that long instead, which a jump
-		// reaches (abi.md 3). Under DTX2 the template names its own.
+		// reaches (abi.md 3). Under DTX2 the template names it.
 		out.WriteString(equ("DTX_PAYLOAD", Park))
 	}
 	out.WriteString("\n; What the code takes at assembly time.\n")
@@ -480,7 +480,7 @@ func Figures(file []byte) (string, error) {
 		out.WriteString(equ("DTX_N", given.Ring))
 		// The payload defines whether its columns contain copies (R5.10), so
 		// the decoder built for them is fixed by the file. That build
-		// writes the reach into two of its own instructions, and a 68030
+		// writes the reach into two of its instructions, and a 68030
 		// caller flushes the instruction cache after every call that seeds
 		// a decoder.
 		if given.Copies {
