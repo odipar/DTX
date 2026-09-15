@@ -7,7 +7,7 @@ using System.Globalization;
 /// An <see cref="IPacker"/> that packs with the copy of ST4 in this
 /// repository.
 ///
-/// <para>dotnet/nt4 is that copy, carried from odipar/ST4@19a77dd and not
+/// <para>dotnet/nt4 is that copy, carried from odipar/ST4@07097fb and not
 /// edited here. So a tool writes DTX2 with no packer beside it, and
 /// <see cref="St4Beside"/> runs one where a caller names it.</para>
 ///
