@@ -81,7 +81,7 @@ public final class Packager {
      * What a DTX2 payload gives, SPEC.md 2.3.
      *
      * <p>It checks the data sets against it. Every set opens with
-     * {@code $53 $34 $07 k}, so one compare against the payload's own
+     * {@code $53 $34 $07 k}, so one compare against the payload's
      * {@code k} checks ST4's signature, its format version and R5.2 at once.
      *
      * @throws IllegalArgumentException where a data set defines another
@@ -239,7 +239,7 @@ public final class Packager {
         // The payload defines whether its columns contain copies (R5.10), so
         // the decoder built for them is fixed by the file and not by a
         // word carried beside it. That build writes the reach into two of
-        // its own instructions, and a 68030 caller flushes the instruction
+        // its instructions, and a 68030 caller flushes the instruction
         // cache after every call that seeds a decoder.
         boolean copies = packed.copies();
 
@@ -259,7 +259,7 @@ public final class Packager {
         if (variant != Dtx.DTX2) {
             // Nothing parks a6 under the plain variants, so the payload
             // init was given stands in that long instead, which a jump
-            // reaches (abi.md 3). Under DTX2 the template names its own.
+            // reaches (abi.md 3). Under DTX2 the template names it.
             out.append(equ("DTX_PAYLOAD", PARK));
         }
         out
@@ -495,7 +495,7 @@ public final class Packager {
                     + code[FORMAT_AT + 3] + " and the table is DTX" + variant);
         }
         // The code ends where the format block's column table offset
-        // points: the two match, or the image reads its own last
+        // points: the two match, or the image reads its last
         // instruction as a column.
         int columns = Dtx.getLong(code, FORMAT_AT + COLUMNS_AT);
         if (columns != code.length) {
@@ -520,7 +520,7 @@ public final class Packager {
         // Each table's column table stands immediately before it, and the
         // pair begins on a long: init reaches the records at the header
         // less 16C, and a header on a long is what SPEC.md 1 asks of a
-        // table's own bytes.
+        // table's bytes.
         int state = variant == Dtx.DTX2 ? stateBytes(header, given) : stateBytes();
         int at = code.length;
         int[] headers = new int[files.size()];

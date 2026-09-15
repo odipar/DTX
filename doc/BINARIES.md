@@ -6,7 +6,7 @@ combines one with a table.
 ## The twenty-two
 
 One variant is one code. `R`, `C` and `RR` reach the code at run time, out of
-the table's own header, so a variant assembles to one code at any number of
+the table's header, so a variant assembles to one code at any number of
 rows or columns. The width does not reach it that way: every value of a table
 takes one width (R6.3), and that width reaches the assembler, so a read moves
 a value in one instruction and no call reads a width a column. One build a

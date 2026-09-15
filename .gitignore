@@ -23,7 +23,7 @@ dist/
 dotnet/bin/
 dotnet/obj/
 
-# go/internal/image/data contains its own .gitignore, as YMX's cores/data
+# go/internal/image/data contains a .gitignore, as YMX's cores/data
 # does: the images there are build output and the directory itself is
 # committed so that go:embed always has one to read.
 

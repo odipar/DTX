@@ -64,7 +64,7 @@ class StabilityTest {
     }
 
     /**
-     * The instructions alone: rmac's own assembly of the template for this
+     * The instructions alone: rmac's assembly of the template for this
      * table, with the four slots, the format block and what stands behind the
      * code taken off.
      *

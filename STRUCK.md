@@ -278,6 +278,21 @@ a verb with nothing for an object
     in: DTX0 has none
     not: nothing decodes it, and no row is read
 
+## No possessive decoration
+
+A possessive that decorates rather than distinguishes: a table of its own is
+a table, and the two chips' own figures are the figures of the two chips.
+Prefer *each*, *separate* or *a*.
+
+a possessive own
+    \b(?:its|their|his|her|our|your|[a-z]+s'|[a-z]+'s) own\b
+    in: a table of its own
+    in: the two chips' own figures
+    in: each source opens its own table
+    in: the rig's own assembler
+    not: the owner of the resource
+    not: a known offset
+
 ## Shape
 
 No em dash construct anywhere: a dash that must stay is a single `-`. The

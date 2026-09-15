@@ -13,7 +13,7 @@ import (
 //
 // CopiesFlag reaches it as -c, or -cS for a search of S seconds, or is
 // empty for none. A column packed that way so that a match beyond the ring
-// copies from its own literal stream, which packs a small ring far smaller;
+// copies from its literal stream, which packs a small ring far smaller;
 // the payload then defines it (R5.10) and the reader of it takes a decoder
 // built with the copy code.
 type Beside struct {
@@ -46,7 +46,7 @@ func (p Beside) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	argv := []string{"-f", "-k" + strconv.Itoa(unit),
 		"-m" + strconv.Itoa(offsetLimit), "-l65535"}
 	if loop >= 0 {
-		// st4 -r takes the loop's own unit, and works out for itself whether
+		// st4 -r takes the loop's unit, and works out for itself whether
 		// a back reference reaches the loop's first unit or the pass has to
 		// be replayed
 		argv = append(argv, "-r"+strconv.Itoa(loop))

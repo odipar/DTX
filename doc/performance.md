@@ -8,7 +8,7 @@ runs the cycles the M68000 user's manual's tables give it, out of the opcode
 and, for a branch or a loop, out of where the machine went next; the rig
 checks this document against its totals and fails where a figure here is
 not the one it counts. Before it counts, it checks its tables against the
-manual on a set of encodings. The cycles are the processor's own, with no
+manual on a set of encodings. The cycles are the processor's, with no
 wait state: a machine whose bus rounds an access up, as an Atari ST's does,
 takes longer.
 
@@ -96,4 +96,4 @@ three column table at each unit.
 | 4 | 41346 | 41502 | 156 |
 
 The two decoders differ at init, where the one with the copy code writes
-the ring's size into two of its own instructions, and not in a row.
+the ring's size into two of its instructions, and not in a row.

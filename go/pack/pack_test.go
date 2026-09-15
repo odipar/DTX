@@ -151,7 +151,7 @@ func TestTheStrideReachesTheNextColumnsValue(t *testing.T) {
 		// column's length on: R times the width, up to a word.
 		{"DTX1 strides by a column's length", plain(dtx.DTX1, 64, 3, 2), 128},
 		{"DTX1 at an odd R of one byte values", plain(dtx.DTX1, 3, 3, 1), 4},
-		// DTX2 unpacks each column through its own ring of N bytes.
+		// DTX2 unpacks each column through its ring of N bytes.
 		{"DTX2 strides by N", packed(64, 2, 2, 1, 960), 960},
 	} {
 		head, err := dtx.ReadHeader(one.file)
@@ -264,7 +264,7 @@ func TestTheStateBlockIsTheSameAtEveryWidth(t *testing.T) {
 }
 
 // The figures define what the image cannot read back: R, C and RR reach the
-// code out of the table's own header, and what is left is the width, the
+// code out of the table's header, and what is left is the width, the
 // row's bytes and the state block, and under DTX2 the period, N, the unit
 // and the copy code.
 func TestTheFiguresDefineOnlyWhatTheImageCannotReadBack(t *testing.T) {
@@ -382,7 +382,7 @@ func TestThePeriodIsTheSmallestThatMeetsEveryRule(t *testing.T) {
 		// takes the first period above C that does: 960 by 7 leaves 1.
 		{"the first period above C of 7 that divides N",
 			packed(64, 7, 1, 1, 960), 8},
-		// A column's ring stands its own number times N from the first, so
+		// A column's ring stands its number times N from the first, so
 		// no displacement bounds C: forty columns package.
 		{"P is C at forty columns", packed(64, 40, 1, 1, 960), 40},
 	} {
@@ -582,7 +582,7 @@ func TestThePayloadDefinesWhetherItsColumnsContainCopies(t *testing.T) {
 	}
 }
 
-// R5.2: the k a payload defines and the k in every data set's own signature
+// R5.2: the k a payload defines and the k in every data set's signature
 // are the same, and the packager checks one against the other.
 func TestADataSetThatDoesNotDefineThePayloadsUnitIsRefused(t *testing.T) {
 	file := packed(64, 2, 2, 1, 960)

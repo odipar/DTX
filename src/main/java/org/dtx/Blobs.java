@@ -76,7 +76,7 @@ public final class Blobs {
         return switch (build.variant()) {
             case Dtx.DTX0 -> Dtx0.write(table);
             case Dtx.DTX1 -> Dtx1.write(table);
-            // The seed defines the build's own copies flag, since that is
+            // The seed defines the build's copies flag, since that is
             // what fixes which decoder the template is assembled with.
             default -> Dtx2.write(table, new Plain(build.copies()),
                     build.unit(), 960);
@@ -85,7 +85,7 @@ public final class Blobs {
 
     /**
      * A packer that does not pack: the column comes back as it is, and defines
-     * the build's own copies flag.
+     * the build's copies flag.
      *
      * <p>The assembler reads only a data set's four stream offsets, not the
      * streams, so a data set whose streams are the column itself fixes every
@@ -116,7 +116,7 @@ public final class Blobs {
         return set;
     }
 
-    /** The code one build assembles to, with the table's own figures out. */
+    /** The code one build assembles to, with the table's figures out. */
     public static byte[] code(Build build, Path rmac) {
         return code(build, rmac, Packager.carried());
     }

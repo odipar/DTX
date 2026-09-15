@@ -19,7 +19,7 @@ of another width is another table, and a reader built for a width reads
 the tables of that width.
 
 **Yielding** is one row at a time and in order. A **cursor** advances to a
-next row, and has its own place in the table: the first advance gives
+next row, and has its place in the table: the first advance gives
 row 0, the next row 1, and the advance after row `R` minus one gives row
 `RR`, or nothing where the table does not repeat. Two cursors on one table
 have two places, and neither moves the other's.
@@ -74,4 +74,4 @@ R5.7).
 
 Nothing here. A column is `W` bytes wide and no more, and what its bytes
 are for belongs to the format built on this one that reads them. That
-format defines it in its own repository.
+format defines it in its repository.

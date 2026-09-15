@@ -401,7 +401,7 @@ func TestALoopLongerThanABackReferenceReachesIsReplayed(t *testing.T) {
 	if !got.Same(want) {
 		t.Fatal("a replayed data set read back another table")
 	}
-	// The same table at a ring of 65280 reaches its own first unit, so its
+	// The same table at a ring of 65280 reaches its first unit, so its
 	// end marker loops it and no pass is replayed.
 	short, err := WriteDtx2(want, st4.Packer{}, 1, 65280)
 	if err != nil {

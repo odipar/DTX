@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import org.junit.jupiter.api.Test;
 
-/** A table against the bounds R6 sets, and against a caller's own arrays. */
+/** A table against the bounds R6 sets, and against a caller's arrays. */
 final class TableTest {
 
     @Test

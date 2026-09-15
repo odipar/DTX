@@ -140,11 +140,11 @@ reads every sample back, so a pattern that drifts fails a build rather than
 review. Add an entry to strike a construct, and take one off in the same
 change that uses the construct.
 
-Three rules of this file have no pattern in STRUCK.md yet: the possessive
-of *No possessive decoration*, and *gives* and *takes* of *The verb that
-says the action*. The prose of this repository was written when *gives* was
-the recommended form, and the three read 809 lines across the five trees. A
-round a rule adds the pattern and sweeps what it finds.
+Two rules of this file have no pattern in STRUCK.md yet: *gives* and
+*takes* of *The verb that says the action*. The prose of this repository was
+written when *gives* was the recommended form, and the two read 640 lines
+across the five trees. A round a rule adds the pattern and sweeps what it
+finds.
 
 ## A specification defines operations
 

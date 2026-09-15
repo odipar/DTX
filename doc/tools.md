@@ -29,8 +29,8 @@ nothing has to find a runtime or a classpath before one runs, and no
 `dtx-run` is needed.
 
 In C# the three are one assembly. `dotnet dtx.dll <tool>` names the tool in
-the first argument, and an executable published under a tool's own name is
-that tool, with every argument its own.
+the first argument, and an executable published under a tool's name is
+that tool, with every argument separate.
 
 Every tool prints its synopsis, a line a flag with the default in
 parentheses, examples, and the section of this document that describes it
@@ -69,12 +69,12 @@ of ST4 in this repository.
 | flag | gives |
 |---|---|
 | `-vV` | the variant to write: 0, 1 or 2. The default is the variant read, or 0 for text |
-| `-wW` | the bytes every value of the table takes: 1, 2 or 4, for text. The default is what the text's first comment gives, or else the narrowest width that takes every value of the table. A DTX file gives its own width |
+| `-wW` | the bytes every value of the table takes: 1, 2 or 4, for text. The default is what the text's first comment gives, or else the narrowest width that takes every value of the table. A DTX file gives its width |
 | `-rRR` | the row the table repeats to, 0 to `R`. The default is what the DTX file or the text's first comment gives, or else `R`, where the table does not repeat |
 | `-kK` | the unit a DTX2 column is packed at, and `R` times the width divides by it (R5.6). The default is 1 |
 | `-mN` | the ring a DTX2 column unpacks through, in bytes, 1 to 65535 (R5.4). The default is 960 |
 | `-pPACKER` | an ST4 executable to pack with, instead of the copy in this repository. Nothing needs one: name it to pack with a build newer than the copy |
-| `-copies[S]` | a match beyond the ring copies from the column's own literal stream, and `-copiesS` searches `S` seconds for a better parse. It reaches the packer as `-c`. YMX spells it the same way |
+| `-copies[S]` | a match beyond the ring copies from the column's literal stream, and `-copiesS` searches `S` seconds for a better parse. It reaches the packer as `-c`. YMX spells it the same way |
 
 `-k`, `-m`, `-p` and `-copies` reach a DTX2 file alone: no other variant
 packs. Every column is packed with `-l65535` as well, which meets
@@ -108,7 +108,7 @@ time, note, step
 
 The first two lines are not rows: the comment opens with `#`, and the names
 are the line before the first row of numbers in which no cell is a number.
-Both are passed over, and the names a reader gives a column are its own,
+Both are passed over, and the names a reader gives a column are the reader's,
 since a DTX file does not define one.
 
 That table takes a width of 2: the width is the narrowest that takes every
@@ -139,7 +139,7 @@ out of a file.
 
 ### Copies from the literal stream
 
-With `-copies` a match beyond the ring copies from the column's own literal
+With `-copies` a match beyond the ring copies from the column's literal
 stream, and that saves most at the small rings DTX2 reads through. Measured
 on a table of 512 rows repeating a pattern 37 rows long, at a width of 2 and
 `N` of 64, where the pattern runs to 74 bytes and reaches past the ring: the
@@ -187,11 +187,11 @@ go build -o dtx-package ./cmd/dtx-package    # under go/
 | flag | gives |
 |---|---|
 | `-aRMAC` | assemble the template with this rmac rather than take the image the build made. The templates are read from `68k` beside the caller, or from what `DTX_68K` names. The two give the same bytes, and a template edit is tried through this one |
-| `-s` | write the figures rather than the image, for reading or for a build of your own |
+| `-s` | write the figures rather than the image, for reading or for a build you make |
 
 The image contains one table and the code for that table's variant, and under
 DTX1 and DTX2 for that table's width. `R`, `C` and `RR` reach the code at run
-time, out of the table's own header, so one build is one code at any of the
+time, out of the table's header, so one build is one code at any of the
 three. The width is not one of them under DTX1 and DTX2: a read moves a value
 in one instruction, and a table of another width takes another build. Under
 DTX0 a read is one run of bytes, so one build reads every width.
@@ -219,13 +219,13 @@ each of them three times:
 |---|---|
 | the classes the jar is made of | the Java packager, off the classpath |
 | `build/68k` | the C# assembly, which embeds them from there |
-| `go/image/data` | `go:embed`, which reads only inside its own module |
+| `go/image/data` | `go:embed`, which reads only inside its module |
 They are plain files and nothing about them is Java's, so a port in another
 language builds from the same twenty-two. A Go executable built after the
 Maven build contains all of them and needs neither this repository nor an
 assembler beside it; one built from a tree whose build had not run does not
 contain one, and resolves an image through `DTX_68K` instead. The directory
-under `go/` contains a README and a `.gitignore` of its own and is committed
+under `go/` contains a README and a `.gitignore` of its and is committed
 empty of images, so the package compiles either way.
 
 This is the one step rmac is needed for. `-Drmac=PATH` names one that is
@@ -237,7 +237,7 @@ where it is released, not where a table is packaged.
 bin/dtx-blobs DIR [DIR..]
 ```
 
-writes the same twenty-two into directories of your own.
+writes the same twenty-two into directories you name.
 
 | flag | gives |
 |---|---|
@@ -245,7 +245,7 @@ writes the same twenty-two into directories of your own.
 | `-tTEMPLATES` | where `68k/` stands. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository does not have a directory to resolve a relative one against, so it names this |
 
 The table each build is assembled from is made rather than read: at the
-build's own width the code is the same for any table, and the six fields
+build's width the code is the same for any table, and the six fields
 one would give are zeroed, so an image does not define a table until a
 package writes one.
 
@@ -286,7 +286,7 @@ contains for a zip - so one release's file is told from another's without
 opening it. It builds `dtx-blobs` first, from a tree with no image, since
 that is the one command that makes them rather than containing them; it
 fails where fewer than twenty-two come out; and it ends by writing and
-packaging a table with the host's own executables, from a directory that is
+packaging a table with the host's executables, from a directory that is
 not this repository, so an executable with no image fails there rather than
 in a release.
 
@@ -313,7 +313,7 @@ row through advance and read, a jump to every row forward and backward,
 the repeat, the end and a read before the first advance. It checks `d6`,
 `d7` and `a6` across every call and a guard band past the row, and it
 watches every access: a word or long at an odd address is a fault here as
-it is on a 68000, which the emulator's own model does not take.
+it is on a 68000, which the emulator's model does not take.
 
 **The round trip.** The same text through Write, through Package and
 through the 68000 at DTX0, DTX1 and DTX2, compared with the rows the text
@@ -342,7 +342,7 @@ across the variants, the widths and the units. One input has one output in
 every tree. It needs Go, the .NET SDK and rmac, and is skipped without one
 of them.
 
-The C# tree does not have tests of its own, so this is its check. Its
+The C# tree does not have tests here, so this is its check. Its
 corpus is one table of decimal values under a comment, so no hexadecimal
 value, negative value, names line or shape comment is read back in any
 tree, and no run with `-s`, `-a` or `-p` is compared.

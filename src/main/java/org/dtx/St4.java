@@ -38,7 +38,7 @@ public final class St4 implements Packer {
 
     /**
      * A packer under which a match beyond the ring copies from the column's
-     * own literal stream, which packs a small ring far smaller.
+     * literal stream, which packs a small ring far smaller.
      *
      * @param copies whether to pack copies
      * @param seconds how long to search beyond the opening passes for a
@@ -69,7 +69,7 @@ public final class St4 implements Packer {
             throw new IllegalArgumentException("the loop is unit -1 to "
                     + (units.length - 1) + " of the column, not " + loop);
         }
-        // ST4 packs a loop two ways, and this makes the same test its own
+        // ST4 packs a loop two ways, and this makes the same test its
         // packer makes: the end marker's endless match where a back
         // reference reaches the loop's first unit, and a replayed pass
         // where it does not.

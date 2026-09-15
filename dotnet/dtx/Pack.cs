@@ -63,7 +63,7 @@ public static class Pack
     /// What a DTX2 payload gives, SPEC.md 2.3.
     ///
     /// <para>It checks the data sets against it. Every set opens with
-    /// <c>$53 $34 $07 k</c>, so one compare against the payload's own k
+    /// <c>$53 $34 $07 k</c>, so one compare against the payload's k
     /// checks ST4's signature, its format version and R5.2 at once.</para>
     /// </summary>
     /// <exception cref="ArgumentException">where a data set defines another
@@ -261,7 +261,7 @@ public static class Pack
                     + $" DTX{header.Variant}");
         }
         // The code ends where the format block puts the column table:
-        // the two match, or the image reads its own last instruction as a
+        // the two match, or the image reads its last instruction as a
         // column.
         int columns = Format.GetLong(code, FormatAt + ColumnsAt);
         if (columns != code.Length)
@@ -405,7 +405,7 @@ public static class Pack
     /// <summary>
     /// What one table gives, as a template reads it: the equates, and no
     /// instruction. Every figure a loop counts with reaches the code
-    /// at run time instead, out of the table's own header (doc/tools.md).
+    /// at run time instead, out of the table's header (doc/tools.md).
     /// </summary>
     public static string Figures(byte[] file)
     {
@@ -442,7 +442,7 @@ public static class Pack
         {
             // Nothing parks a6 under the plain variants, so the payload
             // init was given stands in that long instead, which a jump
-            // reaches (abi.md 3). Under DTX2 the template names its own.
+            // reaches (abi.md 3). Under DTX2 the template names it.
             out_.Append(Equ("DTX_PAYLOAD", Park));
         }
         out_.Append("\n; What the code takes at assembly time.\n")
@@ -464,7 +464,7 @@ public static class Pack
                     .Append(Equ("DTX_N", given.Ring));
             // The payload defines whether its columns contain copies (R5.10), so
             // the decoder built for them is fixed by the file. That build
-            // writes the reach into two of its own instructions, and a 68030
+            // writes the reach into two of its instructions, and a 68030
             // caller flushes the instruction cache after every call that
             // seeds a decoder.
             if (given.Copies)

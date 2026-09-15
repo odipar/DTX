@@ -20,8 +20,8 @@ import org.junit.jupiter.api.io.TempDir;
  * The style check against itself, and the tree against the style check.
  *
  * <p>The first half reads STRUCK.md back: every construct is in each of its
- * own samples and in none of its counter-samples, every rule is a heading of
- * AGENTS.md, and the list is parsed as its own preamble describes. The
+ * samples and in none of its counter-samples, every rule is a heading of
+ * AGENTS.md, and the list is parsed as its preamble describes. The
  * second half runs the check over this repository: no document and no code
  * comment has a struck construct.
  */

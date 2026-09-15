@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>{@code HouseStyleTest} checks the prose against {@code AGENTS.md} and
  * {@code GlossaryTest} checks the terms against the glossary. This checks the
- * numbers and the pointers, which drift on their own as a document is
+ * numbers and the pointers, which drift on their as a document is
  * edited: a requirement renumbered, a section renamed, a column added, a
  * ratio left over from the figures before it.
  */

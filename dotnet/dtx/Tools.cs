@@ -89,7 +89,7 @@ public static class Tools
         }
     }
 
-    /// <summary>The tool's own work, which a flag it does not read
+    /// <summary>The tool's work, which a flag it does not read
     /// stops.</summary>
     private static int Writing(string[] args)
     {
@@ -109,7 +109,7 @@ public static class Tools
             else if (arg.StartsWith("-r", StringComparison.Ordinal)) repeat = Number(arg);
             else if (arg.StartsWith("-k", StringComparison.Ordinal)) unit = Number(arg);
             else if (arg.StartsWith("-m", StringComparison.Ordinal)) ring = Number(arg);
-            // the packer's own: a match beyond the ring copies from the
+            // the packer's flag: a match beyond the ring copies from the
             // literal stream, and -copiesS searches S seconds for a better
             // parse. YMX spells it the same way.
             else if (arg.StartsWith("-copies", StringComparison.Ordinal)) copies = "-c" + arg[7..];
@@ -379,7 +379,7 @@ public static class Tools
         {
             Format.Dtx0 => Variants.WriteDtx0(table),
             Format.Dtx1 => Variants.WriteDtx1(table),
-            // The seed defines the build's own copies flag, since that fixes
+            // The seed defines the build's copies flag, since that fixes
             // which decoder the template is assembled with.
             _ => Variants.WriteDtx2(table, new Plain(build.Copies),
                     build.Unit, 960),
@@ -388,7 +388,7 @@ public static class Tools
 
     /// <summary>
     /// A packer that does not pack: the column comes back as it is, and
-    /// defines the build's own copies flag.
+    /// defines the build's copies flag.
     ///
     /// <para>The assembler reads only a data set's four stream offsets, not
     /// the streams, so a data set whose streams are the column itself fixes

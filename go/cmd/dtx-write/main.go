@@ -120,7 +120,7 @@ func run(args []string, in io.Reader, out io.Writer) error {
 		case strings.HasPrefix(arg, "-m"):
 			ring, err = strconv.Atoi(arg[2:])
 		case strings.HasPrefix(arg, "-copies"):
-			// the packer's own: a match beyond the ring copies from the
+			// the packer's flag: a match beyond the ring copies from the
 			// literal stream, and -copiesS searches S seconds for a better
 			// parse. YMX spells it the same way.
 			copies = "-c" + arg[7:]

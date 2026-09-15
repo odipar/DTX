@@ -5,14 +5,14 @@
 ; Robbert's direction. Use it freely, including commercially, as long as your
 ; documentation says you used DTX (see LICENSE).
 ;
-; Included by DTX0.S, DTX1.S and DTX2.S, never assembled on its own. It contains
+; Included by DTX0.S, DTX1.S and DTX2.S, never assembled alone. It contains
 ; the four slots, the format block, DTX_metadata and DTX_payload, which
 ; doc/abi.md 1 defines for every image and no variant changes, and the macro
 ; DTX0 and DTX1 install a long with.
 ;
 ; An image contains one table or several (doc/abi.md 1). Init takes the
-; header of the one to read, so nothing here reaches a table by a figure of
-; its own: the format block's fields below give the first table's, for a
+; header of the one to read, so nothing here reaches a table by a separate
+; figure: the format block's fields below give the first table's, for a
 ; caller that has only the image.
 ;
 ; A template includes this after DTX_table.i, invokes DTX_IMAGE where the
@@ -61,7 +61,7 @@ _fmt:
 ; size moves with C, so its place is read out of the format block rather
 ; than assembled in. R, C and RR then come out of that header, and the
 ; stride out of the block itself. This call gives the first table's figures;
-; a caller reading another table takes R, C and RR out of that table's own
+; a caller reading another table takes R, C and RR out of that table's
 ; header, at the offsets below.
 ; SPEC.md 1 lays it out: R at +4, C at +8 and RR at +10.
 DTX_metadata:
@@ -90,7 +90,7 @@ DTX_payload:
 ; appends a column table and then a .dtx file for each of the image's
 ; tables, so _columns is where the first pair lands and the code ends on a
 ; long to put it there. DTX0 and DTX1 do not have a column table, so under
-; those two the first table's own header is the first byte there. Where
+; those two the first table's header is the first byte there. Where
 ; _columns stands is assembled in and the format block repeats it; a
 ; table's header stands behind a column table of 16C bytes, which moves
 ; with that table's C, so no instruction reaches a header by a displacement

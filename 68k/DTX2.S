@@ -11,7 +11,7 @@
 ; and a packager combines that code with the table (doc/abi.md 5).
 ;
 ; DTX2 packs a column with ST4, and this reader follows YMX. Every column
-; decodes through its own ring; init fills every ring with P rows; and after
+; decodes through its ring; init fills every ring with P rows; and after
 ; that one column is refilled a row, the one whose turn it is. So a read takes
 ; one value from each ring and never enters a decoder. ST4_wrap.S, the copy
 ; carried into this repository, is the decoder, built at the unit the payload
@@ -52,7 +52,7 @@
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call
-; takes without checking, ST4_wrap.S its own seven.
+; takes without checking, ST4_wrap.S its seven.
 ; -----------------------------------------------------------------------------
 
         .68000
@@ -382,7 +382,7 @@ DTX_init:
         move.l  d0,DTX_NFIG(a6)
 
 ; Where the rings begin: behind the decoder states, one of 48 bytes a turn.
-; Column 0's ring is the pointer's own, so its two ends stand in the block.
+; Column 0's ring is the pointer ring, so its two ends stand in the block.
         move.w  DTX_PERIODFIG+2(a6),d2
         mulu.w  #DTX_D_SIZE,d2
         addi.w  #DTX_DECODERS,d2

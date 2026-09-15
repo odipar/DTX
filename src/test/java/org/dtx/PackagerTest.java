@@ -30,7 +30,7 @@ final class PackagerTest {
 
     @Test
     void theFiguresDefineOnlyWhatTheImageCannotReadBack() {
-        // R, C and RR reach the code at run time, out of the table's own
+        // R, C and RR reach the code at run time, out of the table's
         // header, so no equate defines one. What is left is the width, the
         // row's bytes and the state block: one build reads one width, so the
         // move a value takes is assembled from it, and a caller reads the
@@ -265,10 +265,10 @@ final class PackagerTest {
 
     @Test
     void aTableOfFortyColumnsIsPackaged() {
-        // While a column had a width of its own, a read reached a column by
+        // While a column had a separate width, a read reached a column by
         // a displacement off its class base, and 40 columns at a ring of 960
         // reached past the 32767 a 68000 displacement runs to. One width for
-        // the table ended that rule: a column's ring stands its own number
+        // the table ended that rule: a column's ring stands its number
         // times N from the first, so C of 40 packages.
         byte[] file = packed(64, 40, 1, 1, 960);
         Dtx.Header header = Dtx.header(file);
@@ -287,8 +287,8 @@ final class PackagerTest {
                         + " records, the fill, C, the rings, P, N, the count,"
                         + " the state whose turn is next, column 0's ring"
                         + " and column 0's ring");
-        // The template reads its own copy of the figure, so the two are
-        // compared rather than each pinned to 72 on its own.
+        // The template reads its copy of the figure, so the two are
+        // compared rather than each pinned to 72 alone.
         assertEquals(templateDecoders(), Packager.decoders(),
                 "68k/DTX2.S equates DTX_DECODERS to another offset");
         assertEquals(2, Packager.period(header, given), "P is C");
@@ -326,7 +326,7 @@ final class PackagerTest {
 
     @Test
     void aDataSetThatDoesNotDefineThePayloadsUnitIsRefused() {
-        // R5.2: the k a payload defines and the k in every data set's own
+        // R5.2: the k a payload defines and the k in every data set's
         // signature are the same, and the packager checks one against the
         // other. One compare checks ST4's signature, its version and the
         // unit at once.

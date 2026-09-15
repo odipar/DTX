@@ -6,7 +6,7 @@ package org.dtx;
  *
  * <p>A value falls where the width puts it, so under a width of 1 a row can
  * begin on an odd offset and a reader takes it as bytes (R3.4). Under a
- * width of 2 or 4 every value stands on its own boundary.
+ * width of 2 or 4 every value stands on its boundary.
  */
 public final class Dtx0 {
 

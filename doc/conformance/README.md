@@ -5,7 +5,7 @@ The kit an independent reader is written against: nineteen tables under
 defines what a reader produces from each and the rules it is checked
 against.
 
-Every table is written by this repository's own writer from the text and
+Every table is written by this repository's writer from the text and
 options SOURCES.md lists, and `ConformanceTest` writes each again under
 `mvn test` and compares the file with it byte for byte. So the kit is what
 the writer gives, and a change to the writer that moved a byte of it fails

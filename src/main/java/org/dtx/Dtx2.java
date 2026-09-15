@@ -20,7 +20,7 @@ public final class Dtx2 {
 
     /**
      * The flags bit that marks every column was packed with copies from its
-     * own literal stream (R5.10), at payload byte 3.
+     * literal stream (R5.10), at payload byte 3.
      */
     public static final int COPIES = 1;
 
@@ -122,7 +122,7 @@ public final class Dtx2 {
      * above it, or to the end of the file.
      *
      * @throws IllegalArgumentException where the file is not DTX2, a data set
-     *     does not open with the payload's own unit (R5.2), or a column
+     *     does not open with the payload's unit (R5.2), or a column
      *     unpacks to other than {@code R} times its width
      */
     public static Table read(byte[] file) {
