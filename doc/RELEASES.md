@@ -32,6 +32,34 @@ build.
 
 ## Published
 
+### 0.11.0, 2026-09-15
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.0>, built from the commit
+tagged `v0.11.0`.
+
+The Go tree reads ST4 as a module rather than a copy, and the copies the
+Java and C# trees carry are copied again from the ST4 that collects its
+node pool. No class, no image and no packaged byte moves: the conformance kit
+reads back byte for byte and the twenty-two images are the bytes they were,
+so a table this release packages is the bytes 0.10.1 packaged.
+
+- `go/st4` is `github.com/odipar/st4/go` at v0.1.1 and a small re-export
+  beside it, where it was ten library files copied here. A Go caller
+  fetches ST4 the way it fetches this, and a packer change reaches the Go
+  tree by a version rather than by a fresh copy.
+- The Java and C# copies, and `68k/ST4_wrap.S`, come from ST4 at
+  `19a77dd`. The assembly changed in its comments alone.
+- Packing a column with copies costs a fifth of the memory it did. ST4's
+  search kept a node for every state it reached and 98 per cent of them
+  were unreachable by the end; its pool collects now. A 48 KB file peaks at
+  1,386 MB where it peaked at 6,472, and the Java tools pack it at
+  `-Xmx1g` where they needed 12 GB.
+- The house style is the one the family shares, and the two stand-in verbs
+  of *The verb that says the action* have a pattern each now: 720 lines of
+  documents, code comments and scripts read as the rules say. `HouseStyle`
+  fails a build on what it finds, so every rule of AGENTS.md that a pattern
+  can match now has one.
+
 ### 0.10.1, 2026-09-13
 
 <https://github.com/odipar/DTX/releases/tag/v0.10.1>, built from the commit
