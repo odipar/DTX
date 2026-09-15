@@ -28,6 +28,7 @@ end of the path. A carried copy follows its own tree's style.
 names
     Windows
     ST4_WINDOW
+    Container
     decoder states
     Decoder states
 
@@ -35,7 +36,6 @@ carried
     /org/st4/
     /dotnet/nt4/
     ST4_wrap.S
-    /go/st4/
 
 own
     beside.go

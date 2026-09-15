@@ -290,14 +290,15 @@ packaging a table with the host's executables, from a directory that is
 not this repository, so an executable with no image fails there rather than
 in a release.
 
-Writing DTX2 needs an ST4 packer, and each tree contains one:
+Writing DTX2 needs an ST4 packer. The Java and C# trees contain one,
 `src/main/java/org/st4` and `dotnet/nt4`, both taken from
-odipar/ST4@498aa25, and `go/st4`, taken from odipar/YMX@611e321,
-which is that same packer in Go. No code is edited here: the Go copy's
-package comment is edited to name where the copy came from, and `beside.go`
-and `packer.go` are added beside it. The three pack the same bytes, which
-`ParityTest` checks. So a release does not need a packer beside it
-either. `-pPACKER` runs another where a caller has a newer build.
+odipar/ST4@498aa25, and no code of either is edited here. The Go tree
+requires `github.com/odipar/st4/go` instead, which that repository
+publishes; `go/st4` has what belongs to DTX alone, a `Packer` that packs in
+this process and a `Beside` that runs an ST4 executable, and re-exports the
+library's names so a caller names one package. The three pack the same
+bytes, which `ParityTest` checks. So a release does not need a packer
+beside it either. `-pPACKER` runs another where a caller has a newer build.
 
 ## The rigs
 

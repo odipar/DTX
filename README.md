@@ -115,8 +115,11 @@ units its columns are packed at, with the copy code and without.
 | `bin/` | the Java tools, run out of a build |
 | `release/` | what builds a release |
 
-Each tree contains a copy of ST4, the packer a DTX2 column is packed with,
-so none needs one beside it. `68k/` contains the ST4 decoder the same way.
+The Java and C# trees contain a copy of ST4, the packer a DTX2 column is
+packed with, so neither needs one beside it, and `68k/` contains the ST4
+decoder the same way. The Go tree reads the library from
+[ST4](https://github.com/odipar/ST4) as a module instead, since that
+repository publishes one.
 
 ## Tests
 
