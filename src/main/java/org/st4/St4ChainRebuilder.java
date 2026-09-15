@@ -25,15 +25,17 @@ final class St4ChainRebuilder {
 
     private final int[] units;
     private final int literalBits;
+    private final int penalty;
     private final int[] optimalBits;
     private final byte[] winKind;
     private final int[] winOffset;
     private final int[] winAux;
 
-    St4ChainRebuilder(int[] units, int literalBits, int[] optimalBits,
+    St4ChainRebuilder(int[] units, int literalBits, int penalty, int[] optimalBits,
                       byte[] winKind, int[] winOffset, int[] winAux) {
         this.units = units;
         this.literalBits = literalBits;
+        this.penalty = penalty;
         this.optimalBits = optimalBits;
         this.winKind = winKind;
         this.winOffset = winOffset;
@@ -52,7 +54,7 @@ final class St4ChainRebuilder {
 
     /**
      * A pending resolution: the winner chain at {@code index}, or the state an
-     * offset held when it last matched at {@code index}. Frames form a chain
+     * offset kept when it last matched at {@code index}. Frames form a chain
      * of single dependencies, resolved on an explicit stack, since a chain of
      * one-unit blocks is as deep as the input is long.
      */
@@ -75,7 +77,7 @@ final class St4ChainRebuilder {
 
     /**
      * Builds the winning chain from the descriptors. A winner's parent is an
-     * earlier winner, recorded, or the state an offset held at a recorded
+     * earlier winner, recorded, or the state an offset had at a recorded
      * position; a state is derived from its match run, the recorded winning
      * costs and, when it reused its offset, the state before it.
      */
@@ -147,7 +149,7 @@ final class St4ChainRebuilder {
     }
 
     /**
-     * Resolves the state offset {@code frame.offset} held after matching at
+     * Resolves the state offset {@code frame.offset} kept after matching at
      * {@code frame.index}: the cheaper of reusing the offset across the
      * literal run before this match run, and a new-offset match at the best
      * split, the two candidates the forward pass weighed, with its tie rule.
@@ -176,7 +178,7 @@ final class St4ChainRebuilder {
                     }
                 }
                 frame.newBits = bestCore + 3
-                        + (offset > St4Format.BYTE_OFFSET_LIMIT ? 16 : 8);
+                        + (offset > St4Format.BYTE_OFFSET_LIMIT ? 16 : 8) + penalty;
             }
         }
 
@@ -187,7 +189,8 @@ final class St4ChainRebuilder {
                 return false;
             }
             St4Block literal = literalRun(previous, frame.runStart - 1);
-            int repBits = literal.bits() + 1 + eliasGammaBits(end - frame.runStart + 1);
+            int repBits = literal.bits() + 1 + eliasGammaBits(end - frame.runStart + 1)
+                    + penalty;
             if (frame.newLength == 0 || repBits <= frame.newBits) {
                 states.put(stateKey(offset, end),
                         new St4Block(repBits, end, offset, literal));
@@ -208,7 +211,7 @@ final class St4ChainRebuilder {
     /** The literal run from just after {@code state} through {@code litEnd}. */
     private St4Block literalRun(St4Block state, int litEnd) {
         int length = litEnd - state.index();
-        int bits = state.bits() + 1 + eliasGammaBits(length) + length * literalBits;
+        int bits = state.bits() + 1 + eliasGammaBits(length) + length * literalBits + penalty;
         return new St4Block(bits, litEnd, 0, state);
     }
 
