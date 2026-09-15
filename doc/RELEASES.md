@@ -32,6 +32,22 @@ build.
 
 ## Published
 
+### 0.11.1, 2026-09-16
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.1>, built from the commit
+tagged `v0.11.1`.
+
+The ST4 under this one packs faster. The library, the images and the
+packaging are 0.11.0's, so a table this release packages is the bytes that
+one packaged.
+
+- The Java and C# copies, and `68k/ST4_wrap.S`, come from ST4 at
+  `07097fb`, and `go/st4` reads `github.com/odipar/st4/go` at v0.1.2.
+- ST4's literal channel reads its least in one step where it read a
+  min-tree in a logarithm. A search of a column with copies fits a fifth
+  more steps in a second at a small ring, which is 0.35 per cent smaller at
+  a fixed budget; at a wide ring it reads as it read before.
+
 ### 0.11.0, 2026-09-15
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.0>, built from the commit
