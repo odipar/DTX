@@ -5,11 +5,11 @@ namespace Nt4;
 
 /// <summary>
 /// The optimal parser: ZX1's, moved from bytes to k-byte units, and the
-/// readable reference the fast optimizers are held to.
+/// readable reference the fast optimizers are checked against.
 /// </summary>
 /// <remarks>
 /// For every position it keeps, per offset, the cheapest chain ending in a
-/// literal run and the cheapest ending in a match, and takes the best. Only
+/// literal run and the cheapest ending in a match, and selects the best. Only
 /// the costs differ from ZX1's: a literal unit costs <c>8 * k</c> bits, an
 /// offset counts units, a new-offset match pays three control bits and a
 /// byte or a word. The result is a chain of <see cref="Block"/>s, last block
@@ -38,7 +38,17 @@ public static class Optimizer
     /// <param name="progress">Whether to report on stdout, as <see cref="ProgressMeter"/>.</param>
     /// <returns>The final block of the optimal parse chain.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="units"/> is null.</exception>
-    public static Block Optimize(int[] units, int unit, int offsetLimit, bool progress)
+    public static Block Optimize(int[] units, int unit, int offsetLimit, bool progress) =>
+        Optimize(units, unit, offsetLimit, progress, 0);
+
+    /// <summary>
+    /// The same, with <paramref name="penalty"/> bits charged on every block
+    /// besides what it writes, so the parse prefers fewer, longer blocks: a
+    /// decoder parses a block at a time, and the bits are not what that
+    /// costs. At a penalty of zero it is the parse above.
+    /// </summary>
+    public static Block Optimize(int[] units, int unit, int offsetLimit, bool progress,
+        int penalty)
     {
         ArgumentNullException.ThrowIfNull(units);
         int literalBits = 8 * unit;
@@ -70,7 +80,7 @@ public static class Optimizer
                     if (literal != null)
                     {
                         int length = index - literal.Index;
-                        int bits = literal.Bits + 1 + EliasGammaBits(length);
+                        int bits = literal.Bits + 1 + EliasGammaBits(length) + penalty;
                         var match = new Block(bits, index, offset, literal);
                         lastMatch[offset] = match;
                         optimal[index] = Better(optimal[index], match);
@@ -103,7 +113,7 @@ public static class Optimizer
                         Block previous = optimal[index - length]!;
                         int bits = previous.Bits + 3
                             + (offset > Format.ByteOffsetLimit ? 16 : 8)
-                            + EliasGammaBits(length - 1);
+                            + EliasGammaBits(length - 1) + penalty;
                         Block? match = lastMatch[offset];
                         if (match == null || match.Index != index || match.Bits > bits)
                         {
@@ -123,7 +133,7 @@ public static class Optimizer
                     {
                         int length = index - match.Index;
                         int bits = match.Bits + 1 + EliasGammaBits(length)
-                            + length * literalBits;
+                            + length * literalBits + penalty;
                         var literal = new Block(bits, index, 0, match);
                         lastLiteral[offset] = literal;
                         optimal[index] = Better(optimal[index], literal);

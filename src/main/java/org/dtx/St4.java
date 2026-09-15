@@ -11,7 +11,7 @@ import org.st4.Units;
  * A {@link Packer} that packs with the copy of ST4 in this repository.
  *
  * <p>{@code src/main/java/org/st4} is that copy, carried from
- * odipar/ST4@498aa25 and not edited here. So a tool writes DTX2 with no
+ * odipar/ST4@19a77dd and not edited here. So a tool writes DTX2 with no
  * packer beside it, and {@link St4Beside} runs one where a caller names it.
  *
  * <p>The packer packs as {@code st4 -f -kK -mN -l65535} does, and
