@@ -12,30 +12,30 @@ by 2, and on a long where it divides by 4.
 
 ## 1. The header
 
-| offset | bytes | gives |
+| offset | bytes | contains |
 |---|---|---|
 | 0 | 3 | `DTX` |
 | 3 | 1 | the variant: 0, 1, 2, or a number a later specification assigns |
 | 4 | 4 | `R`, the row count, 1 upward |
 | 8 | 2 | `C`, the column count, 1 to 256 |
 | 10 | 4 | `RR`, the row the table repeats to |
-| 14 | 1 | `W`, the bytes every value of the table takes: 1, 2 or 4 |
+| 14 | 1 | `W`, the bytes every value of the table is written in: 1, 2 or 4 |
 | 15 | 1 | zero, so the payload begins on a long |
 
 `RR` names a row, so 0 to `R` minus one. `RR` equal to `R` marks a table
 that does not repeat, and a reader that reaches the last row does not have
 a next one.
 
-One width for the table and not one a column (R6.3). Every value takes
+One width for the table and not one a column (R6.3). Every value is
 `W` bytes, so a row is `C` times `W`, a column is `R` times `W`, and a
 reader works both out without reading a width a column.
 
 The header is 16 bytes under every variant and every `C`, and the payload
 begins on a long. A long and not a word, because DTX2's data sets begin on
-longs (2.3); DTX0 and DTX1 do not need more than a word, and take the same
+longs (2.3); DTX0 and DTX1 do not need more than a word, and follow the same
 rule so that a header is one shape under every variant.
 
-A reader takes the variant from byte 3 and does not read further where it
+A reader reads the variant from byte 3 and does not read further where it
 does not read that variant (R2.3).
 
 A table of `R` = 3 rows and `C` = 3 columns of two byte values has this
@@ -54,10 +54,10 @@ header, and the pictures below lay out that same table:
 
 ## 2. The payload
 
-`W` is the width from the header, the bytes every value takes. The payload
-begins on a long. Inside it DTX0 does not pad, DTX1 pads before each column
-to a word, and DTX2 pads before each data set to a long: each variant's
-section defines where. A pad byte is zero.
+`W` is the width from the header, the bytes every value is written in. The
+payload begins on a long. Inside it DTX0 does not pad, DTX1 pads before each
+column to a word, and DTX2 pads before each data set to a long: each
+variant's section defines where. A pad byte is zero.
 
 In DTX0 and DTX1 an offset is arithmetic on `R`, `C` and `W` (R3.3, R4.2),
 and DTX1's pad enters that arithmetic as a fixed term. DTX2 differs: the
@@ -73,7 +73,7 @@ within a row begins at `i` times `W`, row `n` begins at `n` times a row,
 and the payload is `R` times a row.
 
 A row begins where the row before it ends, so at a width of 1 and an odd
-`C` a row begins on an odd offset and a reader takes its values as bytes
+`C` a row begins on an odd offset and a reader reads its values as bytes
 (R3.4). At a width of 2 or 4 the payload begins on a long and every value
 is a whole number of them from it, so every value stands where a 68000
 reads it as one.
@@ -137,14 +137,14 @@ Every data set in a payload is packed at one unit and unpacks through a
 ring of one size, so the payload defines both once and then where the data
 sets are:
 
-| offset | bytes | gives |
+| offset | bytes | contains |
 |---|---|---|
 | 0 | 2 | `N`, the bytes of the ring a column unpacks through |
 | 2 | 1 | `k`, the unit every data set is packed at: 1, 2 or 4 |
 | 3 | 1 | the flags: bit 0 marks a payload whose columns contain copies from their literal streams. The other bits are zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
-R5.8 needs `N`. A reader takes it once and has a ring of that many bytes,
+R5.8 needs `N`. A reader reads it once and has a ring of that many bytes,
 and the ring does not grow as `R` does.
 
 One `N` for the payload does for the rings what one `k` does for the code:
@@ -167,7 +167,7 @@ and a decoder without the copy code is the one such a file always
 needed.
 
 One `k` for the payload means one decoder in a reader. ST4 code is built
-for a unit, and a reader of DTX2 takes every column of a payload through
+for a unit, and a reader of DTX2 runs every column of a payload through
 the one build for that unit (R5.3).
 
 `R` times `W` divides by `k` (R5.6). A column is `R` times `W` bytes and
@@ -180,7 +180,7 @@ Four bytes and `4C` divide by 4, so the first data set begins on a long
 where the payload does. The data sets follow, each beginning on a long:
 where one ends short of the next boundary, the bytes between are zero.
 
-A reader takes a column from its offset alone: a data set defines the
+A reader reads a column from its offset alone: a data set defines the
 length of what it unpacks to, and the bits that pack it end on a marker,
 so no offset is read against the next.
 
@@ -190,9 +190,9 @@ is defined in full in [ST4](https://github.com/odipar/ST4).
 - Its first long is `$53 $34 $07 k`: `'S'`, `'4'`, the ST4 format version
   7, and the unit `k`.
 - Its ST4 header is twenty-eight bytes, and a data set begins on a long
-  so a reader takes that header a long at a time. DTX2 aligns its data
+  so a reader reads that header a long at a time. DTX2 aligns its data
   sets for that (R5.9).
-- A reader built for one unit rejects a data set whose fourth byte gives
+- A reader built for one unit rejects a data set whose fourth byte names
   another. The payload's `k` is that same unit (R5.2), and a reader checks
   the two against each other: one compare of a data set's first long
   against `$53 $34 $07 k` checks the signature, the format version and

@@ -6,11 +6,11 @@ import (
 	"github.com/odipar/dtx/go/st4"
 )
 
-// WriteDtx0 gives table as a DTX0 file: R rows, each column 0 through
+// WriteDtx0 returns table as a DTX0 file: R rows, each column 0 through
 // column C minus one in order, with nothing between them.
 //
 // A value falls where the width puts it, so under a width of 1 a row can
-// begin on an odd offset and a reader takes it as bytes (R3.4). Under a
+// begin on an odd offset and a reader reads it as bytes (R3.4). Under a
 // width of 2 or 4 every value stands on its boundary.
 func WriteDtx0(t *Table) []byte {
 	head := t.Header(DTX0)
@@ -27,7 +27,7 @@ func WriteDtx0(t *Table) []byte {
 	return out
 }
 
-// ReadDtx0 gives the table in a DTX0 file.
+// ReadDtx0 returns the table in a DTX0 file.
 func ReadDtx0(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
 	if err != nil {
@@ -54,19 +54,19 @@ func ReadDtx0(file []byte) (*Table, error) {
 	return NewTable(header.Rows, header.Repeat, width, column)
 }
 
-// StrideDtx1 gives the stride from one DTX1 column to the next: R times the
+// StrideDtx1 returns the stride from one DTX1 column to the next: R times the
 // width, up to a word.
 func StrideDtx1(rows, width int) int {
 	return Align(rows*width, 2)
 }
 
-// PayloadLengthDtx1 gives what a DTX1 payload runs to, for rows of this
+// PayloadLengthDtx1 returns what a DTX1 payload runs to, for rows of this
 // width.
 func PayloadLengthDtx1(rows, columns, width int) int {
 	return (columns-1)*StrideDtx1(rows, width) + rows*width
 }
 
-// WriteDtx1 gives table as a DTX1 file: C columns, each its R values in row
+// WriteDtx1 returns table as a DTX1 file: C columns, each its R values in row
 // order.
 //
 // A column begins on a word, so under a width of 1 and an odd R a zero byte
@@ -86,7 +86,7 @@ func WriteDtx1(t *Table) []byte {
 	return out
 }
 
-// ReadDtx1 gives the table in a DTX1 file.
+// ReadDtx1 returns the table in a DTX1 file.
 func ReadDtx1(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
 	if err != nil {
@@ -110,7 +110,7 @@ func ReadDtx1(file []byte) (*Table, error) {
 	return NewTable(header.Rows, header.Repeat, width, column)
 }
 
-// Read gives the table in a file, under any variant. A DTX2 file is unpacked
+// Read returns the table in a file, under any variant. A DTX2 file is unpacked
 // with the copy of ST4 carried in internal/st4.
 func Read(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
@@ -142,22 +142,22 @@ const CopiesFlag = 1
 // ST4 packs: the copy of ST4 carried in internal/st4 packs, or a packer
 // beside it that -p names.
 type Packer interface {
-	// Pack gives column as one complete ST4 data set: its header, and
+	// Pack returns column as one complete ST4 data set: its header, and
 	// the length of what it unpacks to. loop is the unit the set decodes
 	// back to when it reaches the end, so that it decodes forever, or -1
-	// where the set ends (R5.11). It is an error to give a loop to a packer
-	// with none to give: a set that ends where the file defines a loop
-	// reads wrongly.
+	// where the set ends (R5.11). Naming a loop to a packer without one is
+	// an error: a set that ends where the file defines a loop reads
+	// wrongly.
 	Pack(column []byte, unit, ring, loop int) ([]byte, error)
 
-	// Copies gives whether a match beyond the ring copies from the
+	// Copies reports whether a match beyond the ring copies from the
 	// column's literal stream, which ST4 packs with -c. The packer
 	// defines it: a flag carried beside a file could differ from the
 	// bytes in it, and one the packer wrote cannot (R5.10).
 	Copies() bool
 }
 
-// WriteDtx2 gives table as a DTX2 file, every column packed at one unit.
+// WriteDtx2 returns table as a DTX2 file, every column packed at one unit.
 //
 // The payload defines N and k once, so one ring size and one decoder build
 // reads every column (R5.3, R5.5), then an offset a column, then the data
@@ -211,9 +211,9 @@ func WriteDtx2(t *Table, packer Packer, unit, ring int) ([]byte, error) {
 	return out, nil
 }
 
-// Loop gives the unit every data set of a table that repeats loops at, or
+// Loop returns the unit every data set of a table that repeats loops at, or
 // -1 where the table does not repeat (R5.11). A set that loops never ends,
-// so a reader takes the repeat as one more row; a set of a table that does
+// so a reader reads the repeat as one more row; a set of a table that does
 // not repeat ends where the rows do, and its reader shortens the last
 // refill of a column against the rows it has left.
 //
@@ -231,10 +231,10 @@ func Loop(t *Table, unit int) (int, error) {
 	return at / unit, nil
 }
 
-// Dtx2From gives the DTX2 file of the table in a DTX file of any variant.
+// Dtx2From returns the DTX2 file of the table in a DTX file of any variant.
 // The table is the same under every variant (R1.3), so what comes back has
 // the same rows, width, R and RR as what went in, and a DTX2 file comes
-// back packed at the unit and ring given here.
+// back packed at the unit and ring named here.
 func Dtx2From(file []byte, packer Packer, unit, ring int) ([]byte, error) {
 	t, err := Read(file)
 	if err != nil {
@@ -243,7 +243,7 @@ func Dtx2From(file []byte, packer Packer, unit, ring int) ([]byte, error) {
 	return WriteDtx2(t, packer, unit, ring)
 }
 
-// Packed gives what a DTX2 payload defines: the ring, the unit, whether its
+// Packed is what a DTX2 payload defines: the ring, the unit, whether its
 // columns contain copies from the literal stream, whether a reader replays
 // each set's pass, and where each column's data set begins in the payload.
 type Packed struct {
@@ -281,10 +281,10 @@ func ReadPacked(file []byte, header Header) (Packed, error) {
 			return Packed{}, fmt.Errorf("column %d's data set begins at %d,"+
 				" outside the payload", i, out.At[i])
 		}
-		// Byte 20 of a data set gives the unit its loop begins at, or
+		// Byte 20 of a data set records the unit its loop begins at, or
 		// $FFFFFFFF where its end marker loops it. A set that records one is
 		// replayed by the reader (abi.md 4), and every set of a payload
-		// takes the same form: they are one table's columns, so one loop and
+		// has the same form: they are one table's columns, so one loop and
 		// one length.
 		if int32(GetLong(file, payload+out.At[i]+20)) != -1 {
 			out.Replayed = true
@@ -300,7 +300,7 @@ func ReadPacked(file []byte, header Header) (Packed, error) {
 	return out, nil
 }
 
-// ReadDtx2 gives the table in a DTX2 file, each column unpacked with the
+// ReadDtx2 returns the table in a DTX2 file, each column unpacked with the
 // copy of ST4 carried in internal/st4. A data set runs from its offset to
 // the next offset above it, or to the end of the file.
 //

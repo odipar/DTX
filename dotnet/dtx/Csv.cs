@@ -7,40 +7,40 @@ using System.Text;
 /// <summary>
 /// A table out of comma separated text: one row a line, one value a column.
 ///
-/// <para>The first row of numbers gives C. A line that is blank, or whose
+/// <para>The first row of numbers defines C. A line that is blank, or whose
 /// first character other than a space is #, is not a row, and neither is a
 /// line before the first row of numbers in which no cell is a number: a
 /// line of column names, or a line describing the table. A value is
 /// decimal, or hexadecimal where it opens with $, and negative where it
 /// opens with -.</para>
 ///
-/// <para>Every value of the table takes the same width W (R6.3). A value of
+/// <para>Every value of the table is the same width W (R6.3). A value of
 /// W bytes is stored most significant byte first, as every field of the
 /// header is, and a negative one in two's complement. A value fits W bytes
-/// where it lies from -2^(8W-1) to 2^(8W)-1, so one width takes a signed
+/// where it lies from -2^(8W-1) to 2^(8W)-1, so one width fits a signed
 /// column's values and an unsigned one's alike. DTX does not define more of
 /// a column than its width, so which of the two a column is, the caller
 /// defines elsewhere.</para>
 ///
-/// <para>A table is written out the other way as well: a comment that gives
-/// the shape, a line of column names, then one row a line, each value the
-/// unsigned number its bytes give. Read back, the comment gives the width
-/// and the repeat where the caller does not give them, and the names are
-/// passed over, so the text a table was written as reads back to that
-/// table.</para>
+/// <para>A table is written out the other way as well: a comment that
+/// declares the shape, a line of column names, then one row a line, each
+/// value the unsigned number its bytes stand for. Read back, the comment
+/// declares the width and the repeat where the caller does not name them,
+/// and the names are passed over, so the text a table was written as reads
+/// back to that table.</para>
 /// </summary>
 public static class Csv
 {
     /// <summary>
-    /// The rows of text at the width the first comment gives or else the
-    /// narrowest that takes every value, repeating at the row the first
-    /// comment gives or else at R.
+    /// The rows of text at the width the first comment declares or else the
+    /// narrowest that fits every value, repeating at the row the first
+    /// comment declares or else at R.
     /// </summary>
     public static Table TableAt(string text) => TableAt(text, Width(text));
 
     /// <summary>
-    /// The rows of text at the given width, repeating at the row the first
-    /// comment gives or else at R.
+    /// The rows of text at the width named, repeating at the row the first
+    /// comment declares or else at R.
     /// </summary>
     public static Table TableAt(string text, int width)
     {
@@ -49,16 +49,16 @@ public static class Csv
         return Build(row, width, repeat < 0 ? row.Count : repeat);
     }
 
-    /// <summary>The rows of text at the given width, repeating at repeat.</summary>
-    /// <exception cref="ArgumentException">where a line does not give one
+    /// <summary>The rows of text at the width named, repeating at repeat.</summary>
+    /// <exception cref="ArgumentException">where a line does not have one
     /// value a column, where a value is not a number, or where a value does
     /// not fit the width</exception>
     public static Table TableAt(string text, int width, int repeat) =>
             Build(Rows(text), width, repeat);
 
     /// <summary>
-    /// The width the first comment of text gives, or else the narrowest of
-    /// 1, 2 and 4 that takes every value of it.
+    /// The width the first comment of text declares, or else the narrowest
+    /// of 1, 2 and 4 that fits every value of it.
     /// </summary>
     public static int Width(string text)
     {
@@ -68,8 +68,8 @@ public static class Csv
     }
 
     /// <summary>
-    /// The repeat the first comment of text gives, or -1 where it does not
-    /// give one.
+    /// The repeat the first comment of text declares, or -1 where it does
+    /// not.
     /// </summary>
     public static int Repeat(string text)
     {
@@ -79,10 +79,10 @@ public static class Csv
     }
 
     /// <summary>
-    /// table as text: a comment giving R, C, the width and RR; a line of
+    /// table as text: a comment declaring R, C, the width and RR; a line of
     /// column names, c0 onward; then one row a line, one value a column,
-    /// each the unsigned number its bytes give. TableAt(text) reads it back
-    /// to the same table.
+    /// each the unsigned number its bytes stand for. TableAt(text) reads it
+    /// back to the same table.
     /// </summary>
     public static string Text(Table table)
     {
@@ -112,7 +112,7 @@ public static class Csv
     /// <summary>
     /// What follows key in the first comment of text, up to a comma followed
     /// by a space or the end of the line, or empty where the text does not
-    /// open with a comment giving it. The comment is the one Text(table)
+    /// open with a comment that declares it. The comment is the one Text(table)
     /// writes: <c># 3 rows, 3 columns, width 2, RR 3</c>.
     /// </summary>
     private static string Comment(string text, string key)
@@ -255,7 +255,7 @@ public static class Csv
         return false;
     }
 
-    /// <summary>The narrowest width that takes every value of every column.</summary>
+    /// <summary>The narrowest width that fits every value of every column.</summary>
     private static int Narrowest(List<long[]> row)
     {
         int taken = 1;
@@ -277,7 +277,7 @@ public static class Csv
         return taken;
     }
 
-    /// <summary>The number cell gives, or what it is that is not one.</summary>
+    /// <summary>The number cell reads as, or what it is that is not one.</summary>
     private static long Value(string cell, int line, int column)
     {
         string where = $"line {line} column {column}";
@@ -302,7 +302,7 @@ public static class Csv
     }
 
     /// <summary>
-    /// The number digits gives at this radix: a leading - or +, then the
+    /// The number digits reads as at this radix: a leading - or +, then the
     /// digits, and a value that fits eight bytes. One text is one table in
     /// every tree, so this reads what Java's Long.parseLong reads and
     /// nothing else.
@@ -336,7 +336,7 @@ public static class Csv
     /// <summary>
     /// The value of c as a digit at this radix, or -1 where it is not one:
     /// the ASCII digits and letters, and the decimal digit of any script, as
-    /// Java's Character.digit takes them.
+    /// Java's Character.digit reads them.
     /// </summary>
     private static int Digit(char c, int radix)
     {

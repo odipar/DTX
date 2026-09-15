@@ -39,7 +39,7 @@ func TestContainsEveryImageOrNone(t *testing.T) {
 				build.Name(), got, build.Unit)
 		}
 		// DTX0 reads a row as one run of bytes, so its code does not move
-		// with the width and its format block gives a width of 0.
+		// with the width and its format block records a width of 0.
 		want := build.Width
 		if build.Variant == 0 {
 			want = 0

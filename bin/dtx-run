@@ -3,7 +3,7 @@
 # source is newer than the last build. doc/tools.md defines the tools; the
 # three scripts beside this one name a class and pass their arguments on.
 #
-# Paths reach the tool as the caller gave them, so a relative one is
+# Paths reach the tool as the caller wrote them, so a relative one is
 # relative to the caller's directory and not to this repository's.
 set -e
 
@@ -20,7 +20,7 @@ built=$classes/.built
 if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" "$root/68k" \
         -newer "$built" -print -quit 2>/dev/null)" ]; then
     # The build reads standard input, which a tool's input comes in on,
-    # so it is given none.
+    # so it is run with none.
     (cd "$root" && mvn -q process-classes </dev/null)
     : > "$built"
 fi

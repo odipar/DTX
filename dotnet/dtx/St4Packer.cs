@@ -7,13 +7,13 @@ using System.Globalization;
 /// An <see cref="IPacker"/> that packs with the copy of ST4 in this
 /// repository.
 ///
-/// <para>dotnet/nt4 is that copy, taken from odipar/ST4@498aa25 and not
+/// <para>dotnet/nt4 is that copy, carried from odipar/ST4@498aa25 and not
 /// edited here. So a tool writes DTX2 with no packer beside it, and
 /// <see cref="St4Beside"/> runs one where a caller names it.</para>
 ///
-/// <para>The packer takes what <c>st4 -f -kK -mN -l65535</c> gives it, and <c>-c</c> beside them where the columns contain copies.
+/// <para>The packer packs as <c>st4 -f -kK -mN -l65535</c> does, and <c>-c</c> beside them where the columns contain copies.
 /// The ring is bytes and the packer counts units, so <c>-m</c> is the ring
-/// divided by the unit, at most what a word offset can give.</para>
+/// divided by the unit, at most what a word offset reaches.</para>
 ///
 /// <para><c>-l65535</c> meets ST4_wrap's assumption 4: no operation is
 /// longer than the 65535 units the 68000 decoders count in a word.</para>
@@ -111,7 +111,7 @@ public sealed class St4Packer : IPacker
 /// An <see cref="IPacker"/> that runs an ST4 packer beside this one.
 ///
 /// <para><see cref="St4Packer"/> packs with the copy in this repository,
-/// and a tool takes it where none is named. This runs another: an ST4
+/// and a tool uses it where none is named. This runs another: an ST4
 /// separate build, named by <c>-p</c>, so a packer newer than the copy
 /// here is used through this.</para>
 /// </summary>
@@ -146,7 +146,7 @@ public sealed class St4Beside : IPacker
                 RedirectStandardError = true,
             };
             // The offset limit is capped as St4Packer caps it, so the two
-            // packers are given one limit: a word offset is stored scaled to
+            // packers work to one limit: a word offset is stored scaled to
             // bytes, and 32512 units at k=4 would not fit the word.
             int offsetLimit = Math.Min(ring / unit,
                     Nt4.Format.MaxOffsetUnits(unit));
@@ -162,7 +162,7 @@ public sealed class St4Beside : IPacker
             }
             if (loop >= 0)
             {
-                // st4 -r takes the loop's unit, and works out for itself
+                // st4 -r reads the loop's unit, and resolves for itself
                 // whether a back reference reaches the loop's first unit or
                 // the pass has to be replayed
                 start.ArgumentList.Add(

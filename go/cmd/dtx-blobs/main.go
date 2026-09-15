@@ -9,8 +9,7 @@
 //
 // The table each is assembled from is made here rather than read: the code
 // does not move with a table's shape, and pack.Blank zeroes the six fields
-// the one used did give, so what comes out is a function of the template
-// alone.
+// a package fills, so what comes out is a function of the template alone.
 //
 //	dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 package main
@@ -54,7 +53,7 @@ Examples
 doc/tools.md, Build the images.
 `
 
-// errUsage is the run given no file to work on, which prints help to
+// errUsage is a run with no file to work on, which prints help to
 // standard error and exits with 2.
 var errUsage = errors.New("usage")
 
@@ -84,7 +83,7 @@ func main() {
 //
 // The assembler reads only a data set's four stream offsets, not the streams,
 // so a data set whose streams are the column itself fixes every figure the
-// build takes. Nothing decodes it, and nothing here runs it: the packer that
+// build reads. Nothing decodes it, and nothing here runs it: the packer that
 // writes a table a caller reads is ST4's own.
 type plain struct{ copies bool }
 
@@ -105,7 +104,7 @@ func (h plain) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	return set, nil
 }
 
-// seed gives a table that fixes the figures one build's assembly reads.
+// seed returns a table that fixes the figures one build's assembly reads.
 // Any table of the kind does, since the code does not move with it: this
 // one is 64 rows of two columns at the build's width, at a ring of 960 where
 // the build is packed.

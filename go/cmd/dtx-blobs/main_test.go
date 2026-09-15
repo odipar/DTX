@@ -10,8 +10,9 @@ import (
 	"github.com/odipar/dtx/go/pack"
 )
 
-// printed runs the tool over args and gives what it wrote to standard output
-// and the error it gave. The tool prints a line a build, and a test reads
+// printed runs the tool over args and returns what it wrote to standard
+// output and the error it ended with. The tool prints a line a build, and a
+// test reads
 // them where a caller reads them.
 func printed(t *testing.T, args ...string) (string, error) {
 	t.Helper()
@@ -34,7 +35,7 @@ func printed(t *testing.T, args ...string) (string, error) {
 }
 
 // The table a build is assembled from is made rather than read, and every
-// build takes one: a DTX0 or DTX1 file at the build's width, and a DTX2 file
+// build needs one: a DTX0 or DTX1 file at the build's width, and a DTX2 file
 // packed at its unit whose data sets carry the column itself.
 func TestEveryBuildTakesASeedTableOfItsOwnShape(t *testing.T) {
 	for _, build := range image.Builds() {
@@ -68,7 +69,7 @@ func TestEveryBuildTakesASeedTableOfItsOwnShape(t *testing.T) {
 	}
 }
 
-// A flag the tool does not read gives the tool's line and a misuse, which
+// A flag the tool does not read prints the tool's line and a misuse, which
 // main exits 2 on, as the Java tree exits.
 func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 	_, err := printed(t, t.TempDir(), "-z")
@@ -81,7 +82,7 @@ func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 	}
 }
 
-// A run given no directory to write into gives the usage, which main prints
+// A run with no directory to write into prints the usage, which main writes
 // to standard error and exits 2 on. -help prints the one text and nothing
 // else.
 func TestNoDirectoryToWriteIntoGivesTheUsageAndHelpPrintsTheOneText(

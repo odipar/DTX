@@ -98,13 +98,16 @@ them:
   columns, a register *keeps* a value, a file *has* tunes in it.
 - **states.** `the rate the tune states` is `the tune's rate`. A row *sets* a
   register, a document *defines* a rule.
-- **gives.** `what the two chips give` is `the figures of the two chips`. A
-  chip does not give: a clock *counts*, a timer *counts* a period, and a
-  column *is* one value a row.
-- **takes.** `a value the register takes` is `a value that fits the register`,
-  and `a reader takes any JSON of this shape` is `a reader reads any JSON of
-  this shape`. A tick *reads* a row, a tool's flags *are* what they are, and
-  the row that stops an effect *sets* its register back.
+- **gives.** `the comment gives the width` is `the comment declares the
+  width`. A format block *records* the first table's figures,
+  `DTX_metadata` *reports* the stride, an advance *leaves* an address, a
+  document *defines* a rule, and a Go function *returns* a value, or
+  *reports whether* where the answer is a yes or a no.
+- **takes.** `every value of the table takes one width` is `every value of
+  the table is one width`, and `a reader takes a row` is `a reader reads a
+  row`. A table of another width *needs* another build, a refill *costs*
+  cycles, a packager *uses* the decoder a payload names, and a width *fits*
+  every value of a column.
 - **nothing.** `it states nothing about X` and `and no form is the format` are
   a negation standing where the sentence that says what is there belongs.
 
@@ -139,12 +142,6 @@ lowered prose, and the samples the pattern is in and is near. The check
 reads every sample back, so a pattern that drifts fails a build rather than
 review. Add an entry to strike a construct, and take one off in the same
 change that uses the construct.
-
-Two rules of this file have no pattern in STRUCK.md yet: *gives* and
-*takes* of *The verb that says the action*. The prose of this repository was
-written when *gives* was the recommended form, and the two read 640 lines
-across the five trees. A round a rule adds the pattern and sweeps what it
-finds.
 
 ## A specification defines operations
 

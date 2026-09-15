@@ -14,13 +14,13 @@ using System.Reflection;
 /// how they are built and doc/abi.md what each of them does.</para>
 ///
 /// <para>They are build output, embedded from build/68k. An assembly built
-/// without them does not contain one: Read gives null back and the caller
+/// without them does not contain one: Read returns null and the caller
 /// resolves an image as it otherwise would, through DTX_68K.</para>
 /// </summary>
 public static class Images
 {
     /// <summary>
-    /// One build of the code: a variant, the width its values take, and
+    /// One build of the code: a variant, the width its values are in, and
     /// under DTX2 a decoder.
     /// </summary>
     public readonly record struct Build(int Variant, int Width, int Unit,
@@ -56,7 +56,7 @@ public static class Images
         if (variant == Format.Dtx0)
         {
             // DTX0 reads a row as one run of bytes, and the move that run
-            // takes comes from the row's bytes: its code does not move with
+            // needs comes from the row's bytes: its code does not move with
             // the width.
             return "DTX0.bin";
         }

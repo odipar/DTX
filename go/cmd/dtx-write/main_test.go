@@ -11,7 +11,7 @@ import (
 	"github.com/odipar/dtx/go/dtx"
 )
 
-// numbers gives comma separated text of rows rows and columns columns, the
+// numbers returns comma separated text of rows rows and columns columns, the
 // value at row r and column i being r times i.
 func numbers(rows, columns int) string {
 	var out strings.Builder
@@ -27,9 +27,9 @@ func numbers(rows, columns int) string {
 	return out.String()
 }
 
-// ran runs the tool over args with in on standard input, and gives what it
+// ran runs the tool over args with in on standard input, and returns what it
 // wrote to standard output, what it reported on standard error, and the
-// error it gave. A caller reads the three the same way.
+// error it ended with. A caller reads the three the same way.
 func ran(t *testing.T, in string, args ...string) ([]byte, string, error) {
 	t.Helper()
 	file, err := os.CreateTemp(t.TempDir(), "said")
@@ -51,7 +51,7 @@ func ran(t *testing.T, in string, args ...string) ([]byte, string, error) {
 	return out.Bytes(), string(said), err
 }
 
-// printed runs the tool and gives what it printed to standard output, for a
+// printed runs the tool and returns what it printed to standard output, for a
 // run that writes a text rather than a table.
 func printed(t *testing.T, args ...string) (string, error) {
 	t.Helper()
@@ -73,9 +73,9 @@ func printed(t *testing.T, args ...string) (string, error) {
 	return string(said), gave
 }
 
-// Text is written as a DTX file of the variant and width given, and the
-// report gives the figures of the table written.
-func TestATextIsWrittenAndTheReportGivesItsFigures(t *testing.T) {
+// Text is written as a DTX file of the variant and width named, and the
+// report names the figures of the table written.
+func TestATextIsWrittenAndTheReportNamesItsFigures(t *testing.T) {
 	file, said, err := ran(t, numbers(8, 2), "-v1", "-w2")
 	if err != nil {
 		t.Fatal(err)
@@ -145,7 +145,7 @@ func TestTheRepeatOfADtxFileIsChangedAndItsVariantKept(t *testing.T) {
 	}
 }
 
-// A flag the tool does not read gives the tool's line and a misuse, which
+// A flag the tool does not read prints the tool's line and a misuse, which
 // main exits 2 on, as the Java tree exits. -copiesS with letters behind it
 // is one of those: a search of no seconds would pack another file.
 func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {

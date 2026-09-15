@@ -17,7 +17,7 @@ type (
 	// Block is one block of a parse: the bits to its end, the unit it ends
 	// on, its offset, and the block before it.
 	Block = upstream.Block
-	// Container is one ST4 file taken apart.
+	// Container is the parts of one ST4 file.
 	Container = upstream.Container
 	// Result is the four streams and their figures.
 	Result = upstream.Result

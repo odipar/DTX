@@ -14,19 +14,19 @@ import (
 // CopiesFlag reaches it as -c, or -cS for a search of S seconds, or is
 // empty for none. A column packed that way so that a match beyond the ring
 // copies from its literal stream, which packs a small ring far smaller;
-// the payload then defines it (R5.10) and the reader of it takes a decoder
+// the payload then defines it (R5.10) and the reader of it needs a decoder
 // built with the copy code.
 type Beside struct {
 	Path       string
 	CopiesFlag string
 }
 
-// Copies gives whether this packer packs copies from the literal stream.
+// Copies reports whether this packer packs copies from the literal stream.
 func (p Beside) Copies() bool {
 	return p.CopiesFlag != ""
 }
 
-// Pack gives column as one complete ST4 data set, looping at unit loop or
+// Pack returns column as one complete ST4 data set, looping at unit loop or
 // ending where loop is -1.
 func (p Beside) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	work, err := os.MkdirTemp("", "dtx")
@@ -39,14 +39,14 @@ func (p Beside) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	if err := os.WriteFile(in, column, 0o644); err != nil {
 		return nil, err
 	}
-	// The offset limit is capped as Packer caps it, so the two packers are
-	// given one limit: a word offset is stored scaled to bytes, and 32512
+	// The offset limit is capped as Packer caps it, so the two packers work
+	// to one limit: a word offset is stored scaled to bytes, and 32512
 	// units at k=4 would not fit the word.
 	offsetLimit := min(ring/unit, MaxOffsetUnits(unit))
 	argv := []string{"-f", "-k" + strconv.Itoa(unit),
 		"-m" + strconv.Itoa(offsetLimit), "-l65535"}
 	if loop >= 0 {
-		// st4 -r takes the loop's unit, and works out for itself whether
+		// st4 -r reads the loop's unit, and resolves for itself whether
 		// a back reference reaches the loop's first unit or the pass has to
 		// be replayed
 		argv = append(argv, "-r"+strconv.Itoa(loop))
@@ -58,10 +58,10 @@ func (p Beside) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	said, err := exec.Command(p.Path, argv...).CombinedOutput()
 	if err != nil {
 		// Where the executable is not there its output is empty and the
-		// message would end at "gave ", so the error from the run is
+		// message would end at "reported ", so the error from the run is
 		// wrapped into it.
 		if trimmed := strings.TrimSpace(string(said)); trimmed != "" {
-			return nil, fmt.Errorf("%s gave %s: %w", p.Path, trimmed, err)
+			return nil, fmt.Errorf("%s reported %s: %w", p.Path, trimmed, err)
 		}
 		return nil, err
 	}

@@ -15,7 +15,7 @@ type Table struct {
 	column [][]byte
 }
 
-// NewTable gives a table of the given columns, each rows times width bytes.
+// NewTable returns a table of the columns named, each rows times width bytes.
 // The slices are copied, so a later write to the caller's does not reach
 // this table.
 func NewTable(rows, repeat, width int, column [][]byte) (*Table, error) {
@@ -43,29 +43,29 @@ func NewTable(rows, repeat, width int, column [][]byte) (*Table, error) {
 	return &Table{rows, repeat, width, kept}, nil
 }
 
-// Rows gives R.
+// Rows returns R.
 func (t *Table) Rows() int { return t.rows }
 
-// Columns gives C.
+// Columns returns C.
 func (t *Table) Columns() int { return len(t.column) }
 
-// Repeat gives RR, the row the table repeats to, or R where it does not.
+// Repeat returns RR, the row the table repeats to, or R where it does not.
 func (t *Table) Repeat() int { return t.repeat }
 
-// Width gives W, the bytes every value of the table takes.
+// Width returns W, the bytes every value of the table is written in.
 func (t *Table) Width() int { return t.width }
 
-// Column gives column i's R values, in row order.
+// Column returns column i's R values, in row order.
 func (t *Table) Column(i int) []byte {
 	return append([]byte(nil), t.column[i]...)
 }
 
-// RowBytes gives a row's bytes: C values of W bytes.
+// RowBytes returns a row's bytes: C values of W bytes.
 func (t *Table) RowBytes() int {
 	return len(t.column) * t.width
 }
 
-// Same gives whether two tables are the same rows, width, R and RR.
+// Same reports whether two tables are the same rows, width, R and RR.
 func (t *Table) Same(other *Table) bool {
 	if t.rows != other.rows || t.repeat != other.repeat ||
 		t.width != other.width || len(t.column) != len(other.column) {
@@ -79,7 +79,7 @@ func (t *Table) Same(other *Table) bool {
 	return true
 }
 
-// Header gives the header of table under variant, SPEC.md 1.
+// Header returns the header of table under variant, SPEC.md 1.
 func (t *Table) Header(variant int) []byte {
 	out := make([]byte, HeaderLength)
 	copy(out, Magic)

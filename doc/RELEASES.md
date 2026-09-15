@@ -10,15 +10,15 @@ below it.
 
 - one zip a platform, over six: Windows, macOS and Linux, each on x64 and
   arm64. A zip contains the three tools as executables, and each executable
-  contains the twenty-two 68000 images, so a caller who takes one has the
+  contains the twenty-two 68000 images, so a caller who unpacks one has the
   whole of what packaging needs
 - one zip of the twenty-two images, one file a build inside it, for a
-  caller who takes an image and no tool (BINARIES.md)
+  caller who needs an image and no tool (BINARIES.md)
 - `MANIFEST.txt`: every file's size and sha256 beside what identifies it -
   a variant, a width, a unit and copies for an image, what it contains for
   a zip - and the source commit the release was built from
 
-The version names every file. It is read out of `pom.xml`, or given as the
+The version names every file. It is read out of `pom.xml`, or named as the
 script's one argument. The pom names the release being cut, and moves to
 the next `-SNAPSHOT` once it is.
 
@@ -79,7 +79,7 @@ moves, so a table this release packages is the bytes 0.9.0 packaged.
   not fit at 4, an odd `R` at 2 and at 4, a unit of 2 at a width of 4, a
   copy from the literal stream at 1 and at 4, and two tables in one image
   at 4. Twelve cases, and no address odd in any.
-- **`RigCallsTest` runs on every build.** The rig takes four minutes, so
+- **`RigCallsTest` runs on every build.** The rig costs four minutes, so
   no build runs it, and that is how its calls went unread. The test
   imports the rig and runs the two helpers that reach a tool, over a table
   of two rows: no emulator, no assembler, under a second.
@@ -120,12 +120,12 @@ image and no packaged byte moves.
 tagged `v0.8.0`.
 
 **Every caller changes: the state block stands in `a6` and not in `a0`,
-on the three calls that take it.** `DTX_metadata` reads the image alone
+on the three calls that read it.** `DTX_metadata` reads the image alone
 and is as it was.
 
 - Under DTX2 the reader keeps its figures in `a6` and ST4 leaves
   `a6` alone, so a block in `a0` cost a call three instructions: the
-  caller's `a6` parked, `a0` moved into it, and `a6` taken back. Those
+  caller's `a6` parked, `a0` moved into it, and `a6` restored. Those
   are gone, and DTX0 and DTX1 reach their fields through `a6` where
   they reached them through `a0`.
 - An advance under DTX2 reads 640 to 892 cycles on three columns of two
@@ -145,7 +145,7 @@ and is as it was.
 <https://github.com/odipar/DTX/releases/tag/v0.7.0>, built from the commit
 tagged `v0.7.0`.
 
-**Every caller changes: `DTX_init` takes the header of the table to read in
+**Every caller changes: `DTX_init` reads the header of the table to read in
 `a1`.** A caller that leaves `a1` where it stood seeds its block on the
 address that register stood at. A caller of an image of one table passes
 the image plus the format block's +8, which it may read at build time.
@@ -155,19 +155,19 @@ the image plus the format block's +8, which it may read at build time.
   in an image is of the variant and the width the code was built for, and
   under DTX2 of its unit and copies flag, and shares `P` and `N` with the
   rest; `R`, `C` and `RR` are each table's. So a caller with several
-  tables of one shape takes the reader once rather than once a table.
-- `DTX_init` takes `a1`, the table's header. `DTX_payload` is handed that
+  tables of one shape packages the reader once rather than once a table.
+- `DTX_init` reads `a1`, the table's header. `DTX_payload` is handed that
   header rather than deriving one, and under DTX2 the column table is
   reached at the header less 16`C`, which is where the packager lays it.
-- Init parks the payload it was given, and `DTX_jump` reads it there
+- Init parks the payload it was seeded on, and `DTX_jump` reads it there
   rather than deriving the format block's again. Under DTX0 and DTX1 the
   block's +4 stands at that payload, where it parked the caller's `a6`
   under DTX2 and stood unused under the plain two.
-- Under DTX0 init works the row's bytes out of the header it is given,
+- Under DTX0 init forms the row's bytes from the header in `a1`,
   `C` times the width, where it read the format block's field: the figure
   stands in three instructions, so it is the table the block was seeded
   on.
-- The format block's +4, +8, +12, +20 and +24 give the first table's, and
+- The format block's +4, +8, +12, +20 and +24 are the first table's, and
   +14, +16, +18 and +19 the image's. An image of one table is the bytes
   it always was.
 - A jump costs less: 246 cycles to 186 under DTX0 and 138 to 78 under
@@ -175,9 +175,9 @@ the image plus the format block's +8, which it may read at build time.
   DTX0 for the multiply, and 138 to 128 under DTX1 and 7,894 to 7,880
   under DTX2 on the three column example. DTX1's code is 80 bytes where
   it was 84 and DTX2's 1,444 at `k` of 1 where it was 1,448.
-- `Packager.packaged`, Go's `pack.Images` and C#'s `Pack.Image` take the
-  files and give back the image and where each table's header stands.
-  `dtx-package [in.dtx...] > out.bin` takes the tables it is named and
+- `Packager.packaged`, Go's `pack.Images` and C#'s `Pack.Image` read the
+  files and return the image and where each table's header stands.
+  `dtx-package [in.dtx...] > out.bin` reads the tables it is named and
   prints where each stands.
 - Two sentences of abi.md that were wrong are corrected: DTX1 leaves its
   code unwritten, so a DTX1 image may stand in ROM, and no site is
@@ -191,11 +191,11 @@ tagged `v0.6.0`.
 **No file changes, and no caller's code but one that read the block's
 fields from +36 on, or a decoder state's past its registers.**
 
-- A replayed pass puts each column's registers away and takes them back at the
+- A replayed pass puts each column's registers away and puts them back at the
   exact row its loop begins and ends at, splitting the refill the row falls
   inside, where it did so at a period's end and asked of the packager that
   `RR` and `R` minus `RR` divide by `P`. That rule is gone: a table repeats at
-  any row, and packs at the period its ring gives rather than one its loop
+  any row, and packs at the period its ring needs rather than one its loop
   divides by; one rule stays, a replayed loop a period long at least, which
   binds only a table whose period is above 32512 bytes.
 - A table of fewer rows than a period packages, where the packager failed
@@ -217,16 +217,16 @@ fields from +36 on, or a decoder state's past its registers.**
 <https://github.com/odipar/DTX/releases/tag/v0.5.0>, built from the commit
 tagged `v0.5.0`.
 
-**A caller written against 0.4.0's state block has to take its size out
+**A caller written against 0.4.0's state block has to read its size out
 of the format block, as abi.md 3 has always said.** Every file reads as
 before, and no tool's output changes but the state block's size.
 
 - DTX2's advance walks the decoder states rather than indexing them: a
-  refill reads its state's address out of the block, and the state gives
+  refill reads its state's address out of the block, and the state records
   its ring's end, its budget and where its registers go at a loop. On 64
   rows of three two byte columns an advance is 658 to 1002 cycles where
   it was 1180 to 1358, and on twenty columns 1094 where it was 1616.
-- A replayed pass puts each column's registers away, and takes them back,
+- A replayed pass puts each column's registers away, and puts them back,
   at that column's refill, in the period after the loop's row and the
   period after the pass's row. It copied every column's in one call, 170
   cycles a column, on the row before each.
@@ -251,10 +251,10 @@ DTX2 file that repeats has to be written again.** The tools of both
 releases read every file the other writes, and only one file differs at
 all: a DTX2 table that repeats. What broke is the 68000 side.
 
-- An advance gives the address of the row's first value and nothing else.
-  It gave the row in `d0` as well, or $FFFFFFFF at the end. A row is what a
-  jump takes, and a caller counts its rows against the `R` and `RR`
-  that `DTX_metadata` gives.
+- An advance leaves the address of the row's first value and nothing else.
+  It left the row in `d0` as well, or $FFFFFFFF at the end. A jump reads a
+  row number, and a caller counts its rows against the `R` and `RR` of
+  `DTX_metadata`.
 - The state block is 12 bytes under DTX0 and DTX1 where it was 20, and 56
   plus 32`C` plus `NC` under DTX2 where it was 52. A caller reads its size
   out of the format block, as it always could.
@@ -280,11 +280,11 @@ What changed since 0.3.0:
   where it was 208, and DTX1's 84 where it was 160.
 - **The rows decoded still shorten a column's last refill** where the data
   sets end. That is why a DTX2 advance is cheaper than 0.3.0's: on twenty
-  two byte columns it takes 1432 cycles on average over 64 rows where
-  0.3.0 took 1512.
+  two byte columns it costs 1432 cycles on average over 64 rows where
+  0.3.0 cost 1512.
 - R5.11 is the rule this adds: `RR` times the width divides by `k`, so row
-  `RR` begins a unit of the column. A writer given a table that breaks it
-  fails, naming the rule.
+  `RR` begins a unit of the column. A writer fails on a table that breaks
+  it, naming the rule.
 - The README has sections, a usage section and an attribution section.
 
 ### 0.3.0, 2026-09-06
@@ -303,16 +303,16 @@ What changed since 0.2.0:
   copy, and the six fields a combine writes stand at zero in the format
   block rather than being assembled in and then written over. DTX0's code
   is 208 bytes where it was 232, DTX1's 160 where it was 176, and DTX2's
-  884 where it was 924. An image the packager assembles and one it takes
+  884 where it was 924. An image the packager assembles and one it reads
   from the build are the same bytes now, at every variant and width.
 - **The three trees read alike.** A bare `-a`, a header with an `R` above
-  2147483647, and code with no format block were each taken or reported
-  differently by the Java, Go and C# tools. The three now give one line for
-  each, and a tool that cannot do the work it was given prints the reason
-  rather than a stack trace.
+  2147483647, and code with no format block were each read or reported
+  differently by the Java, Go and C# tools. The three now print one line for
+  each, and a tool that cannot do the work prints the reason rather than a
+  stack trace.
 - **The documents read back what the code does.** A review of every file
-  against the code it describes took 213 findings: the format block's place
-  and size in the glossary, six slots where there are four, five fields
+  against the code it describes recorded 213 findings: the format block's
+  place and size in the glossary, six slots where there are four, five fields
   where a combine writes six, image sizes from two changes ago, a
   conformance kit whose README named a check that no test in this
   repository runs, a cell formula that read as `r` times `i` plus one where
@@ -338,8 +338,8 @@ What changed since 0.1.0:
   under every variant and every `C`, with the width at 14. A row is `C`
   times `W` and a column is `R` times `W`, so DTX1's columns lie at one
   stride and DTX2's rule weakens to `R` times `W` divides by `k`.
-- **Four calls, and none of them copies a value.** An advance gives the
-  address of the row's first value and `DTX_metadata` gives the stride, so
+- **Four calls, and none of them copies a value.** An advance leaves the
+  address of the row's first value and `DTX_metadata` reports the stride, so
   a caller reads the columns it needs where they stand. `DTX_read` and
   `DTX_take` are gone, the slots run to 16 bytes and the format block
   stands at +16 in 28 bytes.
@@ -347,7 +347,7 @@ What changed since 0.1.0:
   width for DTX1, and one a width a unit with the copy code and without
   for DTX2.
 - **Three tools**, not four: `dtx-rewrite` folded into `dtx-write`, which
-  takes text or a DTX file and writes a DTX file or text.
+  reads text or a DTX file and writes a DTX file or text.
 - The reader is smaller and faster for it. On 64 rows of three two byte
   columns, DTX1's code is 176 bytes where it was 716, DTX2's 924 where it
   was 1476, and reading a value costs a caller the 12 or 16 cycles of one

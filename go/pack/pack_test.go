@@ -81,7 +81,7 @@ func needsImages(t *testing.T) {
 	}
 }
 
-// The format block defines what the table gives, doc/abi.md 1.
+// The format block defines what the table fixes, doc/abi.md 1.
 func TestTheFormatBlockDefinesWhatTheTableFixes(t *testing.T) {
 	needsImages(t)
 	for _, one := range []struct {
@@ -135,7 +135,7 @@ func TestTheFormatBlockDefinesWhatTheTableFixes(t *testing.T) {
 }
 
 // The stride a caller adds to reach the next column's value, which
-// DTX_metadata gives out of the format block at +24.
+// DTX_metadata reports out of the format block at +24.
 func TestTheStrideReachesTheNextColumnsValue(t *testing.T) {
 	needsImages(t)
 	for _, one := range []struct {
@@ -192,7 +192,7 @@ var fields = []struct {
 	{"the stride", StrideAt, true},
 }
 
-// field gives what one of the six reads in code.
+// field returns what one of the six reads in code.
 func field(code []byte, at int, long bool) int {
 	if long {
 		return dtx.GetLong(code, FormatAt+at)
@@ -379,7 +379,7 @@ func TestThePeriodIsTheSmallestThatMeetsEveryRule(t *testing.T) {
 		{"P is C where C meets the rules", packed(64, 2, 1, 1, 960), 2},
 		{"P is C at three columns of four bytes", packed(48, 3, 4, 1, 960), 3},
 		// N divides by P times the width, so a C that does not divide N
-		// takes the first period above C that does: 960 by 7 leaves 1.
+		// needs the first period above C that does: 960 by 7 leaves 1.
 		{"the first period above C of 7 that divides N",
 			packed(64, 7, 1, 1, 960), 8},
 		// A column's ring stands its number times N from the first, so
@@ -451,7 +451,7 @@ func TestAPackedStateBlockContainsADecoderStateAndARingAColumn(t *testing.T) {
 	}
 }
 
-// A payload whose sets record a loop is replayed, and its block takes a
+// A payload whose sets record a loop is replayed, and its block needs a
 // second decoder state a column, where the reader puts the registers away at
 // the row the loop begins, doc/abi.md 3.
 func TestAReplayedPayloadTakesASecondDecoderStateAColumn(t *testing.T) {
@@ -473,7 +473,7 @@ func TestAReplayedPayloadTakesASecondDecoderStateAColumn(t *testing.T) {
 	}
 }
 
-// The reader puts a replayed set's registers away and takes them back at
+// The reader puts a replayed set's registers away and puts them back at
 // the exact row, splitting the refill the row falls inside, so the period
 // is the same for every RR and R, doc/abi.md 4.
 func TestAReplayedPayloadTakesThePeriodForEveryRepeat(t *testing.T) {
@@ -508,7 +508,7 @@ func TestAReplayedPayloadTakesThePeriodForEveryRepeat(t *testing.T) {
 }
 
 // A refill meets one mark at most, so a replayed loop is a period long at
-// least, doc/abi.md 4: thirty columns give P of 30, and a loop of 20 rows
+// least, doc/abi.md 4: thirty columns make P of 30, and a loop of 20 rows
 // from row 20 of 40 fails the package.
 func TestAReplayedLoopUnderThePeriodIsRefused(t *testing.T) {
 	file := sets(40, 20, 30, 1, 1, 960, false, 20)
@@ -565,7 +565,7 @@ func TestAWidthTheCodeDoesNotReadIsRefused(t *testing.T) {
 }
 
 // The payload defines whether its columns contain copies, so the file fixes
-// the image a table takes and no word from a caller enters it.
+// the image a table needs and no word from a caller enters it.
 func TestThePayloadDefinesWhetherItsColumnsContainCopies(t *testing.T) {
 	needsImages(t)
 	plain, err := Image(packed(64, 2, 2, 1, 960))

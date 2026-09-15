@@ -14,7 +14,7 @@ import java.util.List;
  *
  * <p>The code is the variant's template under {@code 68k/}: DTX0.S, DTX1.S
  * or DTX2.S, which rmac assembles. This class does not write an instruction:
- * it defines what one table gives, as equates in {@code DTX_table.i}. The
+ * it defines the figures of one table, as equates in {@code DTX_table.i}. The
  * column table and the table's bytes follow the code, appended to what rmac
  * writes, so {@code _columns} is the last label of the template and the code
  * ends on a long to put them there.
@@ -53,18 +53,18 @@ public final class Packager {
     static final int STREAM = 16;
 
     /**
-     * What one decoder state takes: the eight registers, the ring's end,
+     * What one decoder state contains: the eight registers, the ring's end,
      * where the registers go at a loop, and the budget.
      */
     static final int STATE = 48;
 
-    /** What the copy of a decoder's registers takes, where a pass is replayed. */
+    /** What the copy of a decoder's registers costs, where a pass is replayed. */
     static final int SAVED = 32;
 
     /** What a packed reader's state block contains before its decoder states. */
     static final int PACKED_HEAD = 72;
 
-    /** The state block DTX0 and DTX1 take: the head, and one pointer. */
+    /** The state block DTX0 and DTX1 need: the head, and one pointer. */
     static final int PLAIN = POINTER + 4;
 
     private Packager() {
@@ -78,7 +78,7 @@ public final class Packager {
             int[] at) {}
 
     /**
-     * What a DTX2 payload gives, SPEC.md 2.3.
+     * What a DTX2 payload defines, SPEC.md 2.3.
      *
      * <p>It checks the data sets against it. Every set opens with
      * {@code $53 $34 $07 k}, so one compare against the payload's
@@ -97,10 +97,10 @@ public final class Packager {
         boolean replayed = false;
         for (int i = 0; i < at.length; i++) {
             at[i] = Dtx.getLong(file, payload + 4 + 4 * i);
-            // Byte 20 of a data set gives the unit its loop begins at, or
+            // Byte 20 of a data set records the unit its loop begins at, or
             // $FFFFFFFF where its end marker loops it. A set that records
             // one is replayed by the reader (abi.md 4), and every set of a
-            // payload takes the same form: they are one table's columns, so
+            // payload has the same form: they are one table's columns, so
             // one loop and one length.
             replayed |= Dtx.getLong(file, payload + at[i] + 20) != -1;
             int said = Dtx.getLong(file, payload + at[i]);
@@ -116,7 +116,7 @@ public final class Packager {
     }
 
     /**
-     * The period a table of these takes, the smallest that meets every rule
+     * The period a table of these needs, the smallest that meets every rule
      * of doc/abi.md 4.
      *
      * @throws IllegalArgumentException naming the rule no period meets
@@ -132,7 +132,7 @@ public final class Packager {
                     + " times " + width + " bytes, which does not divide by"
                     + " k of " + k);
         }
-        // A table shorter than a period takes the period all the same: where
+        // A table shorter than a period needs the period all the same: where
         // its sets end the reader seeds its rows and the first period's budget
         // is 0, and where they loop it seeds a period's rows round the loop
         // (abi.md 4).
@@ -160,7 +160,7 @@ public final class Packager {
     }
 
     /**
-     * The state block a plain reader of this table takes, in bytes.
+     * The state block a plain reader of this table needs, in bytes.
      *
      * <p>The same under DTX0 and DTX1, and the same at every {@code C}:
      * every column is one width, so one pointer walks them all.
@@ -170,8 +170,8 @@ public final class Packager {
     }
 
     /**
-     * The state block a packaged DTX2 reader takes, in bytes. A replayed
-     * payload takes a copy of the registers a column behind the rings, where
+     * The state block a packaged DTX2 reader needs, in bytes. A replayed
+     * payload adds a copy of the registers a column behind the rings, where
      * the reader puts them at the row its loop begins (abi.md 4).
      */
     static int stateBytes(Dtx.Header header, Packed packed) {
@@ -184,7 +184,7 @@ public final class Packager {
      * points at: the width under DTX0, where a row's values stand one after
      * another; the length of a column under DTX1, where the columns lie at
      * one stride; and {@code N} under DTX2, where every column has a ring of
-     * that size. {@code DTX_metadata} gives it, out of the format block.
+     * that size. {@code DTX_metadata} reports it, out of the format block.
      */
     static int stride(Dtx.Header header, Packed packed) {
         return switch (header.variant()) {
@@ -216,7 +216,7 @@ public final class Packager {
     }
 
     /**
-     * What one table gives, as the variant's template reads it: the
+     * The figures of one table, as the variant's template reads them: the
      * equates DTX_table.i defines.
      *
      * @throws IllegalArgumentException where R6's bounds are not met, or
@@ -258,7 +258,7 @@ public final class Packager {
                 .append(equ("DTX_POINTER", POINTER));
         if (variant != Dtx.DTX2) {
             // Nothing parks a6 under the plain variants, so the payload
-            // init was given stands in that long instead, which a jump
+            // init was seeded on stands in that long instead, which a jump
             // reaches (abi.md 3). Under DTX2 the template names it.
             out.append(equ("DTX_PAYLOAD", PARK));
         }
@@ -294,7 +294,7 @@ public final class Packager {
      * a column, four longs at a stride of 16. The plain variants do not have
      * one.
      *
-     * <p>A record gives where the column's four ST4 streams begin, from the
+     * <p>A record marks where the column's four ST4 streams begin, from the
      * payload. Its ring and its decoder state are strides rather than
      * fields: every ring is {@code N} bytes and every decoder state 32, so
      * column {@code i}'s stand {@code i} strides past column 0's.
@@ -303,7 +303,7 @@ public final class Packager {
         Dtx.Header header = Dtx.header(file);
         if (header.variant() != Dtx.DTX2) {
             // Every column is one width, so a pointer and a stride walk them
-            // all: what a plain read takes is arithmetic on R, C and the
+            // all: a plain read is arithmetic on R, C and the
             // width, and no column table is written.
             return new byte[0];
         }
@@ -345,7 +345,7 @@ public final class Packager {
             boolean copies) {
         if (variant == Dtx.DTX0) {
             // DTX0 reads a row as one run of bytes, and the move that run
-            // takes comes from the row's bytes: its code does not move with
+            // needs comes from the row's bytes: its code does not move with
             // the width.
             return "DTX0.bin";
         }
@@ -424,7 +424,7 @@ public final class Packager {
                         .redirectErrorStream(true).start();
                 byte[] said = run.getInputStream().readAllBytes();
                 if (run.waitFor() != 0 || !Files.exists(out)) {
-                    throw new IllegalStateException(rmac + " gave "
+                    throw new IllegalStateException(rmac + " reported "
                             + new String(said).trim());
                 }
                 return Files.readAllBytes(out);
@@ -450,7 +450,7 @@ public final class Packager {
 
     /** An image and where each of its tables' headers stands in it, from
      *  the image's first byte: what a caller hands {@code DTX_init} in
-     *  a1, one a table, in the order the tables were given. */
+     *  a1, one a table, in the order the tables were named. */
     public record Packaged(byte[] image, int[] headers) {
     }
 
@@ -459,18 +459,18 @@ public final class Packager {
      * each file, and the format block written to define the code and the
      * first of them.
      *
-     * <p>The code is the same bytes any table that follows it, so what a
-     * combine writes is the six fields the first table gives. It checks
+     * <p>The code is the same bytes any table that follows it, so a
+     * combine writes the six fields the first table defines. It checks
      * the three it cannot write: the variant, the width the code reads
      * values at, and under DTX2 the unit the decoder built into the code
      * decodes at. Every table past the first meets the first as well, on
-     * the figures an image gives once (doc/abi.md 1): the variant, the
+     * the figures an image defines once (doc/abi.md 1): the variant, the
      * width, the unit and, under DTX2, {@code P} and {@code N}.
      *
      * @throws IllegalStateException where the code is for another variant,
      *     another width or another unit, where it and its format block
      *     differ on where the column table lands, or where two tables
-     *     differ on a figure the image gives once
+     *     differ on a figure the image defines once
      */
     static byte[] combine(byte[] code, byte[] file) {
         return combine(code, List.of(file)).image();
@@ -563,9 +563,9 @@ public final class Packager {
         return new Packaged(image, headers);
     }
 
-    /** One image gives the variant, the width, the unit and, under DTX2,
+    /** One image defines the variant, the width, the unit and, under DTX2,
      *  {@code P} and {@code N} once (doc/abi.md 1), so every table past
-     *  the first gives what the first gives.
+     *  the first meets what the first defines.
      *
      *  @throws IllegalStateException naming the figure two tables differ on
      */
@@ -596,24 +596,24 @@ public final class Packager {
     /**
      * The image, combined from the code in this repository.
      *
-     * <p>The file defines which of the twenty-two it takes: the variant,
-     * the width every value takes, and under DTX2 the unit its data sets are
-     * packed at and whether they contain copies from the literal stream
-     * (R5.10). No word from a caller enters it, so no word can differ from
-     * the bytes.
+     * <p>The file defines which of the twenty-two it needs: the variant,
+     * the width every value is written in, and under DTX2 the unit its
+     * sets are packed at and whether they contain copies from the literal
+     * stream (R5.10). No word from a caller enters it, so no word can
+     * differ from the bytes.
      */
     public static byte[] image(byte[] file) {
         return packaged(List.of(file)).image();
     }
 
     /**
-     * The same, of one table or several: the code every one of them takes,
-     * then a column table and a table's bytes for each, in the order given.
+     * The same, of one table or several: the code every one of them needs,
+     * then a column table and a table's bytes for each, in the order named.
      * What comes back names where each table's header stands, the address
      * a caller hands {@code DTX_init} (doc/abi.md 2).
      *
      * <p>The first file names the code, and every other meets it: an image
-     * gives the variant, the width, the unit and, under DTX2, the period
+     * defines the variant, the width, the unit and, under DTX2, the period
      * and the ring once.
      */
     public static Packaged packaged(List<byte[]> files) {
@@ -634,8 +634,8 @@ public final class Packager {
 
     /**
      * The image, from rmac's assembly of the template rather than from the
-     * carried code. The two give the same bytes, which BlobTest checks; a
-     * change to a template is tried through this path.
+     * carried code. The two assemble to the same bytes, which BlobTest
+     * checks; a change to a template is tried through this path.
      *
      * @param rmac the assembler to run
      */
@@ -680,7 +680,7 @@ public final class Packager {
             return;
         }
         // A name is a table, in the order the image lays them out. Where
-        // no name is given, one table comes in on standard input.
+        // nothing is named, one table comes in on standard input.
         List<byte[]> files = new ArrayList<>();
         if (named.isEmpty()) {
             files.add(System.in.readAllBytes());

@@ -12,21 +12,21 @@
 ;
 ; DTX2 packs a column with ST4, and this reader follows YMX. Every column
 ; decodes through its ring; init fills every ring with P rows; and after
-; that one column is refilled a row, the one whose turn it is. So a read takes
-; one value from each ring and never enters a decoder. ST4_wrap.S, the copy
+; that one column is refilled a row, the one whose turn it is. So a read finds
+; one value in each ring and never enters a decoder. ST4_wrap.S, the copy
 ; carried into this repository, is the decoder, built at the unit the payload
 ; defines.
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR, P and N reach it at run
 ; time and stand in the state block.
 ;
-; A READ IS THE CALLER'S. An advance gives the pointer at column 0's value
+; A READ IS THE CALLER'S. An advance leaves the pointer at column 0's value
 ; for the row, and every ring is N bytes, so column i's value stands i rings
-; further on. DTX_metadata gives that stride, and nothing here copies a row
+; further on. DTX_metadata reports that stride, and nothing here copies a row
 ; anywhere.
 ;
-; WHAT MOVES THE CODE is the width and the decoder: the width every value
-; takes (R6.3) and k and the copy code are assembly-time constants, so a
+; WHAT MOVES THE CODE is the width and the decoder: the width every value is
+; written in (R6.3) and k and the copy code are assembly-time constants, so a
 ; table of another width, or packed at another unit, or with copies, contains
 ; other instructions. That costs one build a width a unit.
 ;
@@ -34,7 +34,7 @@
 ; decoder state 48, so the ring, the state and the stream record of column i
 ; are each i strides from the first. A seed works the three out of the
 ; column's number; a refill reads its state's address out of the block,
-; where the last refill left the next state's, and the state gives its
+; where the last refill left the next state's, and the state records its
 ; ring's end, its budget and where its registers go at a loop: a refill
 ; reads its fields and compares once. ST4 leaves only d6, d7 and a6
 ; alone, so nothing else stands across a call into it.
@@ -52,7 +52,7 @@
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to. doc/abi.md 7 lists what each call
-; takes without checking, ST4_wrap.S its seven.
+; assumes without checking, ST4_wrap.S its seven.
 ; -----------------------------------------------------------------------------
 
         .68000
@@ -68,7 +68,7 @@ DTX_S_D             equ     12
 
 ; The state block beyond what doc/abi.md 3 defines: the payload, where the
 ; stream records stand, the column a seed is at, the five figures the table
-; gives, the count kept where the sets end, the state whose turn the next
+; defines, the count kept where the sets end, the state whose turn the next
 ; row is, and column 0's ring. The decoder states stand at DTX_DECODERS, 48 a
 ; turn, and the rings behind them, N a column.
 DTX_PAYLOAD         equ     12
@@ -104,9 +104,9 @@ DTX_DECODERS        equ     72
 ; end, where the registers go at a loop, the budget, the phase and the
 ; mark. A budget of 0 is a turn with no refill: a turn past the last
 ; column, or a column whose set has ended. The mark is the units the
-; decoder has left before the row its registers are put away at, or taken
+; decoder has left before the row its registers are put away at, or put
 ; back at, and 0 where no such row is ahead; the phase says which of the
-; two, 0 to put them away and 1 to take them back. A refill the mark falls
+; two, 0 to put them away and 1 to put them back. A refill the mark falls
 ; inside is split there.
 DTX_D_END           equ     32
 DTX_D_SAVED         equ     36
@@ -122,9 +122,9 @@ DTX_D_SIZE          equ     48
 ; -----------------------------------------------------------------------------
 ; The first stream record in a3, out of the header in a2. A table's column
 ; table stands immediately before it, one record of 16 bytes a column, so
-; the records begin 16C below the header. The format block's field gives the
-; first table's and is not read here: an image contains several tables and
-; init is given the header of the one to read.
+; the records begin 16C below the header. The format block's field records
+; the first table's and is not read here: an image contains several tables and
+; init is seeded on the header of the one to read.
 
 DTX_columns:
         move.w  8(a2),d0                ; C
@@ -149,7 +149,7 @@ DTX_record:
         adda.l  d4,a3
         rts
 
-; The ring's first byte in a1. N is any size a word takes, so this one is a
+; The ring's first byte in a1. N is any size a word fits, so this one is a
 ; multiply, and N reaches it out of the block rather than through a register.
 DTX_ring:
         move.w  DTX_FILL(a6),d4
@@ -167,7 +167,7 @@ DTX_state:
         adda.l  d4,a3
         rts
 
-; The budget one refill takes, in units: the rows in d3 times the width,
+; The budget one refill runs, in units: the rows in d3 times the width,
 ; divided by k. Both are assembly-time constants, so the two are one shift
 ; of what the width is over the unit, and nothing where they are equal. A
 ; macro rather than a subroutine: at a ratio of one the macro is empty, and
@@ -191,21 +191,21 @@ DTX_state:
 
 ; -----------------------------------------------------------------------------
 ; One refill of the state in a3, whose budget is in d3: the registers
-; loaded, the decoder run for the budget, the write pointer taken back to
+; loaded, the decoder run for the budget, the write pointer set back to
 ; the ring start where it landed on the ring end, and the registers stored.
 ; N divides by P times the width, so a full refill lands on the end or
 ; short of it and the compare is exact. ST4 clobbers a3, so the state is
 ; read out of the block again after the decoder.
 ;
 ; Where the state's mark falls inside the budget the refill is split at
-; it: the decoder runs to the mark, its registers are put away or taken
+; it: the decoder runs to the mark, its registers are put away or put
 ; back as the phase says, and it runs for the rest. A pass that is
-; replayed puts the registers away where its loop begins and takes them
+; replayed puts the registers away where its loop begins and puts them
 ; back where it ends, every pass, so the next mark is the loop's units on;
-; the first mark puts them away, and every mark after takes them back.
+; the first mark puts them away, and every mark after puts them back.
 ; ST4 leaves a1, the write pointer, out of a replay: it walks the ring on
 ; and the pass it belongs to is the caller's, not the stream's, so the
-; copy back takes seven registers and a1 stands as it is.
+; copy back moves seven registers and a1 stands as it is.
 ;
 ; A macro rather than a subroutine: the advance runs it in line, and the
 ; seed once a column.
@@ -261,7 +261,7 @@ DTX_state:
 ; -----------------------------------------------------------------------------
 ; DTX_seed. Every decoder seeded, every ring filled with a period's rows,
 ; or R where the table is shorter, the pointer a row below row 0, and the
-; first period's budget in every state. Init takes it, and so does a jump
+; first period's budget in every state. Init runs it, and so does a jump
 ; that runs from row 0.
 ;
 ; One loop over the columns. ST4 clobbers a3, so where the column stands is
@@ -340,7 +340,7 @@ seed_column:
         dbra    d4,.idle
 .idled:
 
-; The seed gave every column a period's rows, or R, which the count
+; The seed left every column a period's rows, or R, which the count
 ; starts from; the first turn is column 0's, and a period of turns is to
 ; come. The pointer stands a row below column 0's first row, so the
 ; advance into row 0 steps like any other advance. Then the first period's
@@ -395,7 +395,7 @@ DTX_init:
 ; What a period's budget counts its rows against, and where a pass that
 ; is replayed turns. Where RR is below R the sets loop at it (R5.11) and
 ; no count is kept: $7FFFFFFF is a figure no count reaches, so every
-; refill takes a whole period. Where the table does not repeat the sets
+; refill runs a whole period. Where the table does not repeat the sets
 ; end at R: the count stops there, the last period of refills is short and
 ; the one after it gets a budget of 0. The two figures a replay turns on
 ; are units of a column: the units before its loop's first row, and the
@@ -417,15 +417,15 @@ DTX_init:
 .counted:
 
 ; Where the decoders' registers go, behind the rings, and 0 where nothing is
-; put away. Byte 20 of a data set gives the unit its loop begins at, or
+; put away. Byte 20 of a data set records the unit its loop begins at, or
 ; $FFFFFFFF where the set's end marker loops it and no pass is replayed;
-; every set of a payload takes the same form, so column 0 defines it.
+; every set of a payload has the same form, so column 0 defines it.
         clr.l   DTX_SAVED(a6)
         movea.l DTX_PAYLOAD(a6),a3
         movea.l a3,a4
         adda.l  4(a3),a4                ; column 0's data set
         move.l  20(a4),d3
-        addq.l  #1,d3                   ; $FFFFFFFF and nothing else gives 0
+        addq.l  #1,d3                   ; $FFFFFFFF and nothing else reaches 0
         beq.s   .marker
         move.l  DTX_NFIG(a6),d3
         moveq   #0,d4
@@ -446,7 +446,7 @@ DTX_init:
 ;
 ; The pointer moves after the refill: the row it moves onto is not one the
 ; refill writes (doc/abi.md 4), and a1 comes out of the step the pointer
-; an advance gives.
+; an advance leaves.
 ;
 ; A macro rather than a subroutine: the advance runs it in line, and a jump
 ; runs it through DTX_step once a row.
@@ -473,7 +473,7 @@ DTX_init:
         .endm
 
 ; -----------------------------------------------------------------------------
-; A period ended: every column took its refill and those rows are decoded.
+; A period ended: every column had its refill and those rows are decoded.
 ; The next turn is column 0's, and the rows the period decoded go onto the
 ; count. Where the sets end the count stops at R, so the last period is
 ; short and the one after it is empty; where they loop no count is kept.

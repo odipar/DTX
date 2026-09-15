@@ -1,7 +1,8 @@
 // Package dtx reads the header every DTX variant shares.
 //
 // doc/SPEC.md section 1: DTX, the variant, R, C, RR, the width every value
-// takes, and one zero byte, so the payload begins on a long. Every field of
+// is written in, and one zero byte, so the payload begins on a long. Every
+// field of
 // more than one byte is most significant byte first.
 package dtx
 
@@ -21,36 +22,36 @@ var Magic = []byte{'D', 'T', 'X'}
 const HeaderLength = 16
 
 // MaxRows is the largest R a header defines, R6.1: the field is four bytes,
-// and a value past what a signed long gives is out of bounds, so the error
-// gives the count the header defines rather than a negative one. RR is 0 to
+// and a value past what a signed long reaches is out of bounds, so the error
+// names the count the header defines rather than a negative one. RR is 0 to
 // R, so the one bound covers both.
 const MaxRows = 2147483647
 
-// Align gives at up to the next multiple of to.
+// Align returns at up to the next multiple of to.
 func Align(at, to int) int {
 	return (at + to - 1) / to * to
 }
 
-// Header gives what a file's header defines.
+// Header is what a file's header defines.
 type Header struct {
 	Variant int
 	Rows    int // R
 	Columns int // C
 	Repeat  int // RR
-	Width   int // W, the bytes every value takes
+	Width   int // W, the bytes every value is written in
 }
 
-// Length gives what the header runs to, the payload's first byte.
+// Length returns what the header runs to, the payload's first byte.
 func (h Header) Length() int {
 	return HeaderLength
 }
 
-// RowBytes gives a row's bytes: C values of W bytes.
+// RowBytes returns a row's bytes: C values of W bytes.
 func (h Header) RowBytes() int {
 	return h.Columns * h.Width
 }
 
-// ReadHeader gives the header at the start of file, or an error where the
+// ReadHeader returns the header at the start of file, or an error where the
 // file is short of one, does not open with DTX, or breaks a bound R6 sets.
 func ReadHeader(file []byte) (Header, error) {
 	if len(file) < HeaderLength {

@@ -1,25 +1,26 @@
 // Package csv reads a table out of comma separated text, one row a line, one
 // value a column, and writes one back out.
 //
-// The first row of numbers gives C. A line that is blank, or whose first
+// The first row of numbers defines C. A line that is blank, or whose first
 // character other than a space is #, is not a row, and neither is a line
 // before the first row of numbers in which no cell is a number: a line of
 // column names, or a line describing the table. A value is decimal, or
 // hexadecimal where it opens with $, and negative where it opens with -.
 //
-// Every value of the table takes the same width W (R6.3). A value of W
+// Every value of the table is the same width W (R6.3). A value of W
 // bytes is stored most significant byte first, as every field of the header
 // is, and a negative one in two's complement. A value fits W bytes where it
-// lies from -2^(8W-1) to 2^(8W)-1, so one width takes a signed column's
+// lies from -2^(8W-1) to 2^(8W)-1, so one width fits a signed column's
 // values and an unsigned one's alike. DTX does not define more of a column
 // than its width, so which of the two a column is, the caller defines
 // elsewhere.
 //
-// A table is written out the other way as well: a comment that gives the
+// A table is written out the other way as well: a comment that declares the
 // shape, a line of column names, then one row a line, each value the
-// unsigned number its bytes give. Read back, the comment gives the width
-// and the repeat where the caller does not give them, and the names are
-// passed over, so the text a table was written as reads back to that table.
+// unsigned number its bytes stand for. Read back, the comment declares the
+// width and the repeat where the caller does not name them, and the names
+// are passed over, so the text a table was written as reads back to that
+// table.
 package csv
 
 import (
@@ -30,7 +31,7 @@ import (
 	"github.com/odipar/dtx/go/dtx"
 )
 
-// Table gives the rows of text at the given width, repeating at repeat.
+// Table returns the rows of text at the width named, repeating at repeat.
 func Table(text string, width, repeat int) (*dtx.Table, error) {
 	row, err := rows(text)
 	if err != nil {
@@ -39,8 +40,8 @@ func Table(text string, width, repeat int) (*dtx.Table, error) {
 	return table(row, width, repeat)
 }
 
-// TableAt gives the rows of text at the given width, repeating at the row
-// the first comment gives or else at R.
+// TableAt returns the rows of text at the width named, repeating at the row
+// the first comment declares or else at R.
 func TableAt(text string, width int) (*dtx.Table, error) {
 	row, err := rows(text)
 	if err != nil {
@@ -56,8 +57,8 @@ func TableAt(text string, width int) (*dtx.Table, error) {
 	return table(row, width, repeat)
 }
 
-// Width gives the width the first comment of text gives, or else the
-// narrowest of 1, 2 and 4 that takes every value of it.
+// Width returns the width the first comment of text declares, or else the
+// narrowest of 1, 2 and 4 that fits every value of it.
 func Width(text string) (int, error) {
 	given := comment(text, "width ")
 	if given == "" {
@@ -75,8 +76,8 @@ func Width(text string) (int, error) {
 	return width, nil
 }
 
-// Repeat gives the repeat the first comment of text gives, or -1 where it
-// does not give one.
+// Repeat returns the repeat the first comment of text declares, or -1 where
+// it does not.
 func Repeat(text string) (int, error) {
 	given := comment(text, "RR ")
 	if given == "" {
@@ -90,10 +91,10 @@ func Repeat(text string) (int, error) {
 	return repeat, nil
 }
 
-// Text gives t as text: a comment giving R, C, the width and RR; a line of
-// column names, c0 onward; then one row a line, one value a column, each the
-// unsigned number its bytes give. TableAt, at the width Width gives, reads
-// it back to the same table.
+// Text returns t as text: a comment declaring R, C, the width and RR; a line
+// of column names, c0 onward; then one row a line, one value a column, each
+// the unsigned number its bytes stand for. TableAt, at the width Width
+// returns, reads it back to the same table.
 func Text(t *dtx.Table) string {
 	var out strings.Builder
 	fmt.Fprintf(&out, "# %d rows, %d columns, width %d, RR %d\n",
@@ -121,9 +122,10 @@ func Text(t *dtx.Table) string {
 	return out.String()
 }
 
-// comment gives what follows key in the first comment of text, up to a comma
-// followed by a space or the end of the line, or empty where the text does
-// not open with a comment giving it. The comment is the one Text writes:
+// comment returns what follows key in the first comment of text, up to a
+// comma followed by a space or the end of the line, or empty where the text
+// does not open with a comment that declares it. The comment is the one Text
+// writes:
 // # 3 rows, 3 columns, width 2, RR 3.
 func comment(text, key string) string {
 	for _, line := range strings.Split(text, "\n") {
@@ -147,7 +149,7 @@ func comment(text, key string) string {
 	return ""
 }
 
-// get gives the unsigned number of width bytes at at.
+// get returns the unsigned number of width bytes at at.
 func get(in []byte, at, width int) uint64 {
 	var value uint64
 	for i := 0; i < width; i++ {
@@ -178,7 +180,7 @@ func table(row [][]int64, width, repeat int) (*dtx.Table, error) {
 	return dtx.NewTable(len(row), repeat, width, column)
 }
 
-// rows gives every row of text, a value a column, in the order read.
+// rows returns every row of text, a value a column, in the order read.
 func rows(text string) ([][]int64, error) {
 	var out [][]int64
 	columns := -1
@@ -216,8 +218,8 @@ func rows(text string) ([][]int64, error) {
 	return out, nil
 }
 
-// aNumberAmong gives whether a cell of the line is a number, as value reads
-// one.
+// aNumberAmong reports whether a cell of the line is a number, as value
+// reads one.
 func aNumberAmong(cell []string) bool {
 	for _, one := range cell {
 		read := strings.TrimSpace(one)
@@ -245,13 +247,13 @@ func aNumberAmong(cell []string) bool {
 	return false
 }
 
-// digit gives whether c is a decimal digit, or a hexadecimal one where hex.
+// digit reports whether c is a decimal digit, or a hexadecimal one where hex.
 func digit(c rune, hex bool) bool {
 	return c >= '0' && c <= '9' ||
 		hex && (c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F')
 }
 
-// narrowest gives the narrowest width that takes every value of every column.
+// narrowest returns the narrowest width that fits every value of every column.
 func narrowest(row [][]int64) (int, error) {
 	taken := 1
 	for _, read := range row {
@@ -272,7 +274,7 @@ func narrowest(row [][]int64) (int, error) {
 	return taken, nil
 }
 
-// value gives the number cell gives, or what it is that is not one.
+// value returns the number cell reads as, or what it is that is not one.
 func value(cell string, line, column int) (int64, error) {
 	where := fmt.Sprintf("line %d column %d", line, column)
 	notANumber := fmt.Errorf("%s gives %q, which is not a number", where, cell)
@@ -298,7 +300,7 @@ func value(cell string, line, column int) (int64, error) {
 	}
 }
 
-// fits gives whether value lies from -2^(8W-1) to 2^(8W)-1.
+// fits reports whether value lies from -2^(8W-1) to 2^(8W)-1.
 func fits(value int64, width int) bool {
 	return value >= -(int64(1)<<(8*width-1)) && value <= int64(1)<<(8*width)-1
 }

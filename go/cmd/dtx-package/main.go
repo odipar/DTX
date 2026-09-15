@@ -2,7 +2,7 @@
 //
 // It combines rather than assembles: the code does not move with the table's
 // shape, so this executable contains the twenty-two images built once and
-// takes the one the table needs. No assembler runs. doc/tools.md defines the
+// reads the one the table needs. No assembler runs. doc/tools.md defines the
 // tool and doc/abi.md the four calls into the image.
 //
 //	dtx-package [in.dtx...] < in.dtx > out.bin
@@ -19,8 +19,8 @@ import (
 )
 
 // What -help prints: the synopsis, the one flag, an example, and the section
-// of doc/tools.md that describes the tool. The Java and C# trees also take
-// -aRMAC and -s, which this tool does not read.
+// of doc/tools.md that describes the tool. The Java and C# trees also read
+// -aRMAC and -s, which this tool does not.
 const help = `dtx-package [in.dtx...] < in.dtx > out.bin
 
 Packages one DTX file or several as a 68000 image, on standard output: the
@@ -76,8 +76,8 @@ func run(args []string, in io.Reader, out io.Writer) error {
 		}
 		named = append(named, arg)
 	}
-	// A name is a table, in the order the image lays them out. Where no
-	// name is given, one table comes in on standard input.
+	// A name is a table, in the order the image lays them out. Where
+	// nothing is named, one table comes in on standard input.
 	var files [][]byte
 	if len(named) == 0 {
 		file, err := io.ReadAll(in)
@@ -136,7 +136,7 @@ func run(args []string, in io.Reader, out io.Writer) error {
 	return nil
 }
 
-// stateOf gives the state block a table's reader takes, in bytes.
+// stateOf returns the state block a table's reader needs, in bytes.
 func stateOf(file []byte, header dtx.Header) (int, error) {
 	if header.Variant != dtx.DTX2 {
 		return pack.StateBytes(), nil

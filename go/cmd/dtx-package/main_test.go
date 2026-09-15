@@ -12,9 +12,9 @@ import (
 	"github.com/odipar/dtx/go/pack"
 )
 
-// ran runs the tool over args with in on standard input, and gives the image
-// it wrote to standard output, what it reported on standard error, and the
-// error it gave. A caller reads the three the same way.
+// ran runs the tool over args with in on standard input, and returns the
+// image it wrote to standard output, what it reported on standard error, and
+// the error it ended with. A caller reads the three the same way.
 func ran(t *testing.T, in []byte, args ...string) ([]byte, string, error) {
 	t.Helper()
 	file, err := os.CreateTemp(t.TempDir(), "said")
@@ -36,7 +36,7 @@ func ran(t *testing.T, in []byte, args ...string) ([]byte, string, error) {
 	return out.Bytes(), string(said), err
 }
 
-// printed runs the tool and gives what it printed to standard output, for a
+// printed runs the tool and returns what it printed to standard output, for a
 // run that writes a text rather than an image.
 func printed(t *testing.T, args ...string) (string, error) {
 	t.Helper()
@@ -73,8 +73,8 @@ func table(t *testing.T) []byte {
 }
 
 // A table is packaged as an image that opens with the four slots and the
-// format block, and the report gives the figures a caller reads back.
-func TestATableIsPackagedAndTheReportGivesItsFigures(t *testing.T) {
+// format block, and the report names the figures a caller reads back.
+func TestATableIsPackagedAndTheReportNamesItsFigures(t *testing.T) {
 	if image.Embedded() == 0 {
 		t.Skip("this build does not contain images: run mvn process-classes")
 	}
@@ -99,7 +99,7 @@ func TestATableIsPackagedAndTheReportGivesItsFigures(t *testing.T) {
 	}
 }
 
-// A flag the tool does not read gives the tool's line and a misuse, which
+// A flag the tool does not read prints the tool's line and a misuse, which
 // main exits 2 on, as the Java tree exits. This tool combines and does not
 // assemble, so -a and -s are two of those.
 func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {

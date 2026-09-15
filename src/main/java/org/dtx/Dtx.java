@@ -1,10 +1,11 @@
 package org.dtx;
 
 /**
- * The header every variant shares, and the numbers the variants take.
+ * The header every variant shares, and the numbers of the variants.
  *
  * <p>{@code doc/SPEC.md} section 1: {@code DTX}, the variant, {@code R},
- * {@code C}, {@code RR}, the width every value takes, and one zero byte, so
+ * {@code C}, {@code RR}, the width every value is written in, and one zero
+ * byte, so
  * the payload begins on a long. Every field of more than one byte is most
  * significant byte first.
  */
@@ -27,8 +28,8 @@ public final class Dtx {
 
     /**
      * The largest {@code R} a header defines (R6.1). The field is four
-     * bytes, and a reader takes it as a signed long, so a count above this
-     * is out of bounds; the error gives the count the field defines rather
+     * bytes, and a reader reads it as a signed long, so a count above this
+     * is out of bounds; the error names the count the field defines rather
      * than the negative it reads as. {@code RR} is 0 to {@code R}, so the
      * one bound covers both.
      */
@@ -61,7 +62,7 @@ public final class Dtx {
      * @param rows {@code R}
      * @param columns {@code C}
      * @param repeat {@code RR}
-     * @param width the bytes every value takes
+     * @param width the bytes every value is written in
      */
     public record Header(int variant, int rows, int columns, int repeat,
             int width) {

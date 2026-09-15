@@ -26,7 +26,7 @@ same change (requirements.md, R0.6 to R0.9).
 | period | `P`, the rows between one column's refills in a packaged DTX2 reader. | abi.md 4 |
 | pointer | The address, in a ring or in a payload, of the row a packaged reader's cursor stands on. | abi.md 3 |
 | `R` | The table's row count, of the rows in it. | terminology.md, tables, rows and columns |
-| reader | What takes rows out of a table. | terminology.md, tables, rows and columns |
+| reader | What reads rows out of a table. | terminology.md, tables, rows and columns |
 | ring | The bytes of a column a reader has at a time, `N` of them, in place of the unpacked column. | SPEC.md 2.3 |
 | row | One step of a table: `C` values, with nothing in it about what any of them is for. | terminology.md, tables, rows and columns |
 | `RR` | The row a table repeats to once the last row is done. | terminology.md, tables, rows and columns |
@@ -39,8 +39,8 @@ same change (requirements.md, R0.6 to R0.9).
 | turn | The column a row refills in a packaged DTX2 reader: the row number modulo `P`. | abi.md 4 |
 | unit | The width ST4 packs whole numbers of: 1, 2 or 4 bytes. | SPEC.md 2.3 |
 | variant | One way of laying a table's rows out in bytes. DTX0 row by row, DTX1 column by column, DTX2 column by column and packed. | terminology.md, the variants |
-| `W` | The bytes every value of the table takes: 1, 2 or 4. | terminology.md, tables, rows and columns |
+| `W` | The bytes every value of the table is written in: 1, 2 or 4. | terminology.md, tables, rows and columns |
 | word | Two bytes. An offset is on a word where it divides by 2. | SPEC.md |
 | writer | What puts rows into a table. | terminology.md, tables, rows and columns |
-| yielding | Giving one row of a table, in order. | terminology.md, tables, rows and columns |
+| yielding | One row of a table at a time, in order. | terminology.md, tables, rows and columns |
 

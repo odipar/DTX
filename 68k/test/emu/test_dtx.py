@@ -94,7 +94,7 @@ def read_dtx(blob):
 
 # --------------------------------------------------------------------------
 # An independent CSV reader: doc/tools.md, "The text", in Python. The rows a
-# table should give come out of the text the writer was given, not out of the
+# table should have come out of the text the writer read, not out of the
 # file it wrote.
 
 def csv_values(csv):
@@ -128,7 +128,7 @@ def fits(value, width):
 
 
 def csv_width(values):
-    """The narrowest width of 1, 2 and 4 that takes every value of the table."""
+    """The narrowest width of 1, 2 and 4 that fits every value of the table."""
     taken = 1
     for row in values:
         for one in row:
@@ -205,8 +205,8 @@ def package(blob):
     """The raw image the packager makes, and where every label of it stands.
 
     The image comes from the packager, which combines the code the build made
-    from 68k/DTX*.S: the path a caller takes. A run of rmac over the template
-    gives the same bytes, and BlobTest checks that.
+    from 68k/DTX*.S: the path a caller follows. A run of rmac over the
+    template assembles to the same bytes, and BlobTest checks that.
 
     The labels come from a run of rmac over the same template and the same
     figures, for the listing's symbol table alone: the rig counts the decoder's
@@ -247,14 +247,14 @@ class Machine:
     def __init__(self, image, state_bytes):
         self.mu = Uc(UC_ARCH_M68K, UC_MODE_BIG_ENDIAN)
         # A plain 68000, not the ColdFire Unicorn defaults to: ColdFire
-        # dropped adda.w, which ST4's match path takes on its first call.
+        # dropped adda.w, which ST4's match path runs on its first call.
         self.mu.ctl_set_cpu_model(UC_CPU_M68K_M68000)
         for at, size in ((IMAGE, 0x10000), (STATE, 0x10000), (STACK, 0x10000),
                          (DONE & ~0xFFF, 0x1000)):
             self.mu.mem_map(at & ~0xFFF, size)
         self.mu.mem_write(IMAGE, image)
         self.state_bytes = state_bytes
-        # A 68000 takes an address error on a word or long at an odd
+        # A 68000 raises an address error on a word or long at an odd
         # address, and Unicorn's model does not: it reads and writes the
         # bytes. So the rig watches every access itself, and a misaligned one
         # is a fault here as it is on the hardware.
@@ -275,7 +275,7 @@ class Machine:
     def call(self, name, d0=0, a0=STATE, a1=0):
         """One call through its slot, back at the sentinel. The state block
         stands in a6 (doc/abi.md 2), which the caller names a0 here for the
-        argument's sake. Init takes the header of the table to read in a1;
+        argument's sake. Init reads the header of the table to read in a1;
         every other call leaves it at zero, the value a caller of those
         calls passes."""
         mu = self.mu
@@ -384,7 +384,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
         it: a1 the first value, and a stride to the next column's."""
         return m.row(got["a1"], columns, stride, width)
 
-    # every row, one advance each. No call gives a row number: the caller
+    # every row, one advance each. No call reports a row number: the caller
     # counts, as doc/abi.md 2 defines.
     for r in range(rows):
         got = m.call("advance")
@@ -414,7 +414,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
             assert values(got) == want[r + 1], \
                 "the row after a jump and an advance"
 
-    # the row an advance gives stands until the next advance (doc/abi.md 2):
+    # the row an advance leaves stands until the next advance (doc/abi.md 2):
     # under DTX2 the refill that would write over it is P advances away
     m.call("init", a1=IMAGE + header_at)
     before = None
@@ -470,7 +470,7 @@ def numbers(rows, columns, span=251):
 def package_many(blobs):
     """One image of several tables, and where each table's header stands in
     it. The packager prints a line a table past the first, and the offsets
-    come off those lines: a caller of DTX_init takes them the same way."""
+    come off those lines: a caller of DTX_init reads them the same way."""
     work = tempfile.mkdtemp(prefix="dtx68")
     names = []
     for i, blob in enumerate(blobs):
@@ -516,7 +516,7 @@ def one_image_several_tables():
             _, want = csv_rows(csv, width)
             columns = len(csv_values(csv)[0])
             rows = struct.unpack(">I", image[table + 4:table + 8])[0]
-            # The format block gives the first table's stride, so a caller of
+            # The format block records the first table's stride, so a caller of
             # another derives it: the width under DTX0, the column's
             # length on a word under DTX1, and the ring, which every table of
             # an image shares, under DTX2 (doc/abi.md 1).
@@ -540,7 +540,7 @@ def one_image_several_tables():
 
 
 def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
-    """Every row a packaged reader of this variant gives, and its image."""
+    """Every row a packaged reader of this variant reads, and its image."""
     blob = write_table(csv, variant, width, repeat, unit, ring, copies)
     image, at = package(blob)
     header_at = struct.unpack(">I", image[16 + 8:16 + 12])[0]
@@ -580,7 +580,7 @@ def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
         if variant == 2:
             # One call a column at init and one a column a period after it,
             # every period, since every data set loops (R5.11) and no set
-            # runs out. Reading R rows takes the seed and one period a P
+            # runs out. Reading R rows costs the seed and one period a P
             # rows, so a column is called once more than the periods those
             # rows cover.
             due = columns * (1 + (len(want) + p - 1) // p)
@@ -589,12 +589,12 @@ def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
                 " period of %d takes at most %d" % (resumes, len(want), p, due)
             asked = "  %d resumes at P=%d" % (resumes, p)
         # The writer's link, where this rig can read the file: the bytes the
-        # writer laid down are the rows the text gave.
+        # writer laid down are the rows the text defines.
         if variant != 2:
             _, _, _, _, _, _, _, laid = read_dtx(blob)
             assert laid == want, \
                 "DTX%d: the writer laid down rows the text does not give" % variant
-        # The reader's link: a 68000 gives the rows the text gave.
+        # The reader's link: a 68000 reads the rows the text defines.
         assert len(got) == len(want), \
             "DTX%d gave %d rows, not %d" % (variant, len(got), len(want))
         for r, (a, b) in enumerate(zip(got, want)):
@@ -657,7 +657,7 @@ PACKED = [
     # the end are 1024 bytes against a ring of 960, so ST4 packs the pass to
     # be replayed and the reader puts the decoders' registers away at the
     # loop's row and back at the column's end (abi.md 4). From row 128 the
-    # loop is 768 bytes, which fits a ring of 960, so that case takes a
+    # loop is 768 bytes, which fits a ring of 960, so that case uses a
     # ring of 64: a loop that begins past row 0 is put away at a period's
     # end rather than at the seed, and the two cases reach both.
     ("a replayed pass", numbers(512, 2), 2, 0, 1, 960),
@@ -689,11 +689,11 @@ PACKED = [
 
 
 # --------------------------------------------------------------------------
-# 68000 cycles. Every instruction the machine runs is given the cycles the
-# M68000 user's manual's tables give it, out of its opcode words and, for a
-# branch or a loop, out of where the machine went next. The cycles are the
-# processor's, with no wait state: a machine whose bus rounds an access
-# up, as an Atari ST's does, takes longer.
+# 68000 cycles. Every instruction the machine runs is counted at the cycles
+# the M68000 user's manual's tables list for it, out of its opcode words and,
+# for a branch or a loop, out of where the machine went next. The cycles are
+# the processor's, with no wait state: a machine whose bus rounds an access
+# up, as an Atari ST's does, runs longer.
 
 class Unknown(Exception):
     """An instruction the tables here do not cover."""
@@ -708,7 +708,7 @@ EA_TIME = {(0, 0): (0, 0), (1, 0): (0, 0), (2, 0): (4, 8), (3, 0): (4, 8),
 EA_WORDS = {(0, 0): 0, (1, 0): 0, (2, 0): 0, (3, 0): 0, (4, 0): 0, (5, 0): 1,
             (6, 0): 1, (7, 0): 1, (7, 1): 2, (7, 2): 1, (7, 3): 1}
 SIZE = {0: "b", 1: "w", 2: "l"}
-# The control modes lea, pea, jsr, jmp and movem take.
+# The control modes lea, pea, jsr, jmp and movem read.
 LEA = {(2, 0): 4, (5, 0): 8, (6, 0): 12, (7, 0): 8, (7, 1): 12, (7, 2): 8,
        (7, 3): 12}
 PEA = {key: cycles + 8 for key, cycles in LEA.items()}
@@ -736,10 +736,10 @@ def cycles_of(words, sr, dn, pc, next_pc, source=None):
 
     `sr` is the status register before it and `dn` the data registers before
     it, or None where the instruction reads neither. `next_pc` is where the
-    machine went after it, which tells a branch taken from one not, or None
-    where the rig does not have it. `source` is the word at the effective
-    address, for a multiply whose source is in memory, or None where the rig
-    does not have it.
+    machine went after it, which tells a branch that jumped from one that
+    did not, or None where the rig does not have it. `source` is the word at
+    the effective address, for a multiply whose source is in memory, or None
+    where the rig does not have it.
     """
     op = words[0]
     top = op >> 12
@@ -944,7 +944,7 @@ def cycles_of(words, sr, dn, pc, next_pc, source=None):
 # Encodings against the manual's tables: the words, the status register, the
 # data registers, where the machine went next relative to the instruction (None
 # for a fall-through that is not a branch), and the cycles. A sixth entry is
-# the word at the effective address, for a multiply that takes its source
+# the word at the effective address, for a multiply that reads its source
 # there.
 TIMED = [
     ((0x3000,), 0, None, None, 4),                  # move.w d0,d0
@@ -971,10 +971,10 @@ TIMED = [
     ((0x6100, 0x0010), 0, None, None, 18),          # bsr.w
     ((0x6000, 0x0010), 0, None, None, 10),          # bra.w
     ((0x6010,), 0, None, None, 10),                 # bra.s
-    ((0x6610,), 0x04, None, 2, 8),                  # bne.s, z set, not taken
-    ((0x6610,), 0x00, None, 0x12, 10),              # bne.s taken
-    ((0x6600, 0x0100), 0x04, None, 4, 12),          # bne.w not taken
-    ((0x51C8, 0xFFFE), 0, None, 0, 10),             # dbf, branch taken
+    ((0x6610,), 0x04, None, 2, 8),                  # bne.s, z set, no jump
+    ((0x6610,), 0x00, None, 0x12, 10),              # bne.s jumps
+    ((0x6600, 0x0100), 0x04, None, 4, 12),          # bne.w, no jump
+    ((0x51C8, 0xFFFE), 0, None, 0, 10),             # dbf, loops
     ((0x51C8, 0xFFFE), 0, None, 4, 14),             # dbf, counter expired
     ((0x57C8, 0xFFFE), 0x04, None, 4, 12),          # dbeq, z set: cc true
     ((0x7001,), 0, None, None, 4),                  # moveq #1,d0
@@ -1041,7 +1041,7 @@ def cycle_tables():
 
 
 class Cycles:
-    """The cycles the machine takes from here on, and the instructions."""
+    """The cycles the machine has run from here on, and the instructions."""
 
     def __init__(self, m):
         self.mu = m.mu
@@ -1066,7 +1066,7 @@ class Cycles:
         sr = mu.reg_read(UC_M68K_REG_SR) if tests else 0
         # A multiply's cycles move with its source, so where that source is
         # in memory the rig reads it at the effective address. Only d16(An),
-        # the mode DTX_ring takes, is read.
+        # the mode DTX_ring uses, is read.
         source = None
         if op >> 12 == 0xC and op >> 6 & 7 in (3, 7) and op >> 3 & 7 == 5:
             at = mu.reg_read(A[op & 7]) + struct.unpack(">h", raw[2:4])[0]
@@ -1088,7 +1088,7 @@ class Cycles:
         self.instructions += 1
 
     def call(self, m, name, **at):
-        """One call, and the cycles it took."""
+        """One call, and the cycles it cost."""
         before = self.cycles
         m.call(name, **at)
         self._settle(None)
@@ -1109,7 +1109,7 @@ WIDTH = 2
 
 
 def measured(variant, width, unit, columns):
-    """The column of a call table one image gives, in cycles."""
+    """The column of a call table one image fills, in cycles."""
     blob = write_table(numbers(64, columns), variant, width, None, unit, 960)
     image, _ = package(blob)
     state = struct.unpack(">I", image[20:24])[0]
@@ -1122,7 +1122,7 @@ def measured(variant, width, unit, columns):
     jump0 = cycles.call(m, "jump", d0=0)
     jump63 = cycles.call(m, "jump", d0=63)
     return {"init": str(init),
-            # one figure where every advance took the same, a range where not
+            # one figure where every advance cost the same, a range where not
             "advance": str(min(advance)) if min(advance) == max(advance)
             else "%d-%d" % (min(advance), max(advance)),
             "jump to row 0": str(jump0), "jump to row 63": str(jump63),
@@ -1132,7 +1132,7 @@ def measured(variant, width, unit, columns):
 def copy_cost(unit):
     """The cycles of init and 64 rows read and advanced, on a column packed
     without copies, by the decoder without the copy code and by the one with
-    it. The packager takes the decoder the payload's flag names, so the flag
+    it. The packager uses the decoder the payload's flag names, so the flag
     is set on a copy of the file to get the second."""
     blob = write_table(numbers(64, 3), 2, WIDTH, None, unit, 960)
     flagged = bytearray(blob)
@@ -1167,7 +1167,7 @@ def performance_tables():
             out.append("| %s | %s |" % (call, " | ".join(one[call] for one in got)))
         out.append("")
     # What one value costs the caller: a move of that width off the pointer
-    # an advance gives, at a displacement. The rig times the encoding from
+    # an advance leaves, at a displacement. The rig times the encoding from
     # the same tables it counts a call with.
     reads = {}
     out.append("| width | the move | cycles |")

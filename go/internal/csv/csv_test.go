@@ -7,11 +7,11 @@ import (
 )
 
 // The text of the tests here: a comment, a blank line, three rows of three
-// columns. 300 does not fit one byte, so every value of the table takes two.
+// columns. 300 does not fit one byte, so every value of the table is two.
 const text = "# a comment, and the blank line below it\n\n" +
 	"1, 300, -2\n2, 301, -1\n3, 302,  0\n"
 
-// The narrowest width of 1, 2 and 4 that takes every value of the whole
+// The narrowest width of 1, 2 and 4 that fits every value of the whole
 // table, R6.3.
 func TestTheTableTakesTheNarrowestWidthThatFitsEveryValue(t *testing.T) {
 	for _, one := range []struct {
@@ -67,8 +67,8 @@ func TestWhatALineMayContain(t *testing.T) {
 	same(t, "column 1", table.Column(1), []byte{0xFF, 0xFF, 0x7F, 0xFF})
 }
 
-// The width given is taken over the narrowest.
-func TestTheWidthGivenIsTakenOverTheNarrowest(t *testing.T) {
+// A width named outranks the narrowest.
+func TestAWidthNamedOutranksTheNarrowest(t *testing.T) {
 	table, err := TableAt(text, 4)
 	if err != nil {
 		t.Fatal(err)
@@ -87,7 +87,7 @@ func TestTheWidthGivenIsTakenOverTheNarrowest(t *testing.T) {
 	}
 }
 
-// What the text does not give is reported.
+// What the text does not define is reported.
 func TestWhatIsRefused(t *testing.T) {
 	for _, bad := range []struct{ name, said, text string }{
 		{"a short line", "line 2 gives 2 values, not 3", "1,2,3\n4,5\n"},
@@ -116,7 +116,7 @@ func TestWhatIsRefused(t *testing.T) {
 }
 
 // A table written as text opens with its shape and its column names, then
-// one row a line, each value the unsigned number its bytes give.
+// one row a line, each value the unsigned number its bytes stand for.
 func TestATableWrittenAsTextOpensWithItsShapeAndItsColumnNames(t *testing.T) {
 	table, err := TableAt(text, 2)
 	if err != nil {
@@ -178,8 +178,8 @@ func TestALineOfNamesBeforeTheRowsIsNotARow(t *testing.T) {
 	}
 }
 
-// The width and the repeat given outrank the comment, and the comment gives
-// them where the caller does not.
+// The width and the repeat named outrank the comment, and the comment
+// declares them where the caller does not.
 func TestTheWidthAndRepeatGivenOutrankTheComment(t *testing.T) {
 	given := "# 2 rows, 1 columns, width 4, RR 0\nc0\n1\n2\n"
 	width, err := Width(given)
@@ -220,8 +220,8 @@ func TestTheWidthAndRepeatGivenOutrankTheComment(t *testing.T) {
 	}
 }
 
-// read gives the table of text at the width and repeat the text itself
-// gives, as a caller who names neither takes it.
+// read returns the table of text at the width and repeat the text itself
+// declares, as a caller who names neither reads it.
 func read(t *testing.T, text string) (*dtx.Table, error) {
 	t.Helper()
 	width, err := Width(text)

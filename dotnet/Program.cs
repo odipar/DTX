@@ -47,7 +47,7 @@ public static class Program
         catch (Exception failed)
         {
             // A malformed text, a missing file, a truncated one or a unit no
-            // variant takes gives the message on standard error and 1, as
+            // variant defines prints the message on standard error and 1, as
             // the Java and Go tools do, and not a stack trace. A flag a tool
             // does not read exits with 2.
             Console.Error.WriteLine(failed.Message);

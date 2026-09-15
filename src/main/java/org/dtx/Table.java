@@ -24,13 +24,13 @@ public final class Table {
     }
 
     /**
-     * A table of the given columns, each {@code rows} times {@code width}
+     * A table of the columns named, each {@code rows} times {@code width}
      * bytes. The arrays are copied, so a later write to the caller's does not
      * reach this table.
      *
      * @throws IllegalArgumentException where R6's bounds are not met, or
      *     where a column is not the length {@code width} and {@code rows}
-     *     give
+     *     define
      */
     public static Table of(int rows, int repeat, int width, byte[][] column) {
         if (rows < 1) {
@@ -73,7 +73,7 @@ public final class Table {
         return repeat;
     }
 
-    /** {@code W}, the bytes every value of the table takes. */
+    /** {@code W}, the bytes every value of the table is written in. */
     public int width() {
         return width;
     }

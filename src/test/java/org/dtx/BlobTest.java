@@ -46,7 +46,7 @@ class BlobTest {
                     code[Packager.FORMAT_AT + Packager.UNIT_AT] & 0xFF,
                     build.name() + "'s unit");
             // DTX0 reads a row as one run of bytes, so its code does not
-            // move with the width and its format block gives a width of 0.
+            // move with the width and its format block records a width of 0.
             assertEquals(build.variant() == Dtx.DTX0 ? 0 : build.width(),
                     code[Packager.FORMAT_AT + Packager.WIDTH_AT] & 0xFF,
                     build.name() + "'s width");

@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>What the image does is checked by {@code 68k/test/emu/test_dtx.py}, which
  * runs it on a 68000. This checks what the packager writes of it: the
- * figures the format block gives, the state block's size, and what it will
+ * figures the format block records, the state block's size, and what it will
  * not package.
  */
 final class PackagerTest {
@@ -33,7 +33,7 @@ final class PackagerTest {
         // R, C and RR reach the code at run time, out of the table's
         // header, so no equate defines one. What is left is the width, the
         // row's bytes and the state block: one build reads one width, so the
-        // move a value takes is assembled from it, and a caller reads the
+        // move a value needs is assembled from it, and a caller reads the
         // block's size before there is a block to read it from.
         for (int width : new int[] {1, 2, 4}) {
             for (byte[] file : new byte[][] {table(Dtx.DTX0, width),
@@ -93,7 +93,7 @@ final class PackagerTest {
 
     @Test
     void theFiguresDoNotDefineAMacro() {
-        // A template no longer takes a list of macro invocations, one a
+        // A template no longer reads a list of macro invocations, one a
         // column: under DTX2 the column table defines what each of them
         // defined and one loop reads it, and under DTX0 and DTX1 a pointer
         // and a stride walk every column. So the figures are equates, and
@@ -204,7 +204,7 @@ final class PackagerTest {
         assertEquals(3, Packager.period(at3, Packager.packed(wide, at3)),
                 "P is C at three columns of four bytes");
         // N divides by P times the width, so a C that does not divide N
-        // takes the first period above C that does: 960 by 7 leaves 1.
+        // needs the first period above C that does: 960 by 7 leaves 1.
         byte[] seven = packed(64, 7, 1, 1, 960);
         Dtx.Header at7 = Dtx.header(seven);
         assertEquals(8, Packager.period(at7, Packager.packed(seven, at7)),
@@ -215,7 +215,7 @@ final class PackagerTest {
     void aReplayedPassTakesThePeriodForEveryRepeat() {
         // Three columns of two byte values at a ring of 960: P is C, and the
         // reader turns a replayed pass at its exact rows, so a repeat at row
-        // 16 of 64, which 3 does not divide, takes the same period.
+        // 16 of 64, which 3 does not divide, needs the same period.
         byte[] file = packed(64, 16, 3, 2, 1, 960, false, 32);
         Dtx.Header header = Dtx.header(file);
         Packager.Packed given = Packager.packed(file, header);
@@ -237,7 +237,7 @@ final class PackagerTest {
     @Test
     void aReplayedLoopUnderThePeriodIsRefused() {
         // A refill meets one mark at most, so a replayed loop is a period
-        // long at least: thirty columns give P of 30, and a loop of 20 rows
+        // long at least: thirty columns make P of 30, and a loop of 20 rows
         // from row 20 of 40 fails the package.
         byte[] file = packed(40, 20, 30, 1, 1, 960, false, 20);
         Dtx.Header header = Dtx.header(file);
@@ -389,7 +389,7 @@ final class PackagerTest {
         byte[] one = Packager.image(table(Dtx.DTX1, 4), rmac);
         assertEquals(4, one[35], "the width DTX1's code reads values at");
         // The stride a caller steps from one column's value to the next,
-        // which DTX_metadata gives out of the block at +24.
+        // which DTX_metadata reports out of the block at +24.
         assertEquals(2, Dtx.getLong(image, 16 + Packager.STRIDE_AT),
                 "DTX0 strides by the width");
         assertEquals(Dtx1.stride(4, 4), Dtx.getLong(one, 16 + Packager.STRIDE_AT),

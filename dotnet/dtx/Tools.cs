@@ -37,7 +37,7 @@ public static class Tools
     }
 
     /// <summary>
-    /// The whole number an argument gives behind its two letter flag. An
+    /// The whole number an argument stands for behind its two letter flag. An
     /// argument with anything else behind the flag is one the tool does not
     /// read.
     /// </summary>
@@ -56,7 +56,7 @@ public static class Tools
 
     /// <summary>
     /// A flag whose figure is not a number: an argument dtx-write does not
-    /// read. Write gives the line on standard error and exits with 2.
+    /// read. Write prints the line on standard error and exits with 2.
     /// </summary>
     private sealed class NotRead : Exception
     {
@@ -71,7 +71,7 @@ public static class Tools
     ///
     /// <para>The table comes from standard input, a DTX file of any variant
     /// or comma separated text, and goes to standard output as a DTX file of
-    /// the variant -v gives, or as comma separated text under -text. The table
+    /// the variant -v names, or as comma separated text under -text. The table
     /// is the same under every variant (R1.3), so one tool writes text as
     /// DTX, rewrites a DTX file at another variant, unit or ring, and reads
     /// a DTX file out as text. doc/tools.md, Write.</para>
@@ -243,7 +243,7 @@ public static class Tools
             return 2;
         }
         // A name is a table, in the order the image lays them out. Where
-        // no name is given, one table comes in on standard input.
+        // nothing is named, one table comes in on standard input.
         var files = new List<byte[]>();
         if (named.Count == 0)
         {
@@ -300,7 +300,7 @@ public static class Tools
         return 0;
     }
 
-    /// <summary>The state block a table's reader takes, in bytes.</summary>
+    /// <summary>The state block a table's reader needs, in bytes.</summary>
     private static int StateOf(byte[] file, Header header) =>
             header.Variant == Format.Dtx2
                     ? Pack.PackedStateBytes(header, Pack.ReadPacked(file, header))
@@ -312,7 +312,7 @@ public static class Tools
     ///
     /// <para>The table each is assembled from is made here rather than read:
     /// the code does not move with a table's shape, and Pack.Blank zeroes
-    /// the six fields the one used did give, so what comes out is a
+    /// the six fields a package fills, so what comes out is a
     /// function of the template alone.</para>
     /// </summary>
     public static int Blobs(string[] args)
@@ -392,7 +392,7 @@ public static class Tools
     ///
     /// <para>The assembler reads only a data set's four stream offsets, not
     /// the streams, so a data set whose streams are the column itself fixes
-    /// every figure the build takes.</para>
+    /// every figure the build reads.</para>
     /// </summary>
     private sealed class Plain : IPacker
     {

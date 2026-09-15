@@ -6,26 +6,27 @@ import java.util.List;
 /**
  * A table out of comma separated text: one row a line, one value a column.
  *
- * <p>The first row of numbers gives {@code C}. A line that is blank, or
+ * <p>The first row of numbers defines {@code C}. A line that is blank, or
  * whose first character other than a space is {@code #}, is not a row, and
  * neither is a line before the first row of numbers in which no cell is a
  * number: a line of column names, or a line describing the table. A value is
  * decimal, or hexadecimal where it opens with {@code $}, and negative where
  * it opens with {@code -}.
  *
- * <p>Every value of the table takes the same width {@code W} (R6.3). A value
+ * <p>Every value of the table is the same width {@code W} (R6.3). A value
  * of {@code W} bytes is stored most significant byte first, as every field
  * of the header is, and a negative one in two's complement. A value fits
  * {@code W} bytes where it lies from -2^(8W-1) to 2^(8W)-1, so one width
- * takes a signed column's values and an unsigned one's alike. DTX does not
+ * fits a signed column's values and an unsigned one's alike. DTX does not
  * define more of a column than its width, so which of the two a column is,
  * the caller defines elsewhere.
  *
- * <p>A table is written out the other way as well: a comment that gives the
- * shape, a line of column names, then one row a line, each value the
- * unsigned number its bytes give. Read back, the comment gives the width and
- * the repeat where the caller does not give them, and the names are passed
- * over, so the text a table was written as reads back to that table.
+ * <p>A table is written out the other way as well: a comment that declares
+ * the shape, a line of column names, then one row a line, each value the
+ * unsigned number its bytes stand for. Read back, the comment declares the
+ * width and the repeat where the caller does not name them, and the names
+ * are passed over, so the text a table was written as reads back to that
+ * table.
  */
 public final class Csv {
 
@@ -33,17 +34,17 @@ public final class Csv {
     }
 
     /**
-     * The rows of {@code text} at the width the first comment gives or else
-     * the narrowest that takes every value, repeating at the row the first
-     * comment gives or else at {@code R}.
+     * The rows of {@code text} at the width the first comment declares or
+     * else the narrowest that fits every value, repeating at the row the
+     * first comment declares or else at {@code R}.
      */
     public static Table table(String text) {
         return table(text, width(text));
     }
 
     /**
-     * The rows of {@code text} at the given width, repeating at the row the
-     * first comment gives or else at {@code R}.
+     * The rows of {@code text} at the width named, repeating at the row the
+     * first comment declares or else at {@code R}.
      */
     public static Table table(String text, int width) {
         List<long[]> row = rows(text);
@@ -52,11 +53,11 @@ public final class Csv {
     }
 
     /**
-     * The rows of {@code text} at the given width.
+     * The rows of {@code text} at the width named.
      *
      * @param repeat {@code RR}, the row the table repeats to, or {@code R}
      *     where it does not
-     * @throws IllegalArgumentException where a line does not give one value
+     * @throws IllegalArgumentException where a line does not have one value
      *     a column, where a value is not a number, or where a value does not
      *     fit the width
      */
@@ -65,8 +66,8 @@ public final class Csv {
     }
 
     /**
-     * The width the first comment of {@code text} gives, or else the
-     * narrowest of 1, 2 and 4 that takes every value of it.
+     * The width the first comment of {@code text} declares, or else the
+     * narrowest of 1, 2 and 4 that fits every value of it.
      */
     public static int width(String text) {
         String given = comment(text, "width ");
@@ -75,8 +76,8 @@ public final class Csv {
     }
 
     /**
-     * The repeat the first comment of {@code text} gives, or -1 where it
-     * does not give one.
+     * The repeat the first comment of {@code text} declares, or -1 where
+     * it does not.
      */
     public static int repeat(String text) {
         String given = comment(text, "RR ");
@@ -84,10 +85,10 @@ public final class Csv {
     }
 
     /**
-     * {@code table} as text: a comment giving {@code R}, {@code C}, the
+     * {@code table} as text: a comment declaring {@code R}, {@code C}, the
      * width and {@code RR}; a line of column names, {@code c0} onward; then
      * one row a line, one value a column, each the unsigned number its bytes
-     * give. {@link #table(String)} reads it back to the same table.
+     * stand for. {@link #table(String)} reads it back to the same table.
      */
     public static String text(Table table) {
         StringBuilder out = new StringBuilder();
@@ -117,8 +118,8 @@ public final class Csv {
     /**
      * What follows {@code key} in the first comment of {@code text}, up to a
      * comma followed by a space or the end of the line, or empty where the
-     * text does not open with a comment giving it. The comment is the one
-     * {@link #text(Table)} writes: {@code # 3 rows, 3 columns, width 2,
+     * text does not open with a comment that declares it. The comment is
+     * the one {@link #text(Table)} writes: {@code # 3 rows, 3 columns, width 2,
      * RR 3}.
      */
     private static String comment(String text, String key) {
@@ -233,7 +234,7 @@ public final class Csv {
         return false;
     }
 
-    /** The narrowest width that takes every value of every column. */
+    /** The narrowest width that fits every value of every column. */
     private static int narrowest(List<long[]> row) {
         int taken = 1;
         for (long[] read : row) {
@@ -251,7 +252,7 @@ public final class Csv {
         return taken;
     }
 
-    /** The number {@code cell} gives, or what it is that is not one. */
+    /** The number {@code cell} reads as, or what it is that is not one. */
     private static long value(String cell, int line, int column) {
         String where = "line " + line + " column " + column;
         try {

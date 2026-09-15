@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
  * strikes it.
  *
  * <p>A construct is a pattern over lowered prose rather than a word: a verb
- * in every form it takes, a phrase, or a shape such as a verb negating its
+ * in every form, a phrase, or a shape such as a verb negating its
  * object. Each lists samples it is in and, where a near miss is worth
  * pinning, samples it is not in; HouseStyleTest reads both back, so a
  * pattern that drifts fails there rather than in review.

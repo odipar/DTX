@@ -10,9 +10,9 @@
 ; doc/abi.md 1 defines for every image and no variant changes, and the macro
 ; DTX0 and DTX1 install a long with.
 ;
-; An image contains one table or several (doc/abi.md 1). Init takes the
+; An image contains one table or several (doc/abi.md 1). Init reads the
 ; header of the one to read, so nothing here reaches a table by a separate
-; figure: the format block's fields below give the first table's, for a
+; figure: the format block's fields below record the first table's, for a
 ; caller that has only the image.
 ;
 ; A template includes this after DTX_table.i, invokes DTX_IMAGE where the
@@ -60,8 +60,8 @@ _fmt:
 ; lea reaches it; the first table's header is behind a column table whose
 ; size moves with C, so its place is read out of the format block rather
 ; than assembled in. R, C and RR then come out of that header, and the
-; stride out of the block itself. This call gives the first table's figures;
-; a caller reading another table takes R, C and RR out of that table's
+; stride out of the block itself. This call reports the first table's figures;
+; a caller reading another table reads R, C and RR out of that table's
 ; header, at the offsets below.
 ; SPEC.md 1 lays it out: R at +4, C at +8 and RR at +10.
 DTX_metadata:
@@ -75,7 +75,7 @@ DTX_metadata:
         rts
 
 ; DTX_payload. The table's header in a1 on the way in, and on the way out
-; the payload's first byte in a1 and that header in a2. Init is given the
+; the payload's first byte in a1 and that header in a2. Init is seeded on the
 ; header of the table to read, so the table's place is not read out of the
 ; format block: an image contains several and the block names the first. The
 ; header is 16 bytes under every variant and every C (SPEC.md 1), so the

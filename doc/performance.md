@@ -3,14 +3,14 @@
 What each call of a packaged reader costs, in 68000 cycles, measured.
 
 The figures are cycle counts read out of the rig `68k/test/emu/test_dtx.py`.
-It runs each image under emulation and gives every instruction the machine
-runs the cycles the M68000 user's manual's tables give it, out of the opcode
-and, for a branch or a loop, out of where the machine went next; the rig
-checks this document against its totals and fails where a figure here is
+It runs each image under emulation and counts every instruction the machine
+runs at the cycles the M68000 user's manual's tables list for it, out of the
+opcode and, for a branch or a loop, out of where the machine went next; the
+rig checks this document against its totals and fails where a figure here is
 not the one it counts. Before it counts, it checks its tables against the
-manual on a set of encodings. The cycles are the processor's, with no
-wait state: a machine whose bus rounds an access up, as an Atari ST's does,
-takes longer.
+manual on a set of encodings. The cycles are the processor's, with no wait
+state: a machine whose bus rounds an access up, as an Atari ST's does,
+runs longer.
 
 ## The example tables
 
@@ -47,7 +47,7 @@ plus one), modulo 251, so the first rows of the three column table are:
 | code, bytes | 132 | 80 | 1412 | 1408 | 1420 |
 
 There are four calls (abi.md 2), and none of them moves a value: an advance
-gives the pointer at the row's first value and the caller reads from there.
+leaves the pointer at the row's first value and the caller reads from there.
 So a read costs the image nothing, and what it costs the caller stands in
 the table below.
 
@@ -56,7 +56,7 @@ refills decode, and one figure where they do not: a row refills one column
 of `P` rows, and a turn past the last column does not refill.
 
 **What is flat and what is not.** Under DTX0 and DTX1 every call is flat in
-`R` and in `C`. Under DTX2 an advance is flat and takes one column's
+`R` and in `C`. Under DTX2 an advance is flat and costs one column's
 refill, and a jump is not flat: it runs the advance's body once a row up to
 the target, so a jump to row 63 costs the 63 rows. A backward jump seeds
 every ring again first, so a jump to row 0 costs an init and one row's
@@ -68,7 +68,7 @@ grows with `C` and with `P`: the init rows of the two tables.
 
 ## What a value costs the caller
 
-An advance leaves the pointer in `a1` and `DTX_metadata` gives the stride,
+An advance leaves the pointer in `a1` and `DTX_metadata` reports the stride,
 so column `i` of the row is one move at `i` strides off `a1`:
 
 | width | the move | cycles |
@@ -80,7 +80,7 @@ so column `i` of the row is one move at `i` strides off `a1`:
 Those are the manual's figures for the move, which the rig reads out of the
 same tables it counts a call with. A caller that reads every column of a
 row makes `C` of them, and one that reads a single column makes one: DTX1
-and DTX2 lay a column's values together, so taking one column of a wide
+and DTX2 lay a column's values together, so reading one column of a wide
 table never touches the others (R4.4).
 
 ## What the copy code costs

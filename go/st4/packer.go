@@ -19,12 +19,12 @@ type Packer struct {
 	Seconds    float64
 }
 
-// Copies gives whether this packer packs copies from the literal stream.
+// Copies reports whether this packer packs copies from the literal stream.
 func (p Packer) Copies() bool {
 	return p.CopiesFlag
 }
 
-// Pack gives column as one complete ST4 data set, looping at unit loop or
+// Pack returns column as one complete ST4 data set, looping at unit loop or
 // ending where loop is -1.
 func (p Packer) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	if problem := CheckUnit(unit); problem != "" {
@@ -48,7 +48,7 @@ func (p Packer) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 		maxOp, loop, offsetLimit).Container(), nil
 }
 
-// replayed gives a column whose loop is longer than a back reference reaches.
+// replayed returns a column whose loop is longer than a back reference reaches.
 // The run before the loop and the loop are parsed apart, so nothing in the
 // loop reaches before the loop's first unit and every pass reads the same
 // history. The data set records that unit, and a reader puts the decoder's
@@ -63,7 +63,7 @@ func (p Packer) replayed(units []uint32, unit, limit, loop int) Result {
 		units, unit, maxOp, loop, limit)
 }
 
-// parse gives one parse of units, with the copy code where this packs it.
+// parse returns one parse of units, with the copy code where this packs it.
 // Neither optimizer reports progress: a tool writes what it wrote, and a
 // meter on standard output would stand in the middle of it.
 func (p Packer) parse(units []uint32, unit, limit int) *Block {
