@@ -175,7 +175,7 @@ final class HouseStyleTest {
     @Test
     void aTableRowAndAFenceAreReadOnTheirOwn() throws IOException {
         List<Hit> hits = style().document(Path.of("a.md"), List.of(
-                "| column | what it gives |",
+                "| column | what it is |",
                 "| ring | what it holds |",
                 "",
                 "```",
@@ -282,7 +282,7 @@ final class HouseStyleTest {
             }
         }
         assertTrue(hits.isEmpty(), () -> String.join("\n", hits)
-                + "\nAGENTS.md gives the rule each construct is struck under;"
+                + "\nAGENTS.md defines the rule each construct is struck under;"
                 + " reword the line, or take the entry off " + HouseStyle.STRUCK
                 + " in the same change.");
     }

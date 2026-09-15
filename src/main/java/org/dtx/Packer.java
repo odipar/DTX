@@ -19,12 +19,12 @@ public interface Packer {
      *
      * @param column the bytes of DTX1's column
      * @param unit the unit to pack at, 1, 2 or 4, which the data set's
-     *     signature then gives (R5.2)
+     *     signature then records (R5.2)
      * @param ring the bytes past which no back reference in the data set
      *     reaches (R5.4)
      * @param loop the unit the set decodes back to when it reaches the end,
      *     so that it decodes forever, or -1 where the set ends (R5.11). A
-     *     packer with no loop to give throws on a call that gives one: a
+     *     packer without a loop throws on a call that names one: a
      *     set that ends where the file defines a loop reads wrongly
      */
     byte[] pack(byte[] column, int unit, int ring, int loop);

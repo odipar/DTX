@@ -8,9 +8,9 @@
 #
 # The images are read out of the zip that packs them and listed one a line
 # with the four figures that identify one: the variant, the width every
-# value of a table takes, the unit its decoder decodes at, and whether that
+# value of a table is written in, the unit its decoder decodes at, and whether that
 # decoder has the copy code. The zips are listed by what each contains. The
-# source commit is HEAD unless COMMIT gives the commit DIR was built from.
+# source commit is HEAD unless COMMIT names the commit DIR was built from.
 set -e
 VERSION=$1
 DIR=$2
@@ -49,7 +49,7 @@ MANIFEST="$DIR/MANIFEST.txt"
     echo "name  bytes  sha256  variant  w  k  copies"
     for image in "$unpacked"/*.bin; do
         name=$(basename "$image")
-        # The name gives the width as -wW and the unit as -kK. DTX0's code
+        # The name records the width as -wW and the unit as -kK. DTX0's code
         # does not move with the width, and DTX0 and DTX1 do not have a
         # decoder, so those columns read - rather than a figure.
         w=$(echo "$name" | sed -n 's/.*-w\([0-9]*\)[-.].*/\1/p')

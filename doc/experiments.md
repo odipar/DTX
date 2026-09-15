@@ -10,7 +10,7 @@ read tested every value; the row a wrong flag read wrong; and the cycles,
 which performance.md records and the rig `68k/test/emu/test_dtx.py` counts.
 
 The numbers table is the rig's: row `r`, column `i` is `r` times (`i` plus
-one), modulo 251, at the width given. Every value of a table takes one
+one), modulo 251, at the width named. Every value of a table is one
 width (R6.3), so the width is a figure of the table like `R` and `C`.
 
 ## Where DTX2 becomes the smaller of the two
@@ -37,7 +37,7 @@ DTX2 is the larger up to 256 rows on this table and the smaller at 512,
 where it is under three fifths of DTX1. What packing costs does not shrink
 with `R`: the 28 byte ST4 header a column, and the payload's offsets. What
 it saves does, and on this table it overtakes between 256 and 512 rows,
-where the values begin to repeat: they are taken modulo 251.
+where the values begin to repeat: they run modulo 251.
 
 ## Copies from the literal stream, at a small ring
 
@@ -69,35 +69,35 @@ ST4_wrap.S assembled alone, without the copy code and with it:
 
 In an image the difference is 32, 32 and 36 bytes: the decoder stands on a
 long, and the 30 rounds up to one. In cycles, on a column without copies,
-the copy code costs what performance.md's last table gives, about 0.2
+the copy code costs what performance.md's last table records, about 0.2
 percent, at every `k`: the two decoders differ at init, where the one with
 the copy code writes the ring's size into two of its instructions, and
 not in a row.
 
 ## ST4_wrap against ST4_ring
 
-The decoder a packaged reader takes is ST4_wrap, which decodes a fixed
+The decoder a packaged reader uses is ST4_wrap, which decodes a fixed
 budget a call and leaves the ring's wrap to the caller; ST4_ring checks the
 ring end itself. Assembled alone at each unit, ST4_wrap is 324, 328 and 330
 bytes and ST4_ring 386, 394 and 396, measured from odipar/ST4's `68k/` at
 498aa25, of which this repository contains the first and not the second.
 The reader wraps the write pointer with one compare after each refill, so
-it takes the smaller decoder (abi.md 8).
+it uses the smaller decoder (abi.md 8).
 
 ## A word at an odd address
 
-A 68000 takes an address error on a word or long at an odd address, and
+A 68000 raises an address error on a word or long at an odd address, and
 Unicorn's model of it does not: it reads and writes the bytes. The rig ran
 under that model, so a wide column whose place in the row was odd, a two
 byte column after a one byte one, was read with one word move on every
 table it passed, and would have faulted on the hardware. The rig watches
 every access now and fails a misaligned one as the 68000 does. The read
 then tested each wide value and moved bytes where its offset was odd,
-which cost a `btst` and a branch a column and took DTX1's code from 592
+which cost a `btst` and a branch a column and grew DTX1's code from 592
 bytes to 716 and DTX2's from 1352 to 1476.
 
-One width a table (R6.3) took the test out again, and the ABI took the
-move with it: an advance gives the pointer at the row's first value and
+One width a table (R6.3) dropped the test again, and the ABI dropped the
+move with it: an advance leaves the pointer at the row's first value and
 the caller reads where the values stand (abi.md 2), so nothing in an image
 moves one. DTX1's code is 84 bytes now and DTX2's 1448, and the rig's
 alignment hook passes every table it runs.
@@ -105,7 +105,7 @@ alignment hook passes every table it runs.
 ## A column packed with copies, read without them
 
 Before the payload defined whether its columns contain copies (R5.10), the
-packager took that from a flag beside the file, and the flag could be
+packager read that from a flag beside the file, and the flag could be
 wrong. Measured on the 512 row table above, packaged without it: row 37
 read wrong, where the pattern first repeats past the ring, and every row
 before it read right. SPEC.md 2.3 puts the flag in the payload, so the

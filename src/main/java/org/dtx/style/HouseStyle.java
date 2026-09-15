@@ -13,7 +13,7 @@ import org.dtx.style.Construct.Match;
 /**
  * The house style, as a check over a tree.
  *
- * <p>AGENTS.md gives the rules and STRUCK.md lists the constructs struck
+ * <p>AGENTS.md defines the rules and STRUCK.md lists the constructs struck
  * under them; this class reads the list, then every document and every code
  * comment the tree writes against it. A hit names the file, the line, the
  * text matched and the rule. {@code main} runs the check over a tree and
@@ -22,7 +22,7 @@ import org.dtx.style.Construct.Match;
  * <p>The documents and sources are found rather than listed: a list is a
  * place a new file is not. What is carried from another repository is not
  * read, since a copy follows its tree's style, and the documents that
- * give the rules are not read either, since they quote what they strike.
+ * define the rules are not read either, since they quote what they strike.
  *
  * @param constructs every construct struck, in the order STRUCK.md lists
  *     them
@@ -39,8 +39,8 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
     /** The file that lists the constructs, at the root of the tree. */
     public static final String STRUCK = "STRUCK.md";
 
-    /** The documents that give the rules, and so quote what they strike. */
-    public static final List<String> GIVES_THE_RULES =
+    /** The documents that define the rules, and so quote what they strike. */
+    public static final List<String> DEFINES_THE_RULES =
             List.of("AGENTS.md", "CLAUDE.md", STRUCK);
 
     /** One hit: the file, the line, the construct and the text matched. */
@@ -64,7 +64,7 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
      * line followed by an indented block: before the first rule the entries
      * {@code names}, {@code carried} and {@code own} list their items, one a
      * line; under a rule the block is the pattern, over as many lines as it
-     * takes, then {@code in:} and {@code not:} samples. Every other line is
+     * needs, then {@code in:} and {@code not:} samples. Every other line is
      * prose and is not read.
      */
     public static HouseStyle parse(List<String> lines) {
@@ -260,13 +260,13 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
                 || at.contains("/.git/") || at.contains("/.idea/");
     }
 
-    /** Every Markdown file under {@code root} but those that give the rules. */
+    /** Every Markdown file under {@code root} but those that define the rules. */
     public static List<Path> documents(Path root) throws IOException {
         try (Stream<Path> tree = Files.walk(root)) {
             return tree.filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".md"))
                     .filter(path -> !built(path))
-                    .filter(path -> !GIVES_THE_RULES.contains(
+                    .filter(path -> !DEFINES_THE_RULES.contains(
                             path.toFile().getName()))
                     .sorted()
                     .toList();
@@ -318,8 +318,8 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
     }
 
     /**
-     * Runs the check over a tree, the working directory unless one is given,
-     * prints a line a hit, and exits with 1 where there was one.
+     * Runs the check over a tree, the working directory unless one is
+     * named, prints a line a hit, and exits with 1 where there was one.
      */
     public static void main(String[] args) throws IOException {
         Path root = Path.of(args.length > 0 ? args[0] : ".");
@@ -328,7 +328,7 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
             System.out.println(hit);
         }
         if (!hits.isEmpty()) {
-            System.out.println(hits.size() + " hits. AGENTS.md gives the rule"
+            System.out.println(hits.size() + " hits. AGENTS.md defines the rule"
                     + " each was struck under; reword the line, or take the"
                     + " entry off " + STRUCK + " in the same change.");
             System.exit(1);

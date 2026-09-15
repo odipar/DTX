@@ -256,6 +256,19 @@ state as a verb
     not: the state block and the decoder state
     not: the decoder states stand at 80
 
+a thing giving
+    \bgiv(?:e|es|en|ing)\b|\bgave\b
+    in: the comment gives the width
+    in: a reader given a table
+    in: the call gave the row
+    not: a driven value
+
+a thing taking
+    \btak(?:e|es|en|ing)\b|\btook\b
+    in: a value the register takes
+    in: the read took four cycles
+    not: a mistaken width
+
 a verb negating its object
     \b(?!(?:this|thus|as|unless|its|yes|plus|minus|bytes)\b)
     (?:[a-z]+s|are|were|had|have|do|did|took|wrote|left|kept|ran|gave|made

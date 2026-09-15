@@ -16,8 +16,8 @@ final class Help {
 
     /**
      * Prints why a tool stopped, and exits with 1. A file it cannot read, a
-     * header outside the bounds R6 sets, a value no width takes: the caller
-     * is given the one line the Go and C# trees give, and not a stack trace.
+     * header outside the bounds R6 sets, a value no width fits: the caller
+     * reads the one line the Go and C# trees print, and not a stack trace.
      * A misuse of the command line exits with 2 instead.
      */
     static void stopped(Exception failed) {

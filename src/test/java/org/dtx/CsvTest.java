@@ -9,10 +9,10 @@ import org.junit.jupiter.api.Test;
 /**
  * Comma separated text into a table, and that table out under every variant.
  *
- * <p>The text is the source a writer takes; what it builds is the same
+ * <p>The text is the source a writer reads; what it builds is the same
  * {@code Table} every variant writes, one width over the whole table (R6.3),
- * so a row read back out of a DTX0 or a DTX1 file gives the values the text
- * gave.
+ * so a row read back out of a DTX0 or a DTX1 file has the values the text
+ * defines.
  */
 final class CsvTest {
 
@@ -28,8 +28,8 @@ final class CsvTest {
     private static final int[] WIDTHS = {1, 2, 4};
 
     @Test
-    void theTableTakesTheNarrowestWidthThatFitsEveryValue() {
-        // 300 does not fit one byte, so every value of the table takes two.
+    void theTableUsesTheNarrowestWidthThatFitsEveryValue() {
+        // 300 does not fit one byte, so every value of the table is two.
         assertEquals(2, Csv.width(TEXT));
         assertEquals(1, Csv.width("1, -2\n3, 255\n"));
         assertEquals(4, Csv.width("1, 2\n3, 70000\n"));

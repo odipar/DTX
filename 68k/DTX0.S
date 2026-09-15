@@ -12,7 +12,7 @@
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, RR and the row's bytes reach it at
 ; run time rather than at assembly time: DTX_init reads them out of the format
 ; block and the table's header and writes them into the instructions that
-; take them. Every DTX0 image contains the same instructions, byte for byte;
+; read them. Every DTX0 image contains the same instructions, byte for byte;
 ; the table behind them differs.
 ;
 ; That costs a read-only image. The code writes to itself at init, so it
@@ -20,8 +20,9 @@
 ; cache after DTX_init. A 68000 writes to its code freely.
 ;
 ; DTX0 lays the rows one after another, so one pointer walks them and a read is
-; one run of bytes. The width every value takes does not reach this file: a row
-; is a run either way, so one build reads a DTX0 table of any width.
+; one run of bytes. The width every value is written in does not reach this
+; file: a row is a run either way, so one build reads a DTX0 table of any
+; width.
 ;
 ; THE TABLE'S BYTES FOLLOW THE CODE. Nothing here contains them: _columns is the
 ; last label and the code ends on a long, so the packager appends the .dtx
@@ -30,8 +31,8 @@
 ; byte there.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
-; number or the address a row goes to. doc/abi.md 7 lists what each call takes
-; without checking.
+; number or the address a row goes to. doc/abi.md 7 lists what each call
+; assumes without checking.
 ; -----------------------------------------------------------------------------
 
         .68000
@@ -47,7 +48,7 @@
 
 ; -----------------------------------------------------------------------------
 ; The word form of DTX_image.S's DTX_INSTALL_L, which that file's comment
-; lays out. The row's bytes take a word, and only this file installs one.
+; lays out. The row's bytes fit a word, and only this file installs one.
 
         .macro  DTX_INSTALL_W   value,site
         lea     \site+2(pc),a4
@@ -61,7 +62,7 @@
 ; into row 0 steps like any other advance.
 ;
 ; The row's bytes come out of the table's header and not out of the
-; format block, which gives the first table's: an image contains several
+; format block, which records the first table's: an image contains several
 ; tables, and the figure below stands in three instructions, so it is this
 ; table's or the reads are another's.
 
@@ -73,12 +74,12 @@ DTX_init:
         moveq   #0,d2
         move.w  8(a2),d2                ; C
         moveq   #0,d3
-        move.b  14(a2),d3               ; W, the bytes a value takes
+        move.b  14(a2),d3               ; W, the bytes a value stands in
         mulu.w  d3,d2                   ; the row's bytes
 
-; The row's bytes, into the step and into the two mulu a jump takes. A row
-; is C values of the width, so 1024 bytes at the widest table R6 takes,
-; which a word gives.
+; The row's bytes, into the step and into the two mulu a jump runs. A row
+; is C values of the width, so 1024 bytes at the widest table R6 defines,
+; which fits a word.
         DTX_INSTALL_W d2,advance_step
         DTX_INSTALL_W d2,jump_high
         DTX_INSTALL_W d2,jump_low
@@ -105,14 +106,14 @@ jump_high:
 jump_low:
         mulu.w  #0,d3                   ; installed: the row's bytes
         add.l   d3,d1
-        movea.l DTX_PAYLOAD(a6),a1      ; the payload init was given
+        movea.l DTX_PAYLOAD(a6),a1      ; the payload init was seeded on
         adda.l  d1,a1
         move.l  a1,DTX_POINTER(a6)
         rts
 
 ; -----------------------------------------------------------------------------
 ; DTX_advance. One row on: a1 comes back the row's first value, and the
-; values of a DTX0 row stand one after another, so the caller takes column i
+; values of a DTX0 row stand one after another, so the caller reads column i
 ; at i widths from it. Which row that is the caller counts (abi.md 2): no
 ; call keeps a row number, and an advance past row R minus one reads past
 ; the table.

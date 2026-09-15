@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
  * <p>Every table in the kit is written here, from the text and options
  * SOURCES.md defines, and compared byte for byte with the file in the tree;
  * beside each table stands the rows in it, as DTX0 lays them out, and a
- * reader of it gives those back. A table the tree does not have yet is
+ * reader of it reads those back. A table the tree does not have yet is
  * written, and SOURCES.generated.md beside the kit lists what SOURCES.md
  * then has to say.
  */
@@ -89,7 +89,7 @@ class ConformanceTest {
         };
     }
 
-    /** The rows in a table, as DTX0 lays them out: what a reader gives. */
+    /** The rows in a table, as DTX0 lays them out: what a reader reads. */
     private static byte[] rows(Source source) {
         return rows(source.repeat() == null
                 ? Csv.table(source.text(), source.width())
@@ -166,7 +166,7 @@ class ConformanceTest {
 
     /**
      * The Java reader against the kit: every table in it, read through
-     * {@link Dtx#read}, gives the rows beside it. The DTX2 tables go through
+     * {@link Dtx#read}, reads the rows beside it. The DTX2 tables go through
      * the copy of ST4 in this repository, so this is the one check here of
      * a reader that unpacks rather than the 68000 one.
      */

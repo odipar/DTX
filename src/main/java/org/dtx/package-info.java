@@ -9,7 +9,7 @@
  * {@link org.dtx.St4} with that copy, {@link org.dtx.St4Beside} with an
  * executable a caller names, or one the caller supplies. ST4's own
  * repository specifies the format. Its 68000 decoder is carried under
- * {@code 68k/}, which a packaged reader takes and this package does not.
+ * {@code 68k/}, which a packaged reader runs and this package does not.
  */
 @NullMarked
 package org.dtx;

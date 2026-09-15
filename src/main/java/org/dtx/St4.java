@@ -10,18 +10,19 @@ import org.st4.Units;
 /**
  * A {@link Packer} that packs with the copy of ST4 in this repository.
  *
- * <p>{@code src/main/java/org/st4} is that copy, taken from
+ * <p>{@code src/main/java/org/st4} is that copy, carried from
  * odipar/ST4@498aa25 and not edited here. So a tool writes DTX2 with no
  * packer beside it, and {@link St4Beside} runs one where a caller names it.
  *
- * <p>The packer takes what {@code st4 -f -kK -mN -l65535} gives it, and
+ * <p>The packer packs as {@code st4 -f -kK -mN -l65535} does, and
  * {@code -c} beside them where the columns contain copies. The ring is bytes
  * and the packer counts units, so {@code -m} is the ring divided by the unit,
- * at most what a word offset can give.
+ * at most what a word offset reaches.
  *
  * <p>{@code -l65535} meets ST4_wrap's assumption 4: no operation is longer
  * than the 65535 units the 68000 decoders count in a word. ST4's own
- * default already fits them, and this defines it rather than taking it.
+ * default already fits them, and this names it rather than leaving it to
+ * that default.
  */
 public final class St4 implements Packer {
 

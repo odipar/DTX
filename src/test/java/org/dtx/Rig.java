@@ -155,7 +155,7 @@ final class Rig {
         return out.toString();
     }
 
-    /** The arguments Write takes for one table. */
+    /** The arguments Write reads for one table. */
     static List<String> writeArgs(int variant, int width,
             @Nullable Integer repeat, int unit, int ring, boolean copies) {
         List<String> argv = new ArrayList<>();

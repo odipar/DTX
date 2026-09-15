@@ -6,7 +6,7 @@
 //
 // The files are build output. The Maven build writes them into data/, which
 // go:embed reads only inside its module. A tree built without them does
-// not contain one: Read gives nil back and the caller resolves an image as it
+// not contain one: Read returns nil and the caller resolves an image as it
 // otherwise would.
 package image
 
@@ -25,11 +25,11 @@ import (
 //go:embed data
 var data embed.FS
 
-// Name gives the file one build stands in: a variant, the width its values
-// take, and under DTX2 the unit its decoder decodes at and whether that
-// decoder has the copy code.
+// Name returns the file one build stands in: a variant, the width its values
+// are written in, and under DTX2 the unit its decoder decodes at and whether
+// that decoder has the copy code.
 //
-// DTX0 reads a row as one run of bytes, and the move that run takes comes
+// DTX0 reads a row as one run of bytes, and the move that run needs comes
 // from the row's bytes: its code does not move with the width, so one file
 // is every DTX0 table's.
 func Name(variant, width, unit int, copies bool) string {
@@ -45,7 +45,7 @@ func Name(variant, width, unit int, copies bool) string {
 	return fmt.Sprintf("DTX2-w%d-k%d.bin", width, unit)
 }
 
-// Read gives one image's bytes, or nil where the build does not contain one.
+// Read returns one image's bytes, or nil where the build does not contain one.
 func Read(variant, width, unit int, copies bool) []byte {
 	bytes, err := fs.ReadFile(data, "data/"+Name(variant, width, unit, copies))
 	if err != nil {
@@ -54,7 +54,7 @@ func Read(variant, width, unit int, copies bool) []byte {
 	return bytes
 }
 
-// Code gives one image's bytes, from what this build contains or, where it
+// Code returns one image's bytes, from what this build contains or, where it
 // does not contain one, from build/68k, where the Maven build writes the
 // twenty-two.
 //
@@ -78,7 +78,7 @@ func Code(variant, width, unit int, copies bool) ([]byte, error) {
 	return code, nil
 }
 
-// Build is one build of the code: a variant, the width its values take, and
+// Build is one build of the code: a variant, the width its values are in, and
 // under DTX2 a decoder.
 type Build struct {
 	Variant int
@@ -87,12 +87,12 @@ type Build struct {
 	Copies  bool
 }
 
-// Name gives the file this build stands in.
+// Name returns the file this build stands in.
 func (b Build) Name() string {
 	return Name(b.Variant, b.Width, b.Unit, b.Copies)
 }
 
-// Builds gives every build, in the order the Maven build writes them.
+// Builds returns every build, in the order the Maven build writes them.
 //
 // Twenty-two: one DTX0, one DTX1 a width, and one DTX2 a width and a build
 // of the decoder built into it: a unit of 1, 2 or 4, with the copy code and
@@ -111,7 +111,7 @@ func Builds() []Build {
 	return out
 }
 
-// Embedded gives how many of the builds this one contains: all of them, or
+// Embedded returns how many of the builds this one contains: all of them, or
 // none.
 func Embedded() int {
 	count := 0

@@ -11,8 +11,8 @@ import org.st4.St4Format;
  * The code in this repository, one file a build.
  *
  * <p>A build assembles to one code for any table it reads, so the packager
- * combines rather than assembles: it takes the file for the build the table
- * needs, writes the six fields the table gives into the format block, and
+ * combines rather than assembles: it reads the file for the build the table
+ * needs, writes the six fields the table defines into the format block, and
  * appends the column table and the table's bytes. This writes those files,
  * and it is the one step rmac is needed for.
  *
@@ -25,7 +25,7 @@ import org.st4.St4Format;
  * <p>The table each is assembled from fixes only the figures the assembler
  * reads, so it is made here rather than read: the columns do not contain
  * bytes that decode, and {@link Packager#blank} zeroes the six fields the
- * table did give. What comes out is a function of the template alone.
+ * a package fills. What comes out is a function of the template alone.
  */
 public final class Blobs {
 
@@ -33,7 +33,7 @@ public final class Blobs {
     }
 
     /**
-     * One build of the code: a variant, the width its values take, and
+     * One build of the code: a variant, the width its values are in, and
      * under DTX2 a decoder.
      */
     public record Build(int variant, int width, int unit, boolean copies) {
@@ -89,7 +89,7 @@ public final class Blobs {
      *
      * <p>The assembler reads only a data set's four stream offsets, not the
      * streams, so a data set whose streams are the column itself fixes every
-     * figure the build takes. Nothing decodes it, and nothing here runs it:
+     * figure the build reads. Nothing decodes it, and nothing here runs it:
      * the packer that writes a table a caller reads is ST4's own.
      */
     private record Plain(boolean copies) implements Packer {

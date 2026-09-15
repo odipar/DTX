@@ -17,18 +17,18 @@
 ;
 ; THE WIDTH DOES MOVE THE CODE. Every value of a table is one width (R6.3),
 ; and it reaches the assembler as an equate, so a read moves a value in one
-; instruction. That costs one build a width, and the packager takes the build
+; instruction. That costs one build a width, and the packager reads the build
 ; the table's header names.
 ;
 ; DTX1 lays a column's values together and every column is the same length,
 ; so the columns stand at one stride: the value of column i for the row the
-; cursor stands on is the pointer an advance gives plus i strides. The image
+; cursor stands on is the pointer an advance leaves plus i strides. The image
 ; does not have a column table or an entry a column, and it does not copy a
 ; row anywhere: the caller reads the values where they stand.
 ;
-; DTX_metadata gives the stride, which is R times the width rounded up to a
+; DTX_metadata reports the stride, which is R times the width rounded up to a
 ; word (R4.3). It stands in the format block, so a caller that builds against
-; a given image reads it out of the file instead.
+; one image reads it out of the file instead.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
 ; number or the address a row goes to.
@@ -45,7 +45,7 @@
 
 ; -----------------------------------------------------------------------------
 ; A value times the width, in one instruction: add.l dn,dn is the cheapest
-; double a 68000 has, so a width of 2 takes that and a width of 4 a shift.
+; double a 68000 has, so a width of 2 uses that and a width of 4 a shift.
 ; At a width of 1 the value stands as it is and this macro is empty.
 
         .macro  DTX_SCALE value
@@ -82,14 +82,14 @@ DTX_init:
 DTX_jump:
         move.l  d0,d1
         DTX_SCALE d1
-        movea.l DTX_PAYLOAD(a6),a1      ; the payload init was given
+        movea.l DTX_PAYLOAD(a6),a1      ; the payload init was seeded on
         adda.l  d1,a1
         move.l  a1,DTX_POINTER(a6)
         rts
 
 ; -----------------------------------------------------------------------------
 ; DTX_advance. One row on: a1 comes back the row's first value, and the
-; caller takes column i at i strides from it. Which row that is the caller
+; caller reads column i at i strides from it. Which row that is the caller
 ; counts (abi.md 2): no call keeps a row number, and an advance past row R
 ; minus one reads past the column.
 

@@ -85,7 +85,7 @@ public final class Dtx2 {
     /**
      * The unit every data set of a table that repeats loops at, or -1 where
      * the table does not repeat (R5.11). A set that loops never ends, so a
-     * reader takes the repeat as one more row; a set of a table that does
+     * reader reads the repeat as one more row; a set of a table that does
      * not repeat ends where the rows do, and its reader shortens the last
      * refill of a column against the rows it has left.
      *
@@ -110,7 +110,7 @@ public final class Dtx2 {
      * The DTX2 file of the table in a DTX file of any variant. The table is
      * the same under every variant (R1.3), so what comes back has the same
      * rows, width, {@code R} and {@code RR} as what went in, and a DTX2
-     * file comes back packed at the unit and ring given here.
+     * file comes back packed at the unit and ring named here.
      */
     public static byte[] from(byte[] file, Packer packer, int unit, int ring) {
         return write(Dtx.read(file), packer, unit, ring);

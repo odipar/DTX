@@ -114,13 +114,13 @@ final class ConsistencyTest {
         return out;
     }
 
-    /** The number words the pictures' captions give a small count in. */
+    /** The number words the pictures' captions write a small count in. */
     private static final List<String> WORD = List.of("zero", "one", "two",
             "three", "four", "five", "six", "seven", "eight", "nine", "ten");
 
     /**
      * SPEC.md's pictures against the example table the same section defines.
-     * Every count a caption gives is recomputed from `R`, `C` and the width,
+     * Every count a caption names is recomputed from `R`, `C` and the width,
      * so a caption reworded away from what its picture draws fails here
      * rather than standing.
      */
@@ -192,9 +192,9 @@ final class ConsistencyTest {
 
     /**
      * The ST4 figures, in each of the four sentences that define one. SPEC.md
-     * 2.3 gives the size of an ST4 header and the version byte of a data
-     * set's first long, its stored against packed bullet gives the size
-     * again, and the glossary's ST4 header row gives both. Both figures move
+     * 2.3 defines the size of an ST4 header and the version byte of a data
+     * set's first long, its stored against packed bullet repeats the size,
+     * and the glossary's ST4 header row repeats both. Both figures move
      * when ST4 moves, so a move that reaches one sentence and leaves another
      * fails here.
      */
@@ -305,7 +305,7 @@ final class ConsistencyTest {
     }
 
     /**
-     * The scripts doc/tools.md gives, against the tree. A reader copies a
+     * The scripts doc/tools.md lists, against the tree. A reader copies a
      * usage line, so a script renamed away from the document, or one
      * that is not executable, fails here rather than at the reader's shell.
      */

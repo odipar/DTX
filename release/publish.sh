@@ -2,7 +2,7 @@
 # The standalone DTX executables: one set per platform, each containing the
 # twenty-two 68000 images, so a machine with neither this repository nor a
 # toolchain can write a table and package it for a 68000. The images go
-# beside them in one zip, for a caller who takes an image and no tool.
+# beside them in one zip, for a caller who needs an image and no tool.
 #
 #   release/publish.sh [version]      # the six platforms below
 #   TARGETS="linux-x64" release/publish.sh
@@ -16,7 +16,7 @@
 # The Java and C# trees write the same bytes, and ParityTest checks the three
 # against one another; a release is built from one tree.
 #
-# The executables do not take a wrapper. Go builds a real executable, so
+# The executables do not need a wrapper. Go builds a real executable, so
 # nothing has to find a runtime or a classpath before one runs.
 set -e
 cd "$(dirname "$0")/.."
@@ -38,7 +38,7 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-# What go:embed takes: only this release's images, so an executable cannot
+# What go:embed reads: only this release's images, so an executable cannot
 # contain an older release's image by accident.
 IMAGES=go/image/data
 rm -f "$IMAGES"/*.bin
@@ -86,7 +86,7 @@ for target in $TARGETS; do
     echo "$OUT/release/$zip: $(wc -c < "$OUT/release/$zip" | tr -d ' ') bytes"
 done
 
-# The images a caller may take beside the executables, named by release so
+# The images for a caller who packages without a tool, named by release so
 # two of them do not stand in one directory unlabelled, and packed in one
 # zip so they are one download.
 for image in "$OUT"/release/*.bin; do
@@ -113,7 +113,7 @@ esac
 if [ -n "$host" ] && [ -d "$OUT/$host" ]; then
     try=$(mktemp -d)
     printf '1,2,3\n4,5,6\n7,8,9\n8,7,6\n' > "$try/t.csv"
-    # One build a width, so each width takes another image out of the
+    # One build a width, so each width reads another image out of the
     # executable. The three cover DTX1's three.
     for w in 1 2 4; do
         "$OUT/$host/dtx-write" -v1 -w"$w" < "$try/t.csv" > "$try/t.dtx"

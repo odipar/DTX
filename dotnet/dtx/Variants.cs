@@ -8,7 +8,7 @@ public static class Variants
     /// minus one in order, with nothing between them.
     ///
     /// <para>A value falls where the width puts it, so at a width of 1 a row
-    /// can begin on an odd offset and a reader takes it as bytes (R3.4). At
+    /// can begin on an odd offset and a reader reads it as bytes (R3.4). At
     /// a width of 2 or 4 every value stands on its boundary.</para>
     /// </summary>
     public static byte[] WriteDtx0(Table table)
@@ -199,7 +199,7 @@ public static class Variants
     /// <summary>
     /// The unit every data set of a table that repeats loops at, or -1
     /// where the table does not repeat (R5.11). A set that loops never
-    /// ends, so a reader takes the repeat as one more row; a set of a table
+    /// ends, so a reader reads the repeat as one more row; a set of a table
     /// that does not repeat ends where the rows do, and its reader shortens
     /// the last refill of a column against the rows it has left.
     /// </summary>

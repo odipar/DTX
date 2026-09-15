@@ -66,7 +66,7 @@ class StabilityTest {
     /**
      * The instructions alone: rmac's assembly of the template for this
      * table, with the four slots, the format block and what stands behind the
-     * code taken off.
+     * code dropped.
      *
      * <p>The packager's other path combines code the build already made, and
      * does not define what a template assembles to, so this one assembles.

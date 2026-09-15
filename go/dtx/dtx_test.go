@@ -12,7 +12,7 @@ func table(t *testing.T, rows, columns, width int) *Table {
 	return tableAt(t, rows, rows, columns, width)
 }
 
-// tableAt gives a table of rows rows repeating at repeat, with a byte pattern
+// tableAt returns a table of rows rows repeating at repeat, with a byte pattern
 // a column.
 func tableAt(t *testing.T, rows, repeat, columns, width int) *Table {
 	t.Helper()
@@ -135,7 +135,7 @@ func (standin) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	return set, nil
 }
 
-// The offsets a DTX2 payload gives, one a column.
+// The offsets a DTX2 payload records, one a column.
 func offsets(file []byte, columns int) []int {
 	at := make([]int, columns)
 	for i := range at {

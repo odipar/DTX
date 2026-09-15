@@ -17,11 +17,11 @@ the timings in Motorola's manual.
 ## What the format is
 
 DTX is a data format: a table of `R` rows and `C` columns, where every value
-takes one width, 1, 2 or 4 bytes, and the rows repeat at a row `RR`.
+is one width, 1, 2 or 4 bytes, and the rows repeat at a row `RR`.
 
 The format is data. A compile step and a calling convention belong to a
 reader and not to the format, so the specification defines what the bytes
-are and what a reader takes out of them, and no more than that.
+are and what a reader reads out of them, and no more than that.
 
 DTX does not define what a column contains. A format built on DTX defines
 that, in its repository and against what this one defines.
@@ -30,8 +30,8 @@ Three variants lay one table out three ways, and a file names which:
 
 | variant | the payload | for |
 |---|---|---|
-| DTX0 | row by row | a reader that takes whole rows |
-| DTX1 | column by column | a reader that takes one column of many |
+| DTX0 | row by row | a reader that reads whole rows |
+| DTX1 | column by column | a reader that reads one column of many |
 | DTX2 | column by column, each packed as an ST4 data set | a table too large to keep unpacked |
 
 Every one is the same table (R1.3), so a file converts between them without
@@ -68,7 +68,7 @@ Convert between variants, or pack one at a unit and ring you set:
 dtx-write -v2 -k2 -m960 < table.dtx > packed.dtx
 ```
 
-There are three tools, and [doc/tools.md](doc/tools.md) gives every flag of
+There are three tools, and [doc/tools.md](doc/tools.md) lists every flag of
 each. `-help` on any of them prints its usage and examples.
 
 | tool | what it does |
@@ -90,8 +90,8 @@ system, nothing allocated while it runs.
         move.w  DTX_STRIDE*2(a1),d2     ; column 2
 ```
 
-An advance gives the address of the row's first value, and the stride
-`DTX_metadata` gives reaches the next column's. No call copies a value: the
+An advance leaves the address of the row's first value, and the stride
+`DTX_metadata` reports reaches the next column's. No call copies a value: the
 image finds a row and the caller reads it. On 64 rows of three two byte
 columns an advance costs 70 cycles under DTX0 and 66 under DTX1.
 [doc/abi.md](doc/abi.md) is the calling convention and
@@ -129,7 +129,7 @@ between trees fails a build rather than reaching a release.
 
 | what runs | what it checks |
 |---|---|
-| 101 Java tests | the format, the tools, the packager, and every figure the documents give |
+| 101 Java tests | the format, the tools, the packager, and every figure the documents record |
 | the Go and C# suites | each tree against itself |
 | `68k/test/emu/test_dtx.py` | the 68000 reader under emulation, every row against the text the table came from |
 | the conformance kit | 19 tables an independent reader is written against |

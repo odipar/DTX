@@ -8,11 +8,11 @@ combines one with a table.
 One variant is one code. `R`, `C` and `RR` reach the code at run time, out of
 the table's header, so a variant assembles to one code at any number of
 rows or columns. The width does not reach it that way: every value of a table
-takes one width (R6.3), and that width reaches the assembler, so a read moves
+is one width (R6.3), and that width reaches the assembler, so a read moves
 a value in one instruction and no call reads a width a column. One build a
 width is what that costs.
 
-DTX0 reads a row as one run of bytes and takes the run from the row's
+DTX0 reads a row as one run of bytes and forms the run from the row's
 bytes, so its code does not move with the width and one file is every DTX0
 table's. DTX1 has one file a width. DTX2 has one a width and an ST4 build,
 and ST4 is built for a unit and with the copy code or without: three
@@ -48,7 +48,7 @@ the tree.
 
 ## Combining
 
-A tool takes the image for the table - the variant from the header, the
+A tool reads the image for the table - the variant from the header, the
 width at header byte 14, and under DTX2 the unit at payload byte 2 and the
 copies flag at byte 3 - writes the six fields, and appends the table's
 bytes behind the code. Under DTX2 a column table stands between the two,

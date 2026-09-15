@@ -9,7 +9,7 @@ import java.nio.file.Path;
  *
  * <p>The table comes from standard input, a DTX file of any variant or comma
  * separated text, and goes to standard output as a DTX file of the variant
- * {@code -v} gives, or as comma separated text under {@code -text}. The
+ * {@code -v} names, or as comma separated text under {@code -text}. The
  * table is the same under every variant (R1.3), so one tool writes text as
  * DTX, rewrites a DTX file at another variant, unit or ring, and reads a DTX
  * file out as text. doc/tools.md, Write.
@@ -171,7 +171,7 @@ public final class Write {
     }
 
     /**
-     * The whole number an argument gives behind its two letter flag, or the
+     * The whole number an argument stands for behind its two letter flag, or the
      * tool's line and exit 2 where what stands there is not one.
      */
     private static int number(String arg) {

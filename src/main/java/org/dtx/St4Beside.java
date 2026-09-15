@@ -12,21 +12,21 @@ import org.st4.St4Format;
  * A {@link Packer} that runs an ST4 packer beside this one.
  *
  * <p>{@link St4} packs with the copy in this repository, and a tool
- * takes it where none is named. This runs another: a separate ST4
+ * uses it where none is named. This runs another: a separate ST4
  * build, named by {@code -p}, so a packer newer than the copy here is used
  * through this. The unit and the ring reach it as {@code -kK} and
  * {@code -mN}, where {@code -m} counts units and {@code N} is in bytes, at
- * most what a word offset can give.
+ * most what a word offset reaches.
  *
  * <p>Every column is packed with {@code -l65535}, which meets ST4_wrap's
  * assumption 4: no operation is longer than the 65535 units the 68000
  * decoders count in a word. ST4's own default already fits them, and this
- * defines it rather than taking it.
+ * names it rather than leaving it to that default.
  *
  * <p>{@code copies} reaches the packer as {@code -c}, or {@code -cS} for a
  * search of {@code S} seconds. In a column packed that way a match beyond
  * the ring copies from its literal stream, which packs a small ring far
- * smaller; the reader of it takes a decoder built with
+ * smaller; the reader of it needs a decoder built with
  * {@code ST4_WINDOW equ 1}, which the payload defines (R5.10).
  */
 public final class St4Beside implements Packer {
@@ -65,7 +65,7 @@ public final class St4Beside implements Packer {
                 Path out = work.resolve("column.st4");
                 Files.write(in, column);
                 // The offset limit is capped as St4 caps it, so the two
-                // packers are given one limit: a word offset is stored
+                // packers work to one limit: a word offset is stored
                 // scaled to bytes, and 32512 units at k=4 would not fit the
                 // word.
                 int offsetLimit = Math.min(ring / unit,
@@ -74,7 +74,7 @@ public final class St4Beside implements Packer {
                         packer.toString(), "-f", "-k" + unit,
                         "-m" + offsetLimit, "-l65535"));
                 if (loop >= 0) {
-                    // st4 -r takes the loop's unit, and works out for
+                    // st4 -r reads the loop's unit, and resolves for
                     // itself whether a back reference reaches the loop's
                     // first unit or the pass has to be replayed
                     command.add("-r" + loop);
@@ -88,7 +88,7 @@ public final class St4Beside implements Packer {
                         .redirectErrorStream(true).start();
                 byte[] said = run.getInputStream().readAllBytes();
                 if (run.waitFor() != 0 || !Files.exists(out)) {
-                    throw new IllegalStateException(packer + " gave "
+                    throw new IllegalStateException(packer + " reported "
                             + new String(said).trim());
                 }
                 return Files.readAllBytes(out);

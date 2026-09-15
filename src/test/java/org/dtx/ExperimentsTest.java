@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * doc/experiments.md, read back: every byte figure it defines is one the
- * writer and the packager give, or the test names the cell.
+ * writer and the packager write, or the test names the cell.
  *
  * <p>The images come out of the code the build made, so this runs wherever
  * the build does and does not need an assembler.

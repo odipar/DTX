@@ -7,8 +7,8 @@ using System.Text;
 /// Combines a DTX table with the 68000 image that reads it.
 ///
 /// <para>One build is one code, so packaging combines rather than
-/// assembles: it takes the image for the build the table needs, writes the
-/// six fields the table gives into the format block, and appends the
+/// assembles: it reads the image for the build the table needs, writes the
+/// six fields the table defines into the format block, and appends the
 /// column table and the table's bytes. Code assembles a template with rmac,
 /// which is the one step an assembler is needed for. doc/abi.md defines the
 /// image, the format block and the column table.</para>
@@ -37,11 +37,11 @@ public static class Pack
     /// <summary>What one stream record runs to, one a column under DTX2.</summary>
     public const int Stream = 16;
 
-    /// <summary>What one decoder state takes: the eight registers, the
+    /// <summary>What one decoder state contains: the eight registers, the
     /// ring's end, where the registers go at a loop, and the budget.</summary>
     public const int State = 48;
 
-    /// <summary>What the copy of a decoder's registers takes, where a pass
+    /// <summary>What the copy of a decoder's registers costs, where a pass
     /// is replayed.</summary>
     public const int Saved = 32;
 
@@ -49,7 +49,7 @@ public static class Pack
     /// decoder states.</summary>
     public const int PackedHead = 72;
 
-    /// <summary>The state block DTX0 and DTX1 take: the head, and one pointer.</summary>
+    /// <summary>The state block DTX0 and DTX1 need: the head, and one pointer.</summary>
     public const int Plain = Pointer + 4;
 
     /// <summary>
@@ -60,7 +60,7 @@ public static class Pack
             bool Replayed, int[] At);
 
     /// <summary>
-    /// What a DTX2 payload gives, SPEC.md 2.3.
+    /// What a DTX2 payload defines, SPEC.md 2.3.
     ///
     /// <para>It checks the data sets against it. Every set opens with
     /// <c>$53 $34 $07 k</c>, so one compare against the payload's k
@@ -78,10 +78,10 @@ public static class Pack
         for (int i = 0; i < at.Length; i++)
         {
             at[i] = Format.GetLong(file, payload + 4 + 4 * i);
-            // Byte 20 of a data set gives the unit its loop begins at, or
+            // Byte 20 of a data set records the unit its loop begins at, or
             // $FFFFFFFF where its end marker loops it. A set that records
             // one is replayed by the reader (abi.md 4), and every set of a
-            // payload takes the same form: they are one table's columns, so
+            // payload has the same form: they are one table's columns, so
             // one loop and one length.
             replayed |= Format.GetLong(file, payload + at[i] + 20) != -1;
             int read = Format.GetLong(file, payload + at[i]);
@@ -107,7 +107,7 @@ public static class Pack
             Decoders() + State * Period(header, given);
 
     /// <summary>
-    /// The state block a plain reader of this table takes, in bytes.
+    /// The state block a plain reader of this table needs, in bytes.
     ///
     /// <para>The same under DTX0 and DTX1, and the same at every C: every
     /// column is one width, so one pointer walks them all.</para>
@@ -115,8 +115,8 @@ public static class Pack
     public static int StateBytes(Header header) => Plain;
 
     /// <summary>
-    /// The state block a packaged DTX2 reader takes, in bytes. A replayed
-    /// payload takes a copy of the registers a column behind the rings,
+    /// The state block a packaged DTX2 reader needs, in bytes. A replayed
+    /// payload adds a copy of the registers a column behind the rings,
     /// where the reader puts them at the row its loop begins (abi.md 4).
     /// </summary>
     public static int PackedStateBytes(Header header, Packed given) =>
@@ -128,7 +128,7 @@ public static class Pack
     /// points at: the width under DTX0, where a row's values stand one after
     /// another; the length of a column under DTX1, where the columns lie at
     /// one stride; and N under DTX2, where every column has a ring of that
-    /// size. DTX_metadata gives it, out of the format block.
+    /// size. DTX_metadata reports it, out of the format block.
     /// </summary>
     public static int Stride(Header header, Packed given) => header.Variant switch
     {
@@ -138,7 +138,7 @@ public static class Pack
     };
 
     /// <summary>
-    /// The period a table of these takes, the smallest that meets every rule
+    /// The period a table of these needs, the smallest that meets every rule
     /// of doc/abi.md 4.
     /// </summary>
     /// <exception cref="ArgumentException">naming the rule none meets</exception>
@@ -154,7 +154,7 @@ public static class Pack
             throw new ArgumentException($"a column is {rows} times {width}"
                     + $" bytes, which does not divide by k of {k}");
         }
-        // A table shorter than a period takes the period all the same: where
+        // A table shorter than a period needs the period all the same: where
         // its sets end the reader seeds its rows and the first period's budget
         // is 0, and where they loop it seeds a period's rows round the loop
         // (abi.md 4).
@@ -188,7 +188,7 @@ public static class Pack
     /// The column table behind the image's code: under DTX2 one stream
     /// record a column, 16 bytes at a stride of 16, and nothing else.
     ///
-    /// <para>A record gives where the column's four ST4 streams begin, from
+    /// <para>A record marks where the column's four ST4 streams begin, from
     /// the payload. Its ring and its decoder state are strides rather than
     /// fields: every ring is N bytes and every decoder state 32, so column
     /// i's stand i strides past column 0's.</para>
@@ -198,7 +198,7 @@ public static class Pack
         if (header.Variant != Format.Dtx2)
         {
             // Every column is one width, so a pointer and a stride walk them
-            // all: what a plain read takes is arithmetic on R, C and the
+            // all: a plain read is arithmetic on R, C and the
             // width, and no column table is written.
             return Array.Empty<byte>();
         }
@@ -224,8 +224,8 @@ public static class Pack
     /// One image: this code, the column table, the table's bytes, and the
     /// format block written to define the three.
     ///
-    /// <para>The code is the same bytes any table that follows it, so what a
-    /// combine writes is the six fields the table gives. It checks the
+    /// <para>The code is the same bytes any table that follows it, so a
+    /// combine writes the six fields the table defines. It checks the
     /// three it cannot write: the variant, the width, and under DTX2 the
     /// unit the decoder built into the code decodes at.</para>
     /// </summary>
@@ -330,9 +330,9 @@ public static class Pack
     }
 
     /// <summary>
-    /// One image gives the variant, the width, the unit and, under DTX2, P
-    /// and N once (doc/abi.md 1), so every table past the first gives what
-    /// the first gives.
+    /// One image defines the variant, the width, the unit and, under DTX2, P
+    /// and N once (doc/abi.md 1), so every table past the first meets what
+    /// the first defines.
     /// </summary>
     private static void Same(Header first, Packed given, byte[] file,
             Header header)
@@ -366,8 +366,8 @@ public static class Pack
     /// <summary>
     /// The image for this table, from the code this build contains.
     ///
-    /// <para>Which of the twenty-two it takes is the file's to define: the
-    /// variant, the width every value takes, and under DTX2 the unit its
+    /// <para>Which of the twenty-two it needs is the file's to define: the
+    /// variant, the width every value is written in, and under DTX2 the unit its
     /// data sets are packed at and whether they contain copies from the
     /// literal stream (R5.10). No word from a caller enters it, so no word
     /// can differ from the bytes.</para>
@@ -377,7 +377,7 @@ public static class Pack
 
     /// <summary>
     /// The same, of one table or several: the first file names the code and
-    /// every other meets it on what an image gives once, the variant, the
+    /// every other meets it on what an image defines once, the variant, the
     /// width, the unit and, under DTX2, the period and the ring.
     /// </summary>
     public static byte[] Image(List<byte[]> files, out int[] headers)
@@ -403,7 +403,7 @@ public static class Pack
             name + (name.Length < 8 ? "\t" : "") + "\tequ\t" + value + "\n";
 
     /// <summary>
-    /// What one table gives, as a template reads it: the equates, and no
+    /// The figures of one table, as a template reads them: the equates, and no
     /// instruction. Every figure a loop counts with reaches the code
     /// at run time instead, out of the table's header (doc/tools.md).
     /// </summary>
@@ -441,7 +441,7 @@ public static class Pack
         if (variant != Format.Dtx2)
         {
             // Nothing parks a6 under the plain variants, so the payload
-            // init was given stands in that long instead, which a jump
+            // init was seeded on stands in that long instead, which a jump
             // reaches (abi.md 3). Under DTX2 the template names it.
             out_.Append(Equ("DTX_PAYLOAD", Park));
         }

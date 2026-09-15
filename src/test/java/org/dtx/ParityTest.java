@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>One input has one output. Java, Go and C# write the same DTX files,
  * rewrite them the same way, build the same twenty-two images and combine the
- * same packages, so a caller who takes any one of them has the same bytes
+ * same packages, so a caller who runs any one of them has the same bytes
  * at every step.
  *
  * <p>No ST4 packer stands beside this: each tree contains a copy, and what
@@ -233,7 +233,7 @@ class ParityTest {
         // An image of several tables is where the trees could drift apart
         // without a separate case: the layout past the first table, the
         // padding between the pairs, and which figures the format block
-        // gives (doc/abi.md 1).
+        // records (doc/abi.md 1).
         record Case(String name, int variant, int width, int unit, boolean copies) {}
         for (Case one : List.of(
                 new Case("DTX0, three tables", 0, 2, 1, false),

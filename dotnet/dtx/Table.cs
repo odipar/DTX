@@ -27,7 +27,7 @@ public sealed class Table
     /// <summary>RR, the row it repeats to, or R where it does not.</summary>
     public int Repeat { get; }
 
-    /// <summary>W, the bytes every value of the table takes.</summary>
+    /// <summary>W, the bytes every value of the table is written in.</summary>
     public int Width { get; }
 
     /// <summary>C, the column count.</summary>
@@ -40,12 +40,12 @@ public sealed class Table
     public int RowBytes => Columns * Width;
 
     /// <summary>
-    /// A table of the given columns, each rows times width bytes. The
+    /// A table of the columns named, each rows times width bytes. The
     /// arrays are copied, so a later write to the caller's does not reach
     /// this table.
     /// </summary>
     /// <exception cref="ArgumentException">where R6's bounds are not met, or
-    /// a column is not the length width and rows give</exception>
+    /// a column is not the length width and rows define</exception>
     public static Table Of(int rows, int repeat, int width, byte[][] column)
     {
         if (rows < 1)
@@ -108,13 +108,13 @@ public interface IPacker
     /// </summary>
     /// <param name="column">the bytes of DTX1's column</param>
     /// <param name="unit">the unit to pack at, 1, 2 or 4, which the data
-    /// set's signature then gives (R5.2)</param>
+    /// set's signature then records (R5.2)</param>
     /// <param name="ring">the bytes past which no back reference in the data
     /// set reaches (R5.4)</param>
     /// <param name="loop">the unit the set decodes back to when it reaches
     /// the end, so that it decodes forever, or -1 where the set ends
-    /// (R5.11). A packer without a loop to give throws on a call that gives
-    /// one: a set that ends where the file defines a loop reads wrongly
+    /// (R5.11). A packer without a loop throws on a call that names one:
+    /// a set that ends where the file defines a loop reads wrongly
     /// </param>
     byte[] Pack(byte[] column, int unit, int ring, int loop);
 

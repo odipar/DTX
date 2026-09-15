@@ -75,7 +75,7 @@ doc/tools.md, Write.
 `
 
 // A misuse is a flag the tool does not read, or one that does not go with
-// the files given: the message goes to standard error and the exit is 2, as
+// the files named: the message goes to standard error and the exit is 2, as
 // the Java tree exits.
 type misuse string
 
@@ -224,7 +224,7 @@ func run(args []string, in io.Reader, out io.Writer) error {
 	return nil
 }
 
-// repeating gives t repeating at repeat, the rest as it is.
+// repeating returns t repeating at repeat, the rest as it is.
 func repeating(t *dtx.Table, repeat int) (*dtx.Table, error) {
 	column := make([][]byte, t.Columns())
 	for i := range column {
@@ -233,8 +233,8 @@ func repeating(t *dtx.Table, repeat int) (*dtx.Table, error) {
 	return dtx.NewTable(t.Rows(), repeat, t.Width(), column)
 }
 
-// readWidth gives the width -w defines, or else the width the text's first
-// comment gives, or else the narrowest the text takes.
+// readWidth returns the width -w defines, or else the width the text's first
+// comment declares, or else the narrowest the text fits in.
 func readWidth(given, text string) (int, error) {
 	if given == "" {
 		return csv.Width(text)
@@ -246,7 +246,7 @@ func readWidth(given, text string) (int, error) {
 	return width, nil
 }
 
-// packerFor gives what packs a column: the port in this executable, or
+// packerFor returns what packs a column: the port in this executable, or
 // an ST4 executable beside it where -p names one.
 func packerFor(named, copies string) (dtx.Packer, error) {
 	if named != "" {
@@ -262,7 +262,7 @@ func packerFor(named, copies string) (dtx.Packer, error) {
 	return st4.Packer{CopiesFlag: true, Seconds: search}, nil
 }
 
-// seconds gives what -copiesS searches for, zero where -copies stands on its
+// seconds returns what -copiesS searches for, zero where -copies stands on its
 // own, and the tool's line for an S that is not a number.
 func seconds(copies string) (float64, error) {
 	if len(copies) <= 2 {

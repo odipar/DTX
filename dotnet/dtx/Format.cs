@@ -1,10 +1,10 @@
 namespace Dtx;
 
 /// <summary>
-/// The header every DTX variant shares, and the numbers the variants take.
+/// The header every DTX variant shares, and the numbers of the variants.
 ///
 /// <para>doc/SPEC.md section 1: DTX, the variant, R, C, RR, the width every
-/// value takes, and one zero byte, so the payload begins on a long. Every
+/// value is written in, and one zero byte, so the payload begins on a long. Every
 /// field of more than one byte is most significant byte first.</para>
 /// </summary>
 public static class Format
@@ -26,8 +26,8 @@ public static class Format
 
     /// <summary>
     /// The largest R a header defines (R6.1). The field is four bytes, and
-    /// a reader takes it as a signed long, so a count above this is out of
-    /// bounds; the error gives the count the field defines rather than the
+    /// a reader reads it as a signed long, so a count above this is out of
+    /// bounds; the error names the count the field defines rather than the
     /// negative it reads as. RR is 0 to R, so the one bound covers both.
     /// </summary>
     public const int MaxRows = int.MaxValue;
@@ -112,7 +112,7 @@ public static class Format
 
 /// <summary>
 /// What a file's header defines: the byte at offset 3, R, C, RR, and the
-/// bytes every value takes.
+/// bytes every value is written in.
 /// </summary>
 public sealed record Header(int Variant, int Rows, int Columns, int Repeat,
         int Width)
