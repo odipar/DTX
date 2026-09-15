@@ -98,7 +98,7 @@ final class HouseStyleTest {
                 "own",
                 "    packer.go",
                 "",
-                "## Nothing acts on its own",
+                "## Programs do not intend",
                 "",
                 "A line of prose under a rule.",
                 "",
@@ -118,7 +118,7 @@ final class HouseStyleTest {
         assertEquals(List.of("packer.go"), style.own());
         assertEquals(2, style.constructs().size());
         Construct wanting = style.constructs().get(0);
-        assertEquals("Nothing acts on its own", wanting.rule());
+        assertEquals("Programs do not intend", wanting.rule());
         assertEquals("wanting", wanting.name());
         assertEquals("\\bwant(?:s|ed)?\\b", wanting.pattern().pattern());
         assertEquals(List.of("the file wants a header"), wanting.in());
@@ -144,7 +144,7 @@ final class HouseStyleTest {
         List<Hit> hits = style().document(Path.of("doc/a.md"),
                 List.of("The first line.", "", "The ring holds a row."));
         assertEquals(1, hits.size());
-        assertEquals("doc/a.md:3 has \"holds\" - Nothing acts on its own,"
+        assertEquals("doc/a.md:3 has \"holds\" - Programs do not intend,"
                 + " holding", hits.get(0).toString());
     }
 
@@ -196,8 +196,8 @@ final class HouseStyleTest {
                         + "     */\n"
                         + "    int ring; // the payload states it\n"
                         + "}\n");
-        assertEquals(List.of("A.java:5 has \"holds\" - Nothing acts on its"
-                + " own, holding", "A.java:7 has \"states\" - The verb that"
+        assertEquals(List.of("A.java:5 has \"holds\" - Programs do not"
+                + " intend, holding", "A.java:7 has \"states\" - The verb that"
                 + " says the action, state as a verb"),
                 hits.stream().map(Hit::toString).toList());
     }

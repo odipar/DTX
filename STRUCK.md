@@ -41,7 +41,7 @@ own
     beside.go
     packer.go
 
-## Nothing acts on its own
+## Programs do not intend
 
 Roles and abstractions doing what a person does: a writer promising, a
 source implying, a reader wanting or knowing, a ring holding.
