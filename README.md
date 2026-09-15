@@ -1,16 +1,13 @@
 # DTX - a table format, and a 68000 reader for it
 
-DTX is a data format: a table of `R` rows and `C` columns, where every value
-takes one width, 1, 2 or 4 bytes, and the rows repeat at a row `RR`.
-
 ## Read this first
 
 **AI wrote most of DTX.** Claude (Anthropic's Claude Code) wrote the three
-tool trees, the 68000 reader, the tests, the emulation rig and most of what
-is written here, under Robbert van Dalen's direction. The attribution
-section below says who did what. If you would rather not use software
-written that way, this is not the repository for you, and nothing here is
-meant to talk you out of that.
+tool trees, the 68000 reader, the tests, the emulation rig and most of what is
+written here, under Robbert van Dalen's direction: he requested, read and
+merged every change. [LICENSE](LICENSE) is the terms, and its attribution
+records who did what. Whether to use software written that way is the reader's
+decision, and this section is here so that the decision is informed.
 
 What it is built on is not new. ST4, which a DTX2 column is packed with, is
 derived from Einar Saukas's ZX1 through ST1, and its 68000 decoder is
@@ -18,6 +15,9 @@ carried here rather than rewritten. The 68000 reader is measured against
 the timings in Motorola's own manual.
 
 ## What the format is
+
+DTX is a data format: a table of `R` rows and `C` columns, where every value
+takes one width, 1, 2 or 4 bytes, and the rows repeat at a row `RR`.
 
 The format is data. A compile step and a calling convention belong to a
 reader and not to the format, so the specification defines what the bytes
