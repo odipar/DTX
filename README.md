@@ -9,10 +9,12 @@ merged every change. [LICENSE](LICENSE) is the terms, and its attribution
 records who did what. Whether to use software written that way is the reader's
 decision, and this section is here so that the decision is informed.
 
-What it is built on is not new. ST4, which a DTX2 column is packed with, is
-derived from Einar Saukas's ZX1 through ST1, and its 68000 decoder is
-carried here rather than rewritten. The 68000 reader is measured against
-the timings in Motorola's manual.
+What it is built on is older than it. [ST4](https://github.com/odipar/ST4),
+which a DTX2 column is packed with, derives from Einar Saukas's
+[ZX1](https://github.com/einar-saukas/ZX1) through
+[ST1](https://github.com/odipar/ST1), and its 68000 decoder is carried here
+rather than rewritten. The 68000 reader is measured against the timings in
+Motorola's manual.
 
 ## What the format is
 
@@ -24,7 +26,22 @@ reader and not to the format, so the specification defines what the bytes
 are and what a reader reads out of them, and no more than that.
 
 DTX does not define what a column contains. A format built on DTX defines
-that, in its repository and against what this one defines.
+that, in its repository and against what this one defines, and
+[YMXR](https://github.com/odipar/YMXR) is one.
+
+[YMX](https://github.com/odipar/YMX) is the family this repository belongs
+to: a design document defining how YMXS, YMXR, DTX and ST4 fit together.
+Each repository defines a layer:
+
+- **[ST4](https://github.com/odipar/ST4)** defines the compression a DTX2
+  column is packed with, and the 68000 decoders that read it.
+- **DTX** defines the table layout, the packing and the 68000 readers.
+  Values are one width; tables repeat from a selected row or read once.
+- **[YMXS](https://github.com/odipar/YMXS)** defines tune data and
+  playback: register rows, effects, sources and rates.
+- **[YMXR](https://github.com/odipar/YMXR)** encodes that structure as DTX
+  tables and defines how each column reaches the YM2149 sound chip or the
+  MC68901 timers.
 
 Three variants lay one table out three ways, and a file names which:
 
