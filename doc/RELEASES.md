@@ -32,6 +32,33 @@ build.
 
 ## Published
 
+### 0.11.4, 2026-09-16
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.4>, built from the commit
+tagged `v0.11.4`.
+
+The ST4 decoder inside an image enters on an instruction rather than on a
+branch, so every DTX2 image is smaller and an init costs less. A table
+packs to the bytes 0.11.3 packed: the packer is that release's, and the
+conformance kit reads back byte for byte.
+
+- `68k/ST4_wrap.S` comes from ST4 at `acbef72`, where the jump table's last
+  slot became `ST4_resume` itself. The Java and C# copies of the packer and
+  the Go module are 0.11.3's, ST4 having changed no packer since.
+- The eighteen DTX2 images lose 12 to 16 bytes each; DTX0's and DTX1's
+  stand. Assembled alone the decoder is 310, 314 and 316 bytes where it was
+  324, 328 and 330.
+- An init of three columns at `k` of 1 costs 7,700 cycles where it cost
+  7,844, and of twenty columns 54,524 where it cost 55,324. An advance is
+  within a few cycles either way. performance.md lists all 65 figures, and
+  the rig counts every one of them again.
+- The copy code is 28 bytes at `k` of 1 in an image, against 32 before, and
+  32 and 36 at `k` of 2 and 4 as it was.
+
+The documents were swept in the same release: abi.md is a quarter shorter
+and tools.md a fifth, the cleft is struck in its bare form, and the README
+names the family and links what it names.
+
 ### 0.11.3, 2026-09-16
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.3>, built from the commit

@@ -48,9 +48,9 @@ back than a ring of 64:
 | written as | file bytes | image bytes |
 |---|---|---|
 | DTX1 | 2064 | 2188 |
-| DTX2, N=64 | 2140 | 3628 |
-| DTX2, N=64, copies | 356 | 1876 |
-| DTX2, N=128, copies | 252 | 1772 |
+| DTX2, N=64 | 2140 | 3616 |
+| DTX2, N=64, copies | 356 | 1860 |
+| DTX2, N=128, copies | 252 | 1756 |
 
 Without copies the ring is too short for the pattern and DTX2 packs to
 more than DTX1. With them a match beyond the ring copies from the column's
@@ -63,12 +63,13 @@ ST4_wrap.S assembled alone, without the copy code and with it:
 
 | k | without | with | more |
 |---|---|---|---|
-| 1 | 324 | 354 | 30 |
-| 2 | 328 | 360 | 32 |
-| 4 | 330 | 366 | 36 |
+| 1 | 310 | 340 | 30 |
+| 2 | 314 | 346 | 32 |
+| 4 | 316 | 352 | 36 |
 
-In an image the difference is 32, 32 and 36 bytes: the decoder stands on a
-long, and the 30 rounds up to one. In cycles, on a column without copies,
+In an image the difference is 28, 32 and 36 bytes: what follows the decoder
+stands on a long, so a plain build of 310 pads by two and the 340 beside it
+does not. In cycles, on a column without copies,
 the copy code costs what performance.md's last table records, about 0.2
 percent, at every `k`: the two decoders differ at init, where the one with
 the copy code writes the ring's size into two of its instructions, and
@@ -78,9 +79,9 @@ not in a row.
 
 The decoder a packaged reader uses is ST4_wrap, which decodes a fixed
 budget a call and leaves the ring's wrap to the caller; ST4_ring checks the
-ring end itself. Assembled alone at each unit, ST4_wrap is 324, 328 and 330
+ring end itself. Assembled alone at each unit, ST4_wrap is 310, 314 and 316
 bytes and ST4_ring 386, 394 and 396, measured from odipar/ST4's `68k/` at
-498aa25, of which this repository contains the first and not the second.
+acbef72, of which this repository contains the first and not the second.
 The reader wraps the write pointer with one compare after each refill, so
 it uses the smaller decoder (abi.md 8).
 

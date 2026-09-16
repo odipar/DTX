@@ -122,12 +122,12 @@ With `-copies` a match beyond the ring copies from the column's literal
 stream, which saves most at the small rings DTX2 reads through. Measured on
 a table of 512 rows repeating a pattern 37 rows long, at a width of 2 and
 `N` of 64, where the pattern runs to 74 bytes and reaches past the ring:
-the file goes from 2140 bytes to 356, and its image from 3272 to 1520.
+the file goes from 2140 bytes to 356, and its image from 3616 to 1860.
 
 **The payload defines it**, at byte 3 of its flags (SPEC.md 2.3, R5.10), so
 Write is the one tool that reads `-copies` and the packager uses the
 decoder the file needs. What the flag is for, and what a decoder without
-the copy code reads instead, is abi.md 5; what it costs is 32 to 36 bytes
+the copy code reads instead, is abi.md 5; what it costs is 28 to 36 bytes
 of code (experiments.md) and a few cycles over 64 rows (performance.md).
 
 ## Package
