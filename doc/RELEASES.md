@@ -32,6 +32,27 @@ build.
 
 ## Published
 
+### 0.11.3, 2026-09-16
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.3>, built from the commit
+tagged `v0.11.3`.
+
+The ST4 under this one searches with two moves that read the parse. A
+column packed with `-copies` alone is the bytes 0.11.2 packed, since the
+search with seconds is what moves; a column packed with `-copiesS` is
+smaller for the same seconds.
+
+- The Java and C# copies, and `68k/ST4_wrap.S`, come from ST4 at
+  `5081f2e`, and `go/dtx` reads `github.com/odipar/st4/go` at v0.1.4.
+- ST4's search gained a move that grows the dictionary where a copy reads
+  from, and one that fills the gap between a literal run and the one after
+  it. Over 120 columns at a second a column through a ring of 256 bytes,
+  1.20 per cent fewer bytes, and over 24 of them at three seconds a column,
+  2.77.
+- No class, no image and no packaged byte of the tests moves: the
+  conformance kit reads back byte for byte and the twenty-two images are
+  the bytes they were.
+
 ### 0.11.2, 2026-09-16
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.2>, built from the commit
