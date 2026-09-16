@@ -51,8 +51,9 @@ Three variants lay one table out three ways, and a file names which:
 | DTX1 | column by column | a reader that reads one column of many |
 | DTX2 | column by column, each packed as an ST4 data set | a table too large to keep unpacked |
 
-Every one is the same table (R1.3), so a file converts between them without
-loss. [doc/SPEC.md](doc/SPEC.md) defines the bytes.
+Every one is the same table ([requirements.md](doc/requirements.md) R1.3),
+so a file converts between them without
+loss. [SPEC.md](doc/SPEC.md) defines the bytes.
 
 ## Usage
 
@@ -85,7 +86,7 @@ Convert between variants, or pack one at a unit and ring you set:
 dtx-write -v2 -k2 -m960 < table.dtx > packed.dtx
 ```
 
-There are three tools, and [doc/tools.md](doc/tools.md) lists every flag of
+There are three tools, and [tools.md](doc/tools.md) lists every flag of
 each. `-help` on any of them prints its usage and examples.
 
 | tool | what it does |
@@ -111,8 +112,8 @@ An advance leaves the address of the row's first value, and the stride
 `DTX_metadata` reports reaches the next column's. No call copies a value: the
 image finds a row and the caller reads it. On 64 rows of three two byte
 columns an advance costs 70 cycles under DTX0 and 66 under DTX1.
-[doc/abi.md](doc/abi.md) is the calling convention and
-[doc/performance.md](doc/performance.md) has what every call costs,
+[abi.md](doc/abi.md) is the calling convention and
+[performance.md](doc/performance.md) has what every call costs,
 measured.
 
 One width a table, so the code is built for the width and no call tests it:
@@ -122,19 +123,19 @@ units its columns are packed at, with the copy code and without.
 
 ## What's here
 
-| | |
+| source | contents |
 |---|---|
-| `doc/` | the specification, the requirements it is written against, and the rest |
-| `src/main/java/org/dtx/` | the Java tools |
-| `go/`, `dotnet/` | the same tools in Go and C# |
-| `68k/` | the 68000 reader, one template a variant |
-| `68k/test/emu/` | the emulation rig |
-| `bin/` | the Java tools, run out of a build |
-| `release/` | what builds a release |
+| [`doc/`](doc) | the specification, the requirements it is written against, and the rest |
+| [`src/main/java/org/dtx/`](src/main/java/org/dtx) | the three tools in Java, the reference |
+| [`go/`](go), [`dotnet/`](dotnet) | the same three in Go and C#, the executables a release ships |
+| [`68k/`](68k) | the 68000 reader, one template a variant ([abi.md](doc/abi.md)) |
+| [`68k/test/emu/`](68k/test/emu) | the emulation rig, which counts cycles as Motorola's manual counts them |
+| [`bin/`](bin) | the Java tools, run out of a build |
+| [`release/`](release) | the scripts that build and list a release ([RELEASES.md](doc/RELEASES.md)) |
 
 The Java and C# trees contain a copy of ST4, the packer a DTX2 column is
-packed with, so neither needs one beside it, and `68k/` contains the ST4
-decoder the same way. The Go tree reads the library from
+packed with, so neither needs one beside it, and [`68k/`](68k) contains the
+ST4 decoder the same way. The Go tree reads the library from
 [ST4](https://github.com/odipar/ST4) as a module instead, since that
 repository publishes one.
 
@@ -148,12 +149,12 @@ between trees fails a build rather than reaching a release.
 |---|---|
 | 101 Java tests | the format, the tools, the packager, and every figure the documents record |
 | the Go and C# suites | each tree against itself |
-| `68k/test/emu/test_dtx.py` | the 68000 reader under emulation, every row against the text the table came from |
-| the conformance kit | 19 tables an independent reader is written against |
-| the style check | the house style AGENTS.md defines, over every document and comment |
+| [`68k/test/emu/test_dtx.py`](68k/test/emu/test_dtx.py) | the 68000 reader under emulation, every row against the text the table came from |
+| [the conformance kit](doc/conformance) | 19 tables an independent reader is written against |
+| the style check | the house style [AGENTS.md](AGENTS.md) defines, over every document and comment |
 
 The rig counts 68000 cycles as Motorola's manual counts them, and reads
-every figure in [doc/performance.md](doc/performance.md) back out of the
+every figure in [performance.md](doc/performance.md) back out of the
 document, so a stale figure fails.
 
 ```bash
@@ -162,21 +163,21 @@ mvn test -Drmac=/usr/local/bin/rmac
 
 ## The documents
 
-[doc/requirements.md](doc/requirements.md) comes first. Nothing else is
+[requirements.md](doc/requirements.md) comes first. Nothing else is
 written until it defines what DTX has to do.
 
 | | |
 |---|---|
-| [doc/requirements.md](doc/requirements.md) | what the format has to do |
-| [doc/SPEC.md](doc/SPEC.md) | the format specification |
-| [doc/glossary.md](doc/glossary.md) | every term, one line each |
-| [doc/terminology.md](doc/terminology.md) | the same terms explained |
-| [doc/tools.md](doc/tools.md) | every tool's usage, flags and environment, in three trees |
-| [doc/abi.md](doc/abi.md) | the calls a packaged table is read by, on the 68000 |
-| [doc/performance.md](doc/performance.md) | what each call costs, in 68000 cycles, measured |
-| [doc/experiments.md](doc/experiments.md) | what was measured against real tables, and what came out |
-| [doc/BINARIES.md](doc/BINARIES.md) | the twenty-two 68000 images, and how a tool combines one with a table |
-| [doc/RELEASES.md](doc/RELEASES.md) | what a release contains, and what changed in each |
+| [requirements.md](doc/requirements.md) | what the format has to do |
+| [SPEC.md](doc/SPEC.md) | the format specification |
+| [glossary.md](doc/glossary.md) | every term, one line each |
+| [terminology.md](doc/terminology.md) | the same terms explained |
+| [tools.md](doc/tools.md) | every tool's usage, flags and environment, in three trees |
+| [abi.md](doc/abi.md) | the calls a packaged table is read by, on the 68000 |
+| [performance.md](doc/performance.md) | what each call costs, in 68000 cycles, measured |
+| [experiments.md](doc/experiments.md) | what was measured against real tables, and what came out |
+| [BINARIES.md](doc/BINARIES.md) | the twenty-two 68000 images, and how a tool combines one with a table |
+| [RELEASES.md](doc/RELEASES.md) | what a release contains, and what changed in each |
 | [doc/conformance/](doc/conformance) | the kit an independent reader is written against |
 
 [AGENTS.md](AGENTS.md) is the house style every document and comment
@@ -184,7 +185,8 @@ follows, and [STRUCK.md](STRUCK.md) lists what it strikes.
 
 ## License and attribution
 
-The format may be implemented freely. `doc/SPEC.md` is the contract, and an
+The format may be implemented freely. [SPEC.md](doc/SPEC.md) is the
+contract, and an
 independent reader or writer owes only the acknowledgement.
 
 The readers, writers and tests under `src/`, `go/`, `dotnet/` and `68k/`
