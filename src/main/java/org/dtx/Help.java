@@ -7,8 +7,8 @@ package org.dtx;
  * but for dtx-package, which combines and does not assemble, so its help
  * lists neither -a nor -s; {@code ParityTest} compares them.
  *
- * <p>A tool reads its input on standard input, so {@code -help} is what
- * prints this text.
+ * <p>A tool reads its input on standard input, so {@code -help} prints
+ * this text.
  */
 final class Help {
 

@@ -9,8 +9,8 @@ One variant is one code. `R`, `C` and `RR` reach the code at run time, out of
 the table's header, so a variant assembles to one code at any number of
 rows or columns. The width does not reach it that way: every value of a table
 is one width (R6.3), and that width reaches the assembler, so a read moves
-a value in one instruction and no call reads a width a column. One build a
-width is what that costs.
+a value in one instruction and no call reads a width a column. That costs
+one build a width.
 
 DTX0 reads a row as one run of bytes and forms the run from the row's
 bytes, so its code does not move with the width and one file is every DTX0

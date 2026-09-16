@@ -26,8 +26,8 @@
 ; does not have a column table or an entry a column, and it does not copy a
 ; row anywhere: the caller reads the values where they stand.
 ;
-; DTX_metadata reports the stride, which is R times the width rounded up to a
-; word (R4.3). It stands in the format block, so a caller that builds against
+; DTX_metadata reports the stride, R times the width rounded up to a word
+; (R4.3). It stands in the format block, so a caller that builds against
 ; one image reads it out of the file instead.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
@@ -74,8 +74,8 @@ DTX_init:
         rts
 
 ; -----------------------------------------------------------------------------
-; DTX_jump. The pointer is the payload plus the row times the width, which is
-; a shift a width. The payload is the one init parked, not the format
+; DTX_jump. The pointer is the payload plus the row times the width, a
+; shift a width. The payload is the one init parked, not the format
 ; block's: an image contains several tables and a jump reads the one its
 ; block was seeded on.
 

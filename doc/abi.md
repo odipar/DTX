@@ -215,7 +215,7 @@ reads is not defined. A caller stops at `R`, which `DTX_metadata` reports.
 
 ### The row a caller reads
 
-`a1` comes back at the row's first value, which is column 0's, and the
+`a1` comes back at the row's first value, column 0's, and the
 stride `DTX_metadata` reports reaches the next column's. So column `i` of
 that row is one move at `i` strides:
 
@@ -326,8 +326,8 @@ in it is read. `d1` and `d2` are stored and put back as longs: ST4's ring
 decoders keep the ring's bounds in their high words, so the low words alone
 would decode into another column's ring.
 
-The rings follow, `N` bytes a column at a stride of `N`, which is R5.5's
-one size and one stride. Column `i`'s ring is the ring area plus `i` times
+The rings follow, `N` bytes a column at a stride of `N`, R5.5's one size
+and one stride. Column `i`'s ring is the ring area plus `i` times
 `N`, and its value for the current row is the pointer plus the same.
 
 Sizes: DTX0 and DTX1 12 bytes, at every width and every `C`. DTX2 72 plus
@@ -359,8 +359,7 @@ times the width, the refill on row `j` writes over the row that row reads.
   end or short of it and never straddles it
 - `N` is at least 2`P` times the width, the invariant above
 - `P` times the width divided by `k` is a whole number, 1 to 65535: the
-  budget range. `k` then divides `N` as well, which is ST4_wrap's
-  assumption 1
+  budget range. `k` then divides `N` as well, ST4_wrap's assumption 1
 - a replayed loop, `RR` to `R`, is `P` rows or more, so a refill meets one
   mark at most. ST4 replays a loop longer than a back reference reaches,
   `N` or 32512 bytes, so the rule binds only a table whose period is above

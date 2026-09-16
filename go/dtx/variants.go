@@ -243,7 +243,7 @@ func Dtx2From(file []byte, packer Packer, unit, ring int) ([]byte, error) {
 	return WriteDtx2(t, packer, unit, ring)
 }
 
-// Packed is what a DTX2 payload defines: the ring, the unit, whether its
+// Packed is a DTX2 payload's figures: the ring, the unit, whether its
 // columns contain copies from the literal stream, whether a reader replays
 // each set's pass, and where each column's data set begins in the payload.
 type Packed struct {

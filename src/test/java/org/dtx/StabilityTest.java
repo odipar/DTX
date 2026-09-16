@@ -20,8 +20,7 @@ import org.junit.jupiter.api.Test;
  * The code a variant assembles to, against the table that follows it.
  *
  * <p>R, C and RR are the table's, not the reader's: an image contains the same
- * instructions at any of them, and its format block and its table are what
- * differ. This assembles a corpus a variant at a time and compares every
+ * instructions at any of them, and its format block and its table differ. This assembles a corpus a variant at a time and compares every
  * image's code to the first one's, byte for byte.
  *
  * <p>Under DTX2 the decoder is built for one unit and for copies or not, so

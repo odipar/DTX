@@ -38,9 +38,9 @@ build.
 tagged `v0.11.3`.
 
 The ST4 under this one searches with two moves that read the parse. A
-column packed with `-copies` alone is the bytes 0.11.2 packed, since the
-search with seconds is what moves; a column packed with `-copiesS` is
-smaller for the same seconds.
+column packed with `-copies` alone is the bytes 0.11.2 packed, only a
+search with seconds moving; a column packed with `-copiesS` is smaller for
+the same seconds.
 
 - The Java and C# copies, and `68k/ST4_wrap.S`, come from ST4 at
   `5081f2e`, and `go/dtx` reads `github.com/odipar/st4/go` at v0.1.4.
@@ -59,8 +59,8 @@ smaller for the same seconds.
 tagged `v0.11.2`.
 
 The ST4 under this one searches better. A column packed with `-copies`
-alone is the bytes 0.11.1 packed, since the search with seconds is what
-moves; a column packed with `-copiesS` is smaller for the same seconds.
+alone is the bytes 0.11.1 packed, only a search with seconds moving; a
+column packed with `-copiesS` is smaller for the same seconds.
 
 - The Java and C# copies, and `68k/ST4_wrap.S`, come from ST4 at
   `aa01118`, and `go/st4` reads `github.com/odipar/st4/go` at v0.1.3.
@@ -85,7 +85,7 @@ one packaged.
   `07097fb`, and `go/st4` reads `github.com/odipar/st4/go` at v0.1.2.
 - ST4's literal channel reads its least in one step where it read a
   min-tree in a logarithm. A search of a column with copies fits a fifth
-  more steps in a second at a small ring, which is 0.35 per cent smaller at
+  more steps in a second at a small ring, 0.35 per cent smaller at
   a fixed budget; at a wide ring it reads as it read before.
 
 ### 0.11.0, 2026-09-15
@@ -143,7 +143,7 @@ The Go module is fetched by its import path, and the rig reaches the tools
 again. The library is as it was: no class, no image and no packaged byte
 moves, so a table this release packages is the bytes 0.9.0 packaged.
 
-- **The Go module is `github.com/odipar/dtx/go`**, which is the path a
+- **The Go module is `github.com/odipar/dtx/go`**, the path a
   caller fetches it by: a module in a repository's `go/` has the path of
   that directory, and the name `dtx` reached no one. Every import follows.
   A version is a tag of the directory, `go/v0.10.0` beside `v0.10.0`.
@@ -169,7 +169,7 @@ moves, so a table this release packages is the bytes 0.9.0 packaged.
   of two rows: no emulator, no assembler, under a second.
 - The copy case at a width of 1 is out of the rig. No boundary applies at
   a width of 1, so it read the copy path a second time and cost 1.2
-  seconds. The width of 4 stays, which is the copy path where a 68000
+  seconds. The width of 4 stays, the copy path where a 68000
   aligns.
 
 ### 0.9.0, 2026-09-10
@@ -376,9 +376,9 @@ What changed since 0.3.0:
 <https://github.com/odipar/DTX/releases/tag/v0.3.0>, built from the commit
 tagged `v0.3.0`.
 
-**It reads 0.2.0's files, and 0.2.0 reads 0.3.0's.** The format, the four
-calls and the state block are what 0.2.0 defined; what changed is the code
-behind the calls and what the tools print.
+**It reads 0.2.0's files, and 0.2.0 reads 0.3.0's.** 0.2.0 defined the
+format, the four calls and the state block; the code behind the calls and
+what the tools print are the two that moved.
 
 What changed since 0.2.0:
 

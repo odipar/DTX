@@ -7,8 +7,8 @@ against.
 
 Every table is written by this repository's writer from the text and
 options SOURCES.md lists, and `ConformanceTest` writes each again under
-`mvn test` and compares the file with it byte for byte. So the kit is what
-the writer writes, and a change to the writer that moved a byte of it fails
+`mvn test` and compares the file with it byte for byte. So the writer
+emits the kit itself, and a change that moved a byte of it fails
 here.
 
 The tables reach every variant at every width, a repeat and a repeat at row 0,

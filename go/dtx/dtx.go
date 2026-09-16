@@ -18,7 +18,7 @@ const (
 // Magic is the three bytes a file opens with.
 var Magic = []byte{'D', 'T', 'X'}
 
-// HeaderLength is what a header runs to, under every variant and every C.
+// HeaderLength is a header's bytes, under every variant and every C.
 const HeaderLength = 16
 
 // MaxRows is the largest R a header defines, R6.1: the field is four bytes,
@@ -32,7 +32,7 @@ func Align(at, to int) int {
 	return (at + to - 1) / to * to
 }
 
-// Header is what a file's header defines.
+// Header is the figures a file's header defines.
 type Header struct {
 	Variant int
 	Rows    int // R
