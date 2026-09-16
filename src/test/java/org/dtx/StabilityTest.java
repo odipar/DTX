@@ -215,7 +215,7 @@ class StabilityTest {
     void theCopyCodeMeasuresWhatTheDocumentDefines() throws Exception {
         needsRmac();
         // doc/abi.md 5 defines the figure the copy code costs a build, and
-        // it is not one figure: 32 bytes at k of 1 and 2, 36 at k of 4.
+        // it is three: 28 bytes at k of 1, 32 at k of 2, 36 at k of 4.
         int[] cost = new int[5];
         for (int unit : new int[] {1, 2, 4}) {
             Shape shape = packedCorpus(unit).get(0);
@@ -225,14 +225,15 @@ class StabilityTest {
         String said = Files.readString(
                 Rig.root().resolve("doc/abi.md"));
         Matcher defines = Pattern.compile(
-                "copy code,\\s+which measures (\\d+) bytes more at `k` of"
-                + " 1\\s+and 2\\s+and (\\d+) at `k` of 4").matcher(said);
+                "copy code,\\s+which measures (\\d+) bytes more at `k` of 1,"
+                + "\\s+(\\d+) at `k` of 2 and (\\d+) at `k` of\\s+4").matcher(said);
         assertTrue(defines.find(),
                 "doc/abi.md 5 no longer defines the copy code's size");
         assertEquals(cost[1], Integer.parseInt(defines.group(1)),
                 "the copy code at k of 1");
-        assertEquals(cost[4], Integer.parseInt(defines.group(2)),
+        assertEquals(cost[2], Integer.parseInt(defines.group(2)),
+                "the copy code at k of 2");
+        assertEquals(cost[4], Integer.parseInt(defines.group(3)),
                 "the copy code at k of 4");
-        assertEquals(cost[1], cost[2], "k of 1 and k of 2 pay the same");
     }
 }

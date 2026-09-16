@@ -43,7 +43,7 @@ In this order, from the image's first byte:
 | +0 | 16 | four `bra.w` slots, one a call |
 | +16 | 28 | the format block, on a long |
 | +44 | .. | the bodies for the variant |
-| .. | 324, 328 or 330, and 354, 360 or 366 with the copy code | under DTX2, ST4's wrap decoder at `k` |
+| .. | 310, 314 or 316, and 340, 346 or 352 with the copy code | under DTX2, ST4's wrap decoder at `k` |
 | .. | .. | the tables, the pair below repeated one a table |
 
 One table, in this order:
@@ -416,7 +416,8 @@ decoder counts in a word.
 A column may be packed with `-c` as well, so that a match beyond the ring
 copies from the column's literal stream. That packs a small ring far
 smaller, and the package uses the decoder built with its copy code,
-which measures 32 bytes more at `k` of 1 and 2 and 36 at `k` of 4.
+which measures 28 bytes more at `k` of 1, 32 at `k` of 2 and 36 at `k` of
+4.
 
 The payload defines which kind its columns are, in the flags byte SPEC.md
 2.3 defines, so the packager reads the decoder a table needs out of the
@@ -493,7 +494,7 @@ Each choice above, and what it costs:
 | one column a row, not `C` every `P` rows | the same decoding spread flat, one `ST4_resume` a row | rings of 2`P` rows a column, and `P` at least `C` |
 | the block is the caller's | two cursors on one table, and what a reader keeps stays out of the code | `a6` is the block on every call |
 | the code does not move with the table | one code a variant at any `R`, `C` or `RR`, so a check reads what every table runs | the image stands in RAM, and three counts are memory reads rather than immediates |
-| ST4_wrap over ST4_ring | no ring end check in the decoder, and 62 to 66 bytes less | the reader sets the write pointer back itself, one compare a refill |
+| ST4_wrap over ST4_ring | no ring end check in the decoder, and 76 to 80 bytes less | the reader sets the write pointer back itself, one compare a refill |
 | one pointer and a stride | column `i` is one move at `i` strides off one address register | a table of columns of differing widths, which needed three pointers |
 | `movem` of the whole decoder state | every register stays a register, and ST4's code is not forked | two `movem`s a refill |
 | no checkpoints in DTX2 | a jump costs the target row, not the distance | a forward jump begins where the cursor is, and a backward jump is bounded |
