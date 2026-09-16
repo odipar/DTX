@@ -19,8 +19,8 @@ import org.st4.St4Format;
  * <p>Twenty-two of them. DTX0 reads a row as one run of bytes, so its code
  * does not move with the width and one file is every DTX0 table's. DTX1
  * moves a value a column, so it has one a width. DTX2 has one a width and a
- * build of the decoder built into it, which is a unit of 1, 2 or 4 with the
- * copy code and without.
+ * build of the decoder built into it, a unit of 1, 2 or 4 with the copy
+ * code and without.
  *
  * <p>The table each is assembled from fixes only the figures the assembler
  * reads, so it is made here rather than read: the columns do not contain

@@ -41,25 +41,25 @@ const (
 	StrideAt   = 24
 )
 
-// Stream is what one stream record runs to, one a column under DTX2.
+// Stream is one stream record's bytes, one a column under DTX2.
 const Stream = 16
 
-// State is what one decoder state contains: the eight registers, the ring's
+// State is one decoder state: the eight registers, the ring's
 // end, where the registers go at a loop, and the budget.
 const State = 48
 
-// Saved is what the copy of a decoder's registers costs, where a pass is
+// Saved is the cost of a copy of a decoder's registers, where a pass is
 // replayed.
 const Saved = 32
 
-// PackedHead is what a packed reader's state block contains before its
+// PackedHead is the part of a packed reader's state block before its
 // decoder states.
 const PackedHead = 72
 
 // Plain is the state block DTX0 and DTX1 need: the head, and one pointer.
 const Plain = Pointer + 4
 
-// Packed is what a DTX2 payload defines: the ring, the unit, whether its
+// Packed is a DTX2 payload's figures: the ring, the unit, whether its
 // columns contain copies from the literal stream, and where each column's data
 // set begins in the payload. The DTX2 reader in dtx reads the same payload,
 // so the one reader is there.
@@ -271,7 +271,7 @@ func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int,
 	}
 	// Each table's column table stands immediately before it, and the pair
 	// begins on a long: init reaches the records at the header less 16C,
-	// and a header on a long is what SPEC.md 1 asks of a table's bytes.
+	// and SPEC.md 1 requires a header on a long of a table's bytes.
 	// The code ends on a long and a column table is a multiple of 16, so
 	// the first pair lands on a long without padding and a one table image
 	// comes out the bytes it always was.

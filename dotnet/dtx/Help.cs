@@ -7,7 +7,7 @@ namespace Dtx;
 /// same but for dtx-package, which combines and does not assemble, so its
 /// help lists neither -a nor -s; ParityTest compares them.
 ///
-/// <para>A tool reads its input on standard input, so -help is what prints
+/// <para>A tool reads its input on standard input, so -help prints
 /// this text.</para>
 /// </summary>
 public static class Help

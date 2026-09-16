@@ -156,7 +156,7 @@ final class HouseStyleTest {
                 "what makes the row."));
         assertEquals(1, hits.size());
         assertEquals(1, hits.get(0).line());
-        assertEquals("which is what", hits.get(0).text());
+        assertEquals("is what", hits.get(0).text());
         hits = style().document(Path.of("a.md"), List.of(
                 "- an item whose data set opens",
                 "  no comment."));

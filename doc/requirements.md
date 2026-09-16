@@ -2,7 +2,7 @@
 
 ## R0. The house style and the terms
 
-The specification is what this repository produces. How it is written comes
+This repository produces the specification. How it is written comes
 before what it describes, and what things are called comes before both.
 
 - **R0.1** `AGENTS.md` defines the rules, for every document, code comment
@@ -66,7 +66,7 @@ before what it describes, and what things are called comes before both.
 - **R3.4** Nothing padded inside the payload. A value falls where the width
   puts it, so at a width of 1 and an odd `C` a row may fall on an odd
   offset, where a 68000 reads its values as bytes.
-- **R3.5** A whole row in one run of bytes. That is what DTX0 is for.
+- **R3.5** A whole row in one run of bytes, which DTX0 is for.
 
 ## R4. DTX1
 
@@ -78,7 +78,7 @@ before what it describes, and what things are called comes before both.
   and the next where the width is 1 and `R` odd, and at nothing where the
   width is 2 or 4.
 - **R4.4** A column's values together, so a reader reads one column
-  without touching the others. That is what DTX1 is for.
+  without touching the others, which DTX1 is for.
 
 ## R5. DTX2
 
@@ -101,8 +101,8 @@ before what it describes, and what things are called comes before both.
   column that is not a whole number of them unpacks to more bytes than it
   has.
 - **R5.7** The same table in fewer bytes than DTX1, once it has rows
-  enough for the packing to cost less than it saves. That is what DTX2 is
-  for. What the packing costs does not grow with `R`, where what it saves
+  enough for the packing to cost less than it saves, which DTX2 is for.
+  What the packing costs does not grow with `R`, where what it saves
   does, so a short table packs to more than it has.
 - **R5.8** Read back through a ring that does not grow with `R`. A reader
   has `N` bytes of a column at a time, not the column.

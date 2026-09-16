@@ -13,8 +13,8 @@ so a pattern 37 rows long repeats, further back than a ring of 64 bytes
 reaches.
 
 Beside every `NAME.dtx` stands `NAME.rows`: the rows in the table, as DTX0
-lays them out, with nothing between the values. That file is what a reader
-of the table reads back (TASK.md).
+lays them out, with nothing between the values. A reader of the table
+reads that file back (TASK.md).
 
 | table | text | options | bytes | sha256 | exercises |
 |---|---|---|---|---|---|

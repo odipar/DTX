@@ -519,7 +519,7 @@ public final class Packager {
         int rowBytes = header.rowBytes();
         // Each table's column table stands immediately before it, and the
         // pair begins on a long: init reaches the records at the header
-        // less 16C, and a header on a long is what SPEC.md 1 asks of a
+        // less 16C, and SPEC.md 1 requires a header on a long of a
         // table's bytes.
         int state = variant == Dtx.DTX2 ? stateBytes(header, given) : stateBytes();
         int at = code.length;

@@ -190,13 +190,14 @@ letting
 
 ## Say it once
 
-The cleft: `X is what makes Y` is `X makes Y`. R3.5, R4.4 and R5.7 keep
-`That is what DTXn is for`, so the bare `is what` is not struck.
+The cleft: `X is what makes Y` is `X makes Y`. R3.5, R4.4 and R5.7 read
+`which DTXn is for` now, so the bare `is what` is struck with the rest.
 
 the cleft
-    \b(?:which|this) is what\b|\bis what lets\b
+    \bis what\b|\bare what\b|\bis what lets\b
     in: which is what makes the row
-    not: that is what DTX0 is for
+    in: that is what DTX0 is for
+    not: the row a caller reads
 
 ## No flourish
 
