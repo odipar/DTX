@@ -32,6 +32,25 @@ build.
 
 ## Published
 
+### 0.11.2, 2026-09-16
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.2>, built from the commit
+tagged `v0.11.2`.
+
+The ST4 under this one searches better. A column packed with `-copies`
+alone is the bytes 0.11.1 packed, since the search with seconds is what
+moves; a column packed with `-copiesS` is smaller for the same seconds.
+
+- The Java and C# copies, and `68k/ST4_wrap.S`, come from ST4 at
+  `aa01118`, and `go/st4` reads `github.com/odipar/st4/go` at v0.1.3.
+- ST4 read what each of its search's moves saved and weighted the odds by
+  it: extending a literal run saves bits where freeing one at random is the
+  walk the annealing makes. A second a column writes 0.51 per cent fewer bytes
+  over 120 columns, and three seconds 1.3 per cent.
+- No class, no image and no packaged byte of the tests moves: the
+  conformance kit reads back byte for byte and the twenty-two images are
+  the bytes they were.
+
 ### 0.11.1, 2026-09-16
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.1>, built from the commit
