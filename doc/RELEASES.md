@@ -32,6 +32,21 @@ build.
 
 ## Published
 
+### 0.11.5, 2026-09-15
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.5>, built from the commit
+tagged `v0.11.5`.
+
+The ST4 inside this one comes from a release rather than from a commit.
+0.11.4 copied the decoder here from ST4 at `acbef72`, which no ST4 release
+had reached; ST4 go/v0.1.5 is that decoder, and `go/dtx` reads the module at
+v0.1.5.
+
+**No byte of this release differs from 0.11.4's.** The decoder is the same
+bytes, so the twenty-two images are, and the packer is the same, so a table
+is. The content of the Go module did not change between v0.1.4 and v0.1.5
+either: ST4 moved no packer.
+
 ### 0.11.4, 2026-09-16
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.4>, built from the commit
