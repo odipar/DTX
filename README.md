@@ -147,7 +147,7 @@ between trees fails a build rather than reaching a release.
 
 | what runs | what it checks |
 |---|---|
-| 101 Java tests | the format, the tools, the packager, and every figure the documents record |
+| 110 Java tests | the format, the tools, the packager, and every figure the documents record |
 | the Go and C# suites | each tree against itself |
 | [`68k/test/emu/test_dtx.py`](68k/test/emu/test_dtx.py) | the 68000 reader under emulation, every row against the text the table came from |
 | [the conformance kit](doc/conformance) | 19 tables an independent reader is written against |
