@@ -298,11 +298,19 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
         }
     }
 
-    /** Whether {@code path} is one of the scripts under {@code bin/}. */
+    /** Whether {@code path} is one of the scripts under the repository's
+     *  {@code bin/}. A directory of that name deeper in the tree is a
+     *  build's, and a build writes executables there, not scripts. */
     private static boolean inBin(Path path) {
         Path up = path.getParent();
-        return up != null && up.getFileName() != null
-                && up.getFileName().toString().equals("bin");
+        if (up == null || up.getFileName() == null
+                || !up.getFileName().toString().equals("bin")) {
+            return false;
+        }
+        Path over = up.getParent();
+        return over == null || over.getFileName() == null
+                || over.getFileName().toString().isEmpty()
+                || over.equals(Path.of(".")) || over.getNameCount() == 0;
     }
 
     /** Every hit in the documents and source comments under {@code root}. */
