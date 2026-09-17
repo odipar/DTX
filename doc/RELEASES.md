@@ -32,6 +32,26 @@ build.
 
 ## Published
 
+### 0.11.7, 2026-09-17
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.7>, built from the commit
+tagged `v0.11.7`.
+
+ST4 0.1.7 in all three trees, and two checks over the documents. The
+packer files are 0.1.6's, which are 0.1.7's, so every table packed here and
+every one of the twenty-two images is 0.11.6's byte for byte.
+
+- `everyClauseCitedInAnotherDocumentIsDefined` reads every `<document>.md
+  N` citation against the clauses that document defines.
+  `everySectionCitedExists` reads SPEC.md against itself alone, and abi.md's
+  twenty-two citations and every other document's went unread. There are 43
+  and each resolves.
+- `theNewestReleaseListedIsTheVersionOfTheBuild` reads this document's
+  newest entry against `pom.xml`, which `release/publish.sh` names every
+  file by.
+- The copies of the packer here are `odipar/ST4@6341b8f`, and `go/dtx`
+  reads the module at v0.1.7.
+
 ### 0.11.6, 2026-09-17
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.6>, built from the commit
