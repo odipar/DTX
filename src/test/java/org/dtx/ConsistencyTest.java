@@ -23,9 +23,9 @@ import org.junit.jupiter.api.Test;
  *
  * <p>{@code HouseStyleTest} checks the prose against {@code AGENTS.md} and
  * {@code GlossaryTest} checks the terms against the glossary. This checks the
- * numbers and the pointers, which drift on their as a document is
- * edited: a requirement renumbered, a section renamed, a column added, a
- * ratio left over from the figures before it.
+ * numbers and the pointers, which drift as a document is edited: a
+ * requirement renumbered, a section renamed, a column added, a ratio left
+ * over from the figures before it.
  */
 final class ConsistencyTest {
 
@@ -71,6 +71,97 @@ final class ConsistencyTest {
         }
         assertTrue(dangling.isEmpty(), () -> String.join("\n", dangling)
                 + "\nrequirements.md defines " + defined);
+    }
+
+    /** The clause numbers a document defines: its numbered headings and
+     *  the bold number that opens a clause. */
+    private static Set<String> clausesOf(Path at) throws IOException {
+        Set<String> out = new TreeSet<>();
+        String said = read(at);
+        Matcher heading = Pattern.compile("^#{1,4} (\\d+(?:\\.\\d+)*)\\.?\\s",
+                Pattern.MULTILINE).matcher(said);
+        while (heading.find()) {
+            out.add(heading.group(1));
+        }
+        Matcher bold = Pattern.compile("^\\*\\*(\\d+(?:\\.\\d+)*)\\b",
+                Pattern.MULTILINE).matcher(said);
+        while (bold.find()) {
+            out.add(bold.group(1));
+        }
+        return out;
+    }
+
+    /**
+     * Every clause one document cites in another is a clause that document
+     * defines. The check above reads SPEC.md against itself; this reads
+     * abi.md's twenty-two citations and every other document's, which no
+     * check followed.
+     *
+     * <p>A citation qualified with ST4, YMXS or YMXR names that
+     * repository's document, and so does a document this repository does
+     * not have; both are left alone. RELEASES.md records what was true at a
+     * release, so a clause renumbered after one leaves its entry as it was.
+     */
+    @Test
+    void everyClauseCitedInAnotherDocumentIsDefined() throws IOException {
+        java.util.Map<Path, Set<String>> defined = new java.util.LinkedHashMap<>();
+        List<String> dangling = new ArrayList<>();
+        int read = 0;
+        for (Path at : documents()) {
+            if (at.getFileName().toString().equals("RELEASES.md")) {
+                continue;
+            }
+            String said = read(at);
+            Matcher cited = Pattern.compile("([A-Za-z_]+)\\.md\\)? (\\d+(?:\\.\\d+)*)")
+                    .matcher(said);
+            while (cited.find()) {
+                int open = said.lastIndexOf('(', Math.max(0, cited.start() - 1));
+                String before = open >= 0 && cited.start() - open <= 120
+                        ? said.substring(open, cited.start())
+                        : said.substring(Math.max(0, cited.start() - 20), cited.start());
+                if (before.contains("ST4") || before.contains("YMXS")
+                        || before.contains("YMXR")) {
+                    continue;
+                }
+                Path in = Path.of("doc", cited.group(1) + ".md");
+                if (!Files.exists(in)) {
+                    in = Path.of(cited.group(1) + ".md");
+                }
+                if (!Files.exists(in)) {
+                    continue;
+                }
+                if (!defined.containsKey(in)) {
+                    defined.put(in, clausesOf(in));
+                }
+                read++;
+                if (!defined.get(in).contains(cited.group(2))) {
+                    dangling.add(at + " cites " + cited.group());
+                }
+            }
+        }
+        final int opened = read;
+        assertTrue(opened > 30, () -> "only " + opened
+                + " citations read; the check is asleep");
+        assertTrue(dangling.isEmpty(), () -> String.join("\n", dangling));
+    }
+
+    /**
+     * The newest release RELEASES.md lists against the version the build is.
+     * {@code release/publish.sh} names every file by the pom's version, so a
+     * release cut without its entry, or an entry written before the bump,
+     * parts the two.
+     */
+    @Test
+    void theNewestReleaseListedIsTheVersionOfTheBuild() throws IOException {
+        Matcher pom = Pattern.compile("<version>([^<]+)</version>")
+                .matcher(read(Path.of("pom.xml")));
+        assertTrue(pom.find(), "pom.xml names no version");
+        Matcher listed = Pattern.compile("^### (\\d+\\.\\d+\\.\\d+), ",
+                Pattern.MULTILINE).matcher(read(Path.of("doc/RELEASES.md")));
+        assertTrue(listed.find(), "RELEASES.md lists no release");
+        assertTrue(pom.group(1).equals(listed.group(1)),
+                () -> "the pom is " + pom.group(1) + " and the newest release listed is "
+                        + listed.group(1));
     }
 
     @Test
