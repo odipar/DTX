@@ -32,6 +32,30 @@ build.
 
 ## Published
 
+### 0.11.6, 2026-09-17
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.6>, built from the commit
+tagged `v0.11.6`.
+
+ST4 0.1.6 in all three trees: the Java and C# copies here are that
+release's files, and `go/dtx` reads the module at v0.1.6. The fix is in the
+packer, where a copy the offsets cannot reach is written as literals.
+
+**No byte of this release differs from 0.11.5's.** The decoder is the same
+bytes, so the twenty-two images are, and every table a DTX2 payload packs
+here is the same: the ST4 change moves a stream only where a copy's source
+lies further back than an offset reaches, which needs a literal stream of
+more than 32,512 bytes behind the copy, and no table of this repository's
+corpora reaches that.
+
+- What it was: `st4 -k1 -m16 -c` over a stream with a repeat 32,512 units
+  back ended the Go tool and the C# port at `a copy reaches past the
+  offsets`, and the Java tool, whose check is an assertion, packed a stream
+  with an offset the format does not encode. One packer, copied into three
+  trees, read one call three ways.
+- `ParityTest` reads the three trees over a corpus and requires the same
+  bytes, so the three copies stay one packer.
+
 ### 0.11.5, 2026-09-15
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.5>, built from the commit
