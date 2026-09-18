@@ -71,8 +71,8 @@ public final class St4Beside implements Packer {
                 int offsetLimit = Math.min(ring / unit,
                         St4Format.maxOffsetUnits(unit));
                 List<String> command = new ArrayList<>(List.of(
-                        packer.toString(), "-f", "-k" + unit,
-                        "-m" + offsetLimit, "-l65535"));
+                        packer.toString(), "-k" + unit,
+                        "-m" + offsetLimit, "-l65535", "-silent"));
                 if (loop >= 0) {
                     // st4 -r reads the loop's unit, and resolves for
                     // itself whether a back reference reaches the loop's
@@ -82,11 +82,17 @@ public final class St4Beside implements Packer {
                 if (!copies.isEmpty()) {
                     command.add(copies);
                 }
-                command.add(in.toString());
-                command.add(out.toString());
+                // The packer reads the column on standard input and
+                // writes the packed bytes on standard output (ST4,
+                // doc/tools.md), so the two files stand at those rather
+                // than on the command line. Redirecting both keeps the
+                // pipes from filling while this writes one and reads the
+                // other.
                 Process run = new ProcessBuilder(command)
-                        .redirectErrorStream(true).start();
-                byte[] said = run.getInputStream().readAllBytes();
+                        .redirectInput(in.toFile())
+                        .redirectOutput(out.toFile())
+                        .start();
+                byte[] said = run.getErrorStream().readAllBytes();
                 if (run.waitFor() != 0 || !Files.exists(out)) {
                     throw new IllegalStateException(packer + " reported "
                             + new String(said).trim());

@@ -246,11 +246,12 @@ release does not need a packer beside it either.
 
 ## The rigs
 
-`.github/workflows/test.yml` runs `mvn test` on a GitHub runner, with Go,
-the .NET SDK and rmac 2.4.3 on the path so the parity check of the three
-trees runs rather than skips. No push starts it: a caller starts it from
-the Actions tab or by `gh workflow run test.yml`. The rig below runs by
-hand as well.
+`.github/workflows/test.yml` runs `mvn test` on a GitHub runner, with
+Go, the .NET SDK, rmac 2.4.3 and ST4's packer on it so that no check
+skips: the parity check of the three trees reads the first three, and
+`St4Test` reads the copy of the packer here against the real one. No
+push starts it: a caller starts it from the Actions tab or by `gh
+workflow run test.yml`. The rig below runs by hand as well.
 
 ```
 python3 68k/test/emu/test_dtx.py
