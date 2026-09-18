@@ -178,7 +178,32 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
                 || line.charAt(at) == '/')) {
             at++;
         }
-        return line.substring(at).strip();
+        return quoted(line.substring(at).strip());
+    }
+
+    /**
+     * The line with what stands between backticks blanked, a space a
+     * character so the rest keeps its offsets.
+     *
+     * <p>A code span is quoted material: a message a tool writes, a name in
+     * a tree, a construct a document strikes and must spell to strike it. A
+     * quoted message keeps its words (AGENTS.md), so the words inside one
+     * are not this tree's prose and are not read.
+     */
+    private static String quoted(String line) {
+        StringBuilder out = new StringBuilder(line);
+        int at = out.indexOf("`");
+        while (at >= 0) {
+            int to = out.indexOf("`", at + 1);
+            if (to < 0) {
+                break;
+            }
+            for (int i = at; i <= to; i++) {
+                out.setCharAt(i, ' ');
+            }
+            at = out.indexOf("`", to + 1);
+        }
+        return out.toString();
     }
 
     /**
