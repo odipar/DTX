@@ -90,6 +90,54 @@ class ParityTest {
         });
     }
 
+    /** One command run with {@code in} on its standard input: what it
+     *  wrote, out and error together, and the code it exited with. */
+    private record Fed(String said, int exit) {
+    }
+
+    private static Fed fed(List<String> argv, byte[] in) throws Exception {
+        Process ran = new ProcessBuilder(argv).directory(Rig.root().toFile())
+                .redirectErrorStream(true).start();
+        ran.getOutputStream().write(in);
+        ran.getOutputStream().close();
+        String said = new String(ran.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        return new Fed(said.trim(), ran.waitFor());
+    }
+
+    /**
+     * An input no tree reads: every tree reports one line and exits the
+     * same way.
+     *
+     * <p>The three trees are one tool written three times, and an error path
+     * is where two of them drift unread: nothing here calls a wrong input
+     * until a check does.
+     */
+    @Test
+    void everyTreeReadsAWrongInputTheSameWay() throws Exception {
+        for (byte[] in : List.of(new byte[0], "xyz".getBytes())) {
+            for (String tool : TOOLS.keySet()) {
+                Map<String, Fed> said = new LinkedHashMap<>();
+                for (String tree : List.of("java", "go", "cs")) {
+                    said.put(tree, fed(command(tree, tool), in));
+                }
+                assertEquals(3, said.size(), tool + ": the check read "
+                        + said.size() + " trees");
+                Fed one = said.getOrDefault("java", new Fed("", 0));
+                for (Map.Entry<String, Fed> tree : said.entrySet()) {
+                    assertEquals(one.exit(), tree.getValue().exit(),
+                            tool + " on " + in.length + " bytes: the java tree"
+                            + " exits " + one.exit() + " and the "
+                            + tree.getKey() + " tree " + tree.getValue().exit()
+                            + ": " + tree.getValue().said());
+                    assertEquals(one.said(), tree.getValue().said(),
+                            tool + " on " + in.length + " bytes: the "
+                            + tree.getKey() + " tree reports another line");
+                }
+            }
+        }
+    }
+
     @Test
     void everyTreePrintsOneHelp() {
         for (String tool : TOOLS.keySet()) {
