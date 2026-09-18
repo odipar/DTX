@@ -32,6 +32,44 @@ build.
 
 ## Published
 
+### 0.11.10, 2026-09-18
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.10>, built from the commit
+tagged `v0.11.10`.
+
+One build runs at a time, and a quoted block keeps its words. Every file a
+tool is built from stands as 0.11.8 has it - `go/`, `68k/`, `dotnet/` and
+every document - so the tools are that release's, the twenty-two images
+are its bytes, and `go/dtx` reads ST4 at v0.1.9 still, whose module is the
+module v0.1.11 tags. This release is the style check, the script under
+`bin/` and the parity tests.
+
+- **One build runs at a time.** `bin/dtx-write -v2 -k1 < in.csv |
+  bin/dtx-package > out.bin`, the pipeline doc/tools.md opens with, starts
+  both tools at once, and with a source newer than the last build both
+  found a build owed and both ran Maven into the same `target/classes`:
+  measured here with a wrapper counting invocations, that pipeline ran
+  `mvn` twice. `bin/dtx-run` builds under the lock `target/.building` now,
+  as YMXS's runner has since it hit the same race. The output of the build
+  went to standard output, which for the first tool of a pipeline is the
+  stream the second reads; it goes to standard error now.
+- **A code span that wraps is quoted whole.** The style check blanked a
+  code span a line at a time while the rest of it reads a paragraph
+  joined, so a span broken by a wrap was two unpaired backticks and its
+  words were read as prose - and the pairing ran from one span's closing
+  backtick to the next span's opening one, which blanked the prose between
+  them. Over the four repositories that is 150 regions, 5,506 characters,
+  blanked as Markdown reads them, and 82 fragments, 906 characters, of
+  prose read back. The blanking runs over the joined lines now, and ST4,
+  YMXS and YMXR carry the change.
+- **A fenced block is quoted as a code span is.** A fence broke the
+  paragraph and was read alone, and the lines inside it were read as
+  paragraphs of this tree: 53 blocks, 106 fences and 188 lines over the
+  four repositories, every one of them a command, a file, a run of output
+  or a diagram. The check reads past a block and the two fences around it.
+- **The parity tests read the error paths**, so a tree that reports a
+  wrong input differently from the other two fails the build.
+
 ### 0.11.9, 2026-09-18
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.9>, built from the commit
