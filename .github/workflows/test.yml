@@ -36,21 +36,34 @@ jobs:
       # RigCallsTest drives the 68000 reader under emulation and skips
       # where unicorn is absent.
       - run: python3 -m pip install --quiet unicorn
+      # St4Test reads the packer this tree carries against the real
+      # one, and skips where no executable stands at $ST4 or on the
+      # path. ST4 is built at the release go.mod requires, read from
+      # go.mod so the two cannot drift.
+      - name: ST4's packer at the release go.mod requires
+        run: |
+          st4=$(grep -oE 'st4/go v[0-9]+\.[0-9]+\.[0-9]+' go/go.mod \
+              | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "ST4 $st4"
+          git clone --depth 1 --branch "go/v$st4" \
+              https://github.com/odipar/ST4 "$RUNNER_TEMP/ST4"
+          (cd "$RUNNER_TEMP/ST4/go" && go build -o "$RUNNER_TEMP/bin/" ./cmd/...)
+          echo "ST4=$RUNNER_TEMP/bin/st4" >> "$GITHUB_ENV"
       # ParityTest reads the three trees against one another and skips
       # where go, dotnet or rmac is absent, so a runner without one of
       # them is green and asleep.
       - run: go version && dotnet --version && rmac | sed -n '7p'
-      # A skipped test is a check that did not run. One stands here:
-      # St4Test reads the real ST4 packer, which is another repository's
-      # and stands at $ST4 or on the path, and this tree has neither.
-      - name: the suite, and one skip
+      # A skipped test is a check that did not run, and a run that skips
+      # one is green and asleep. Every skip here has a cause the steps
+      # above remove, so the count stands at 0.
+      - name: the suite, and no skip
         run: |
           set -o pipefail
           mvn -B --no-transfer-progress test | tee /tmp/test.log
           skipped=$(grep -oE 'Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$' \
               /tmp/test.log | tail -1 | grep -oE '[0-9]+$')
-          if [ "$skipped" != "1" ]; then
-              echo "::error::$skipped skipped, and this workflow reads 1"
+          if [ "$skipped" != "0" ]; then
+              echo "::error::$skipped skipped, and this workflow reads 0"
               grep -E 'Skipped: [1-9]' /tmp/test.log
               exit 1
           fi
