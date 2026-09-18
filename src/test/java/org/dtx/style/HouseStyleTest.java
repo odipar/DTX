@@ -212,6 +212,28 @@ final class HouseStyleTest {
     }
 
     @Test
+    void aJavadocTagIsQuotedAsACodeSpanIs() throws IOException {
+        // A comment quotes in the marks Javadoc reads, as a document quotes
+        // between backticks, and the words inside one are the quoted
+        // thing's. The prose around them is read, on the last line here.
+        List<Hit> hits = style().source(Path.of("A.java"),
+                "class A {\n"
+                        + "    /**\n"
+                        + "     * The table {@code holds} a row, and {@code a tag\n"
+                        + "     * that holds} wraps over a line, and\n"
+                        + "     * <pre>\n"
+                        + "     * the ring holds a row\n"
+                        + "     * </pre>\n"
+                        + "     * while the table holds a row here.\n"
+                        + "     */\n"
+                        + "    int x;\n"
+                        + "}\n");
+        assertEquals(1, hits.size(), () -> hits.toString());
+        assertEquals("holds", hits.get(0).text());
+        assertEquals(8, hits.get(0).line());
+    }
+
+    @Test
     void aNameSpelledLikeAWordPasses() throws IOException {
         assertTrue(style().document(Path.of("a.md"), List.of(
                 "Windows and ST4_WINDOW, and the decoder states at 80."))
