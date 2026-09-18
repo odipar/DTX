@@ -32,6 +32,28 @@ build.
 
 ## Published
 
+### 0.11.9, 2026-09-18
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.9>, built from the commit
+tagged `v0.11.9`.
+
+The document checks are one package, kept here. Every file a tool is built
+from stands as 0.11.8 has it - `go/`, `68k/`, `dotnet/`, `bin/` and every
+document - so the tools are that release's, the twenty-two images are its
+bytes, and `go/dtx` reads ST4 at v0.1.9 still, whose module is the module
+v0.1.10 tags.
+
+- **`org.dtx.doc.Documents`** reads a link that resolves, one wrap width, a
+  glossary in order and the rows it is read from. Those four were written
+  in each of the four repositories of the family, and the copies had
+  drifted in both directions: this tree read fenced blocks and anchors
+  where ST4 skipped them, and reported neither the line a broken link is
+  written at nor how many documents it had read, which YMXS and YMXR did.
+  The package reads the best of the four, and ST4, YMXS and YMXR each
+  carry a copy of it beside the copy each has of `org.dtx.style`.
+- `ConsistencyTest` is 46 lines shorter for it, and reads the figures of
+  this repository as it did.
+
 ### 0.11.8, 2026-09-18
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.8>, built from the commit
