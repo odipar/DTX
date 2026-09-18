@@ -33,8 +33,24 @@ jobs:
             https://rmac.is-slick.com/static/rmac-2.4.3-lin-x64.zip
           unzip -j -o /tmp/rmac.zip -d /tmp/rmac
           sudo install -m 755 /tmp/rmac/rmac /usr/local/bin/rmac
+      # RigCallsTest drives the 68000 reader under emulation and skips
+      # where unicorn is absent.
+      - run: python3 -m pip install --quiet unicorn
       # ParityTest reads the three trees against one another and skips
       # where go, dotnet or rmac is absent, so a runner without one of
       # them is green and asleep.
       - run: go version && dotnet --version && rmac | sed -n '7p'
-      - run: mvn -B --no-transfer-progress test
+      # A skipped test is a check that did not run. One stands here:
+      # St4Test reads the real ST4 packer, which is another repository's
+      # and stands at $ST4 or on the path, and this tree has neither.
+      - name: the suite, and one skip
+        run: |
+          set -o pipefail
+          mvn -B --no-transfer-progress test | tee /tmp/test.log
+          skipped=$(grep -oE 'Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$' \
+              /tmp/test.log | tail -1 | grep -oE '[0-9]+$')
+          if [ "$skipped" != "1" ]; then
+              echo "::error::$skipped skipped, and this workflow reads 1"
+              grep -E 'Skipped: [1-9]' /tmp/test.log
+              exit 1
+          fi
