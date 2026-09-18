@@ -32,6 +32,33 @@ build.
 
 ## Published
 
+### 0.11.8, 2026-09-18
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.8>, built from the commit
+tagged `v0.11.8`.
+
+ST4 0.1.9 in all three trees, and two lines of the style check. The packer
+moved in its comments alone, so every table packed here and every one of
+the twenty-two images is 0.11.7's byte for byte.
+
+- **A directory named `bin` under a build is a build's.** The check read
+  every file whose parent directory is named `bin` as a script, since a
+  script under `bin/` is named without an extension, and a Go build run as
+  `go build -o bin/` writes executables there. Reading one as text ended
+  the check in a decoding fault rather than a hit. YMXS carried this
+  package and hit it on the first run.
+- **A code span is quoted material**, and the words inside one are not read:
+  a document that quotes the message a tool writes, or spells a construct
+  in order to strike it, reported a hit on the words it quotes. AGENTS.md says
+  a quoted message keeps its words. YMXR carried the package and hit that
+  one, on two of its tools' messages.
+- Both lines stand in the copies ST4, YMXS and YMXR carry, so the four read
+  the same 370 lines.
+- `README.md` counts the Java tests the tree runs: 110, where the row read
+  101 and no check read the figure back.
+- The copies of the packer here are `odipar/ST4@0af4845`, and `go/dtx`
+  reads the module at v0.1.9.
+
 ### 0.11.7, 2026-09-17
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.7>, built from the commit
