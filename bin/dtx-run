@@ -13,16 +13,45 @@ shift
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 classes=$root/target/classes
 built=$classes/.built
+lock=$root/target/.building
 
-# The code the packager combines from is built into target/classes, by the
-# step bound to process-classes, so a build runs to there and a template
-# under 68k/ dates it as a source does.
-if [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" "$root/68k" \
-        -newer "$built" -print -quit 2>/dev/null)" ]; then
-    # The build reads standard input, which a tool's input comes in on,
-    # so it is run with none.
-    (cd "$root" && mvn -q process-classes </dev/null)
+# Whether a build is owed: no build yet, or a source newer than the last
+# build. The code the packager combines from is built into target/classes,
+# by the step bound to process-classes, so a template under 68k/ dates it as
+# a source does.
+owed() {
+    [ ! -f "$built" ] || [ -n "$(find "$root/src/main/java" "$root/68k" \
+        -newer "$built" -print -quit 2>/dev/null)" ]
+}
+
+build() {
+    # A tool reads standard input and writes standard output, so the build
+    # is handed no input and its output goes to standard error.
+    (cd "$root" && mvn -q process-classes </dev/null >&2)
     : > "$built"
+}
+
+if owed; then
+    # A pipe starts every tool at once, so two of them can owe the same
+    # build. mkdir either makes the directory or does not, so the first
+    # one through builds and the rest wait on it.
+    mkdir -p "$root/target"
+    waited=0
+    while ! mkdir "$lock" 2>/dev/null; do
+        waited=$((waited + 1))
+        if [ "$waited" -gt 180 ]; then
+            echo "dtx-run: a build has held $lock for three minutes" >&2
+            exit 2
+        fi
+        sleep 1
+    done
+    trap 'rmdir "$lock" 2>/dev/null || true' EXIT INT TERM
+    # The one that waited may find the build already done.
+    if owed; then
+        build
+    fi
+    rmdir "$lock" 2>/dev/null || true
+    trap - EXIT INT TERM
 fi
 
 exec java -cp "$classes" "$class" "$@"
