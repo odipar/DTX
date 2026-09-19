@@ -154,8 +154,9 @@ runs on.
 
 Note: `R` in ST4's document is the loop point of a stream (ST4, SPEC.md
 6.1), where `R` here is the row count of a table (1). A data set of a
-payload is packed without a loop, so a reader of both documents meets the
-two names and one figure.
+table that repeats loops at the form of ST4, SPEC.md 6.2, and the loop
+point of that stream is this format's `RR` (R5.11): a reader of both
+documents meets one figure under the two names.
 
 R5.8 needs `N`. A reader reads it once and has a ring of that many bytes,
 and the ring does not grow as `R` does.
@@ -197,7 +198,7 @@ where the payload does. The data sets follow, each beginning on a long:
 where one ends short of the next boundary, the bytes between are zero.
 
 A reader reads a column from its offset alone: a data set defines the
-length of what it unpacks to, and the bits that pack it end on a marker,
+length of what it unpacks to, and the bits that pack it end on the end code,
 so no offset is read against the next.
 
 **What an ST4 data set is.** What a reader of DTX2 needs of it; the format
