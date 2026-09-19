@@ -108,10 +108,10 @@ before what it describes, and what things are called comes before both.
   has `N` bytes of a column at a time, not the column.
 - **R5.9** An ST4 data set begins on a long.
 - **R5.10** The payload defines whether its columns contain copies from their
-  literal streams. A decoder built without the copy code reads such a
-  column wrongly, and no data set defines which kind it is, so a reader that
-  read it from anywhere but the file could read a flag that differs from the
-  bytes.
+  literal streams. A copy is an offset above `M`, the ring in units (ST4,
+  SPEC.md 4.4), which a decoder built without the copy code reads as a
+  match, so a reader reads the build it needs out of the file rather than
+  out of anywhere else.
 
 - **R5.11** Where `RR` is below `R`, every data set of the payload loops at
   row `RR`: the set never ends, the rows come round and nothing is decoded
@@ -154,5 +154,6 @@ What R1 to R6 do not yet define. Each is open, and none of it is fixed by
 - What checks a reader written elsewhere against this repository's. The
   Java, Go and C# trees write the same bytes and a test compares them, and
   the 68000 reader is compared with the text a table came from under
-  emulation; a reader written against the kit under doc/conformance is
-  checked by nothing here yet.
+  emulation. A reader written against the kit under doc/conformance is
+  checked by hand: conformance/README.md records each run and what it
+  moved, and no test reads one back.

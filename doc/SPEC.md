@@ -101,7 +101,9 @@ zero byte stands between them. Its row `n` is `n` times `W` further on.
 
 Every column is the same length, so they lie at one stride: `R` times `W`,
 up to a word. Column `i` begins at `i` strides, and a reader steps from one
-column of a row to the next by adding one (R4.2).
+column of a row to the next by adding one (R4.2). The payload is `C` minus
+one strides and the last column's `R` times `W` bytes, the padding standing
+between one column and the next.
 
 DTX1 has that padding over DTX0 (R4.3). It costs a byte between one column
 and the next at a width of 1 and an odd `R`, and nothing at a width of 2 or
@@ -144,6 +146,10 @@ sets are:
 | 3 | 1 | the flags: bit 0 marks a payload whose columns contain copies from their literal streams. The other bits are zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
+A data set's `M` (ST4, SPEC.md 2.1) is `N` divided by `k`, the same ring
+in the unit ST4 counts in, which a reader of copies reads out of the data
+set to tell a copy from a match (ST4, SPEC.md 7.4).
+
 R5.8 needs `N`. A reader reads it once and has a ring of that many bytes,
 and the ring does not grow as `R` does.
 
@@ -157,10 +163,13 @@ pointer arithmetic runs every column (R5.4, R5.5).
 
 **The flags byte.** Bit 0 marks a payload whose every column was packed so
 that a match beyond the ring copies from that column's literal stream,
-which ST4 packs with `-c`. A decoder built without the copy code reads such
-a column wrongly, and nothing in an ST4 data set defines which kind it is, so
-the payload defines it (R5.10). In a payload that defines it every column
-contains copies, and in one that does not, none does.
+which ST4 packs with `-c`. A copy is an offset above `M`, the ring in
+units (ST4, SPEC.md 4.4), which a decoder built without the copy code
+reads as a match, so such a decoder reads such a column wrongly: the
+payload names the build a reader needs before it opens a data set
+(R5.10). In a payload
+that defines it every column contains copies, and in one that does not,
+none does.
 
 A file written before this byte was used reads zero here, no copies,
 and a decoder without the copy code is the one such a file always

@@ -17,11 +17,12 @@ Compare your reader's `RR` with the header's instead.
 
 ## The tables
 
-SOURCES.md lists them. Each is complete: the header, and the payload of its
-variant. A DTX2 table's data sets are ST4 version 7 (SPEC.md 2.3), packed
-with the copy of ST4 in this repository, at the unit and ring the row
-names, and `dtx2-copies` was packed with copies from the literal stream,
-which its payload's flags byte marks.
+SOURCES.md lists them, and stands outside a run against this kit, since the
+text a table was written from has the table's rows in it. Each table is
+complete: the header, and the payload of its variant. A DTX2 table's data
+sets are ST4 version 7 (SPEC.md 2.3), packed with the copy of ST4 in this
+repository, at the unit and ring the row names, and `dtx2-copies` was packed
+with copies from the literal stream, which its payload's flags byte marks.
 
 ## The rules
 
