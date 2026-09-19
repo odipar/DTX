@@ -17,6 +17,39 @@ table whose rows are not a multiple of its period, and columns packed with
 copies at a ring too short for their pattern. The Java reader reads every
 table here back to its rows in `ConformanceTest`; the Go and C# trees write
 the same bytes as the Java tree in `ParityTest`; and the 68000 reads tables
-of the same shapes under emulation in `68k/test/emu/test_dtx.py`. A reader
-written against the kit is checked by nothing here yet (requirements.md,
-R7).
+of the same shapes under emulation in `68k/test/emu/test_dtx.py`.
+
+## The runs
+
+An implementer reads SPEC.md, requirements.md and TASK.md, and ST4's
+SPEC.md for the packed payloads, writes a reader from those alone, and
+produces the rows of every table. The `.rows` files and SOURCES.md stand
+outside the run, since either has the rows of a table in it. A run passes
+where every table's bytes equal the kit's and every reading the notes
+record is one the documents decide.
+
+**The first run**, 2026-09-19, against the kit at nineteen tables. The
+implementer wrote a reader of 332 lines from the four documents alone and
+produced all nineteen tables byte for byte, `dtx2-copies` and the
+twenty-column table among them. Its notes had 23 entries with 7 marked
+*decides output*, six of them in ST4's document and one here, and four
+clauses changed for them.
+
+- ST4's 3.4 reaches a block at the last offset with no value for that
+  offset before a block sets one. It is 1 unit, and 22 columns of this kit
+  open on a block that reads it: ST4 names it now.
+- ST4's 3.8 reads that a block is an even number of bits, where the first
+  block stands without a flag and is odd; 2.3 runs each stream to the next,
+  where stream D stands last; and 3.5 left the order a block reads its
+  offset stream in.
+- SPEC.md 2.3 read that "nothing in an ST4 data set defines which kind it
+  is", where a copy is an offset above `M` (ST4, SPEC.md 4.4): what the
+  flags byte names is the build a reader needs, which R5.10 reads the same
+  way now.
+- SPEC.md 2.3 reads `M` against `N`, `N` divided by `k`, which every data
+  set of this kit has and no clause had; and 2.2 reads that the payload is
+  `C` minus one strides and the last column's bytes, which the reader read
+  off the payload's length.
+
+`TASK.md` cited SOURCES.md as though a run could read it; it reads that
+the file stands outside a run now.
