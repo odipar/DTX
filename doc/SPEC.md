@@ -146,9 +146,11 @@ sets are:
 | 3 | 1 | the flags: bit 0 marks a payload whose columns contain copies from their literal streams. The other bits are zero |
 | 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
 
-A data set's `M` (ST4, SPEC.md 2.1) is `N` divided by `k`, the same ring
-in the unit ST4 counts in, which a reader of copies reads out of the data
-set to tell a copy from a match (ST4, SPEC.md 7.4).
+A writer puts `N` divided by `k` in a data set's `M` (ST4, SPEC.md 2.1),
+the same ring in the unit ST4 counts in, and a reader of copies reads `M`
+out of the data set to tell a copy from a match (ST4, SPEC.md 7.4): the
+two figures stand for one ring, and the data set's is the one a decoder
+runs on.
 
 Note: `R` in ST4's document is the loop point of a stream (ST4, SPEC.md
 6.1), where `R` here is the row count of a table (1). A data set of a
