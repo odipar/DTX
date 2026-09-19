@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -392,5 +393,45 @@ final class ConsistencyTest {
         List<String> wide = Documents.wide(read, 78);
         assertTrue(wide.isEmpty(), () -> String.join("\n", wide)
                 + "\nAGENTS.md gives one wrap width, and a document keeps it.");
+    }
+
+    /** The clauses one document defines: `**N.N**` and `## N.N`, a section
+     *  number standing for itself and for the clauses under it. */
+    private static Set<String> clausesOf(String said) {
+        Set<String> out = new HashSet<>();
+        Matcher m = Pattern.compile("(?m)^(?:\\*\\*|#+ )R?(\\d+(?:\\.\\d+)*)").matcher(said);
+        while (m.find()) {
+            String clause = m.group(1);
+            out.add(clause);
+            for (int dot = clause.indexOf('.'); dot > 0; dot = clause.indexOf('.', dot + 1)) {
+                out.add(clause.substring(0, dot));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Every citation of a specification lands on a clause of it.
+     *
+     * <p>A citation in these documents is the clause in brackets, `(2.3)`,
+     * and a reader follows it. The first reader of the conformance kit read
+     * ST4's 3.4 pointing at a value no clause set; this reads every
+     * citation at once, so one that lands nowhere is named where it is
+     * written.
+     */
+    @Test
+    void everyCitationLandsOnAClause() throws IOException {
+        List<String> wrong = new ArrayList<>();
+        for (Path at : List.of(SPEC, REQ, Path.of("doc/abi.md"), TERM)) {
+            String said = Files.readString(at);
+            Set<String> clauses = clausesOf(said);
+            Matcher m = Pattern.compile("\\((\\d+(?:\\.\\d+){1,3})\\)").matcher(said);
+            while (m.find()) {
+                if (!clauses.contains(m.group(1))) {
+                    wrong.add(at + " cites (" + m.group(1) + "), which is no clause of it");
+                }
+            }
+        }
+        assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong));
     }
 }
