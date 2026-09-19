@@ -150,6 +150,11 @@ A data set's `M` (ST4, SPEC.md 2.1) is `N` divided by `k`, the same ring
 in the unit ST4 counts in, which a reader of copies reads out of the data
 set to tell a copy from a match (ST4, SPEC.md 7.4).
 
+Note: `R` in ST4's document is the loop point of a stream (ST4, SPEC.md
+6.1), where `R` here is the row count of a table (1). A data set of a
+payload is packed without a loop, so a reader of both documents meets the
+two names and one figure.
+
 R5.8 needs `N`. A reader reads it once and has a ring of that many bytes,
 and the ring does not grow as `R` does.
 
