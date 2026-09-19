@@ -53,3 +53,23 @@ clauses changed for them.
 
 `TASK.md` cited SOURCES.md as though a run could read it; it reads that
 the file stands outside a run now.
+
+**The third run**, the same day, against the kit with the clauses of the
+first two in it and a third implementer. The reader was 423 lines and
+produced all nineteen tables byte for byte; its notes had 20 entries with
+9 marked *decides output*, and two places changed here.
+
+- SPEC.md 2.3's Note read that a data set of a payload is packed without
+  a loop, where R5.11 has every data set of a repeating table loop at row
+  `RR` and both sets of `dtx2-repeat` carry the loop word `$FFD0`. A data
+  set of such a table loops at the form of ST4, SPEC.md 6.2, and the loop
+  point of that stream is this format's `RR`.
+- 2.3 read that the bits packing a data set "end on a marker", where ST4
+  calls it the end code and a marker bit is a gamma's (ST4, SPEC.md 3.3,
+  3.6). R0.7 forbids the second word.
+
+Three more changed in ST4's document, which the same reader read for the
+payloads: its 3.1 lists three kinds of block and its 3.4 three cases of
+the flag, a copy standing among neither, so a reader reads a copy as a
+match block, which governs every byte of `dtx2-copies` after its second
+block.
