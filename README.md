@@ -16,65 +16,49 @@ which a DTX2 column is packed with, derives from Einar Saukas's
 rather than rewritten. The 68000 reader is measured against the timings in
 Motorola's manual.
 
-## What the format is
+## What DTX is
 
-DTX is a data format: a table of `R` rows and `C` columns, where every value
-is one width, 1, 2 or 4 bytes, and the rows repeat at a row `RR`.
+DTX is a table format for programs on the Motorola 68000, the processor
+of the Atari ST: a table of `R` rows and `C` columns, where every value is
+one width, 1, 2 or 4 bytes, and the rows repeat at a row `RR`. The table is
+data, and a reader of it is code.
 
-The format is data. A compile step and a calling convention belong to a
-reader and not to the format, so the specification defines what the bytes
-are and what a reader reads out of them, and no more than that.
+A table is written on a PC from comma separated text, and packaged with a
+68000 reader into one file, an image. A 68000 program includes the image,
+steps through the rows with one call a row, and reads the values at the
+address each call leaves.
 
-DTX does not define what a column contains. A format built on DTX defines
-that, in its repository and against what this one defines, and
-[YMXR](https://github.com/odipar/YMXR) is one.
+DTX defines what the bytes are and what a reader reads out of them. What a
+column means is left to the program, or to a format built on DTX.
 
-[YMX](https://github.com/odipar/YMX) is the family this repository belongs
-to: a design document defining how YMXS, YMXR, DTX and ST4 fit together.
-Each repository defines a layer:
-
-- **[ST4](https://github.com/odipar/ST4)** defines the compression a DTX2
-  column is packed with, and the 68000 decoders that read it.
-- **DTX** defines the table layout, the packing and the 68000 readers.
-  Values are one width; tables repeat from a selected row or read once.
-- **[YMXS](https://github.com/odipar/YMXS)** defines tune data and
-  playback: register rows, effects, sources and rates.
-- **[YMXR](https://github.com/odipar/YMXR)** encodes that structure as DTX
-  tables and defines how each column reaches the YM2149 sound chip or the
-  MC68901 timers.
-
-Three variants lay one table out three ways, and a file names which:
-
-| variant | the payload | for |
-|---|---|---|
-| DTX0 | row by row | a reader that reads whole rows |
-| DTX1 | column by column | a reader that reads one column of many |
-| DTX2 | column by column, each packed as an ST4 data set | a table too large to keep unpacked |
-
-Every one is the same table ([requirements.md](doc/requirements.md) R1.3),
-so a file converts between them without
-loss. [SPEC.md](doc/SPEC.md) defines the bytes.
-
-## Usage
+## Getting started
 
 The tools come as executables for Windows, macOS and Linux, on x64 and
 arm64, from the [releases](https://github.com/odipar/DTX/releases). Each
-one contains the twenty-two 68000 images, so nothing is installed beside
-it: no assembler, no packer, no runtime.
+one contains the twenty-two 68000 images, and runs with no assembler,
+packer or runtime beside it.
 
-Write a table from comma separated text:
+A table starts as text: one row a line and one value a column. A value is
+decimal, or hexadecimal where it opens with `$`, and negative where it
+opens with `-`. A line that is blank, or opens with `#`, is not a row, and
+neither is a line of column names before the first row of numbers:
+
+```
+# a time, a note and a step
+time, note, step
+0, $0100, -2
+1, $0101, -1
+2, $0102,  0
+```
+
+Write it as a DTX file, then package that as an image:
 
 ```bash
 dtx-write -v1 -w2 < table.csv > table.dtx
-```
-
-Package it as a standalone 68000 image, the code and the table in one file:
-
-```bash
 dtx-package < table.dtx > table.bin
 ```
 
-Read it back out as text, which is how a DTX file is inspected:
+Read a DTX file back out as text, which is how one is inspected:
 
 ```bash
 dtx-write -text < table.dtx > back.csv
@@ -97,9 +81,10 @@ each. `-help` on any of them prints its usage and examples.
 
 ## Reading a table on a 68000
 
-A packaged image is the code for the table's variant, the table's bytes,
-and four calls that reach them PC relative. No relocation, no operating
-system, nothing allocated while it runs.
+An image is the reader code for the table's variant, the table's bytes, and
+four calls. The calls reach the table by addresses relative to the program
+counter, so an image runs wherever it is loaded, with or without an
+operating system.
 
 ```
         bsr     DTX_advance     ; onto the next row
@@ -109,17 +94,47 @@ system, nothing allocated while it runs.
 ```
 
 An advance leaves the address of the row's first value, and the stride
-`DTX_metadata` reports reaches the next column's. No call copies a value: the
-image finds a row and the caller reads it. On 64 rows of three two byte
-columns an advance costs 70 cycles under DTX0 and 66 under DTX1.
-[abi.md](doc/abi.md) is the calling convention and
-[performance.md](doc/performance.md) has what every call costs,
-measured.
+`DTX_metadata` reports reaches the next column's. The image finds a row and
+the caller reads the values in place. On 64 rows of three two byte columns
+an advance costs 70 cycles under DTX0 and 66 under DTX1, counted with no
+wait state, so an Atari ST runs longer. [abi.md](doc/abi.md) is the calling
+convention and [performance.md](doc/performance.md) has what every call
+costs, measured.
 
 One width a table, so the code is built for the width and no call tests it:
 twenty-two builds, one for DTX0, which reads a row as one run of bytes at
 any width, three for DTX1, and eighteen for DTX2, three widths by the three
 units its columns are packed at, with the copy code and without.
+
+## The three variants
+
+A file declares which of three variants lays its table out:
+
+| variant | the payload | for |
+|---|---|---|
+| DTX0 | row by row | a reader that reads whole rows |
+| DTX1 | column by column | a reader that reads one column of many |
+| DTX2 | column by column, each packed as an ST4 data set | a table too large to keep unpacked |
+
+Every one is the same table ([requirements.md](doc/requirements.md) R1.3),
+so a file converts between them without loss. [SPEC.md](doc/SPEC.md)
+defines the bytes. DTX2 packs each column with
+[ST4](https://github.com/odipar/ST4), and a reader of it unpacks a column a
+part at a time, through a ring of `N` bytes.
+
+## Words used here
+
+| word | definition |
+|---|---|
+| table | `R` rows, `C` columns wide, every value `W` bytes, repeating at `RR` |
+| row | one step of a table: `C` values |
+| column | one field of a row, `W` bytes wide |
+| `RR` | the row a table repeats to once the last row is done; `RR` equal to `R` marks a table that does not repeat |
+| variant | one way of laying a table's rows out in bytes |
+| image | a table packaged for the 68000: the code and the table's bytes in one file, read through four calls |
+| stride | the bytes from one column, ring or decoder state to the next |
+| ring | the bytes of a column a reader has at a time, `N` of them, in place of the unpacked column |
+| unit | the width ST4 packs whole numbers of: 1, 2 or 4 bytes |
 
 ## What's here
 
@@ -147,7 +162,7 @@ between trees fails a build rather than reaching a release.
 
 | what runs | what it checks |
 |---|---|
-| 110 Java tests | the format, the tools, the packager, and every figure the documents record |
+| the Java tests | the format, the tools and the packager |
 | the Go and C# suites | each tree against itself |
 | [`68k/test/emu/test_dtx.py`](68k/test/emu/test_dtx.py) | the 68000 reader under emulation, every row against the text the table came from |
 | [the conformance kit](doc/conformance) | 19 tables an independent reader is written against |
@@ -182,6 +197,14 @@ written until it defines what DTX has to do.
 
 [AGENTS.md](AGENTS.md) is the house style every document and comment
 follows, and [STRUCK.md](STRUCK.md) lists what it strikes.
+
+## Related repositories
+
+[ST4](https://github.com/odipar/ST4) is the compression a DTX2 column is
+packed with. [YMXR](https://github.com/odipar/YMXR) is a format built on
+DTX, for music on the Atari ST. [YMX](https://github.com/odipar/YMX) is the
+family this repository belongs to: a design document defining how YMXS,
+YMXR, DTX and ST4 fit together.
 
 ## License and attribution
 
