@@ -130,6 +130,42 @@ decoder the file needs. What the flag is for, and what a decoder without
 the copy code reads instead, is abi.md 5; what it costs is 28 to 36 bytes
 of code (experiments.md) and a few cycles over 64 rows (performance.md).
 
+## What the tools report
+
+Every line below reaches standard error, the tool exiting 1. The three
+trees report the same line for the same input, which `ConsistencyTest`
+reads against each of them.
+
+Reading a table, in `dtx-write`, `dtx-package` and `dtx-blobs` alike:
+
+| condition | reported as |
+|---|---|
+| a file of B bytes with no header in it | `a DTX file of B bytes does not contain a header` |
+| a file whose header names a variant V outside 0, 1 and 2 | `variant V is not 0, 1 or 2` |
+| a header whose `R` is 0 or negative | `R is 1 upward, not N` |
+| a header whose `C` is outside 1 to 256 | `C is 1 to 256, not N` |
+| a header whose `RR` is outside 0 to `R` | `RR is 0 to R, not N` |
+| a header whose width is other than 1, 2 or 4 | `the width is 1, 2 or 4 bytes, not W` |
+| a file of B bytes short of the payload the header names | `a DTX file of B bytes is short of N` |
+| text with no row in it | `the text does not contain a row` |
+| a cell X that is not a number | `"X", which is not a number` |
+| a value V outside the range of 1, 2 and 4 bytes | `V, which no width of 1, 2 or 4 bytes takes` |
+
+Writing a DTX2 table, in `dtx-write` and `dtx-package`:
+
+| condition | reported as |
+|---|---|
+| `-kK` with K other than 1, 2 or 4 | `k is 1, 2 or 4, not K` |
+| `RR` times the width no unit at that `k` | `the table repeats at row N, which is byte A of a column and not a unit of one at k of K: RR times the width divides by k (R5.11)` |
+| a replayed loop of L rows under the period P a refill needs | `a replayed loop of L rows is under the period of P: a refill meets one mark at most` |
+
+Either tool:
+
+| condition | reported as |
+|---|---|
+| standard output cannot be written | `cannot write standard output` |
+| a flag F outside the flags of the tool | `dtx-write does not read F` |
+
 ## Package
 
 A DTX file of any variant into a standalone 68000 image: the code, then the

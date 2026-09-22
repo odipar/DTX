@@ -188,9 +188,17 @@ public static class Tools
     /// <summary>A file on standard output: the tool's output.</summary>
     private static void Write(byte[] file)
     {
-        using Stream out_ = Console.OpenStandardOutput();
-        out_.Write(file, 0, file.Length);
-        out_.Flush();
+        try
+        {
+            using Stream out_ = Console.OpenStandardOutput();
+            out_.Write(file, 0, file.Length);
+            out_.Flush();
+        }
+        catch (IOException)
+        {
+            Console.Error.WriteLine("cannot write standard output");
+            Environment.Exit(1);
+        }
     }
 
     /// <summary>Whether file opens with DTX.</summary>

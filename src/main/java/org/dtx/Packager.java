@@ -148,7 +148,7 @@ public final class Packager {
                 int loop = rows - header.repeat();
                 if (packed.replayed() && loop < p) {
                     throw new IllegalArgumentException("a replayed loop of " + loop
-                            + " rows is under the period of " + p + ": a refill holds one"
+                            + " rows is under the period of " + p + ": a refill meets one"
                             + " mark at most");
                 }
                 return p;
