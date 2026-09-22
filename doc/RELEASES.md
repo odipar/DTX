@@ -32,6 +32,36 @@ build.
 
 ## Published
 
+### 0.11.11, 2026-09-22
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.11>, built from the commit
+tagged `v0.11.11`.
+
+What a caller sees when a tool reports something: tools.md writes those
+lines down for the first time, and the Java tree, the Go tree and the C#
+tree are read against them. Two of the three wrote a line the others do
+not.
+
+- **A refill's mark read two ways.** The Java tree reported `a replayed
+  loop of L rows is under the period of P: a refill holds one mark at
+  most` where the Go tree and the C# tree read `meets`. The three read
+  `meets` now, which the house style asks of the verb in any case.
+- **A write that fails.** The Java tree and the Go tree report `cannot
+  write standard output`, where the C# tool left the failure to the
+  runtime. It reports the line now.
+- **The lines are in the document.** tools.md has a table for reading a
+  table, one for writing a DTX2 table and one for either tool, and
+  `ConsistencyTest` reads each line against the three trees: the longest
+  run of words between the figures a tool writes into a line must stand
+  in each.
+
+A data set loops where its table does (SPEC.md 2.3's note), the
+citations of the specifications land on clauses, and a first reader read
+the kit cold: those moved the documents alone.
+
+Checks: `mvn -o clean test` green, 116 tests; `dotnet test` green; `go
+test ./...` green.
+
 ### 0.11.10, 2026-09-18
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.10>, built from the commit
