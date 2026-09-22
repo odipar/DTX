@@ -31,6 +31,94 @@ import org.junit.jupiter.api.Test;
  */
 final class ConsistencyTest {
 
+    /**
+     * Every line tools.md reports reads the same in the three trees: a
+     * line reworded in one tree and the document, or in the document
+     * alone, fails here. The letters a table writes for a figure, V or N
+     * or K, and the figures a tool builds a line from stand outside the
+     * comparison, and this reads the words around them.
+     *
+     * <p>The check came from YMXR, where a release moved a descriptor's
+     * version to 2 in one clause and left another reading 1. Writing the
+     * table for it found the Java tree wording the refill's mark one way
+     * and the other two another, and the C# tree writing no line where
+     * the other two report a failed write.
+     */
+    @Test
+    void everyLineTheDocumentReportsReadsTheSameInTheTrees() throws IOException {
+        String reference = tree(Path.of("src/main/java/org/dtx"), ".java");
+        String go = tree(Path.of("go"), ".go");
+        String sharp = tree(Path.of("dotnet"), ".cs");
+        int read = 0;
+        for (String said : reportedLines(Files.readString(Path.of("doc/tools.md")))) {
+            String part = longestRun(said);
+            if (part.isEmpty() || !reference.contains(part)) {
+                continue;
+            }
+            read++;
+            assertTrue(go.contains(part),
+                    "tools.md reports \"" + said + "\" and the Go tree lacks \"" + part + "\"");
+            assertTrue(sharp.contains(part),
+                    "tools.md reports \"" + said + "\" and the C# tree lacks \"" + part + "\"");
+        }
+        assertTrue(read >= 6, "tools.md reports " + read + " lines of the tools");
+    }
+
+    /** The longest run of words of a line between the figures a tool
+     *  writes into it, and the empty text where the line is figures and
+     *  short runs. */
+    private static String longestRun(String said) {
+        String longest = "";
+        // a letter a table writes for a figure stands alone: a capital
+        // with no letter after it and no capital before it
+        for (String part : said.split("(?<![A-Z])[A-Z](?![A-Za-z])|\\bi\\b|\\b[0-9]+\\b")) {
+            String one = part.strip();
+            if (one.length() >= 12 && one.length() > longest.length()) {
+                longest = one;
+            }
+        }
+        return longest;
+    }
+
+    /** The lines the tables of a document report: the last cell of a row,
+     *  each code span in it of three words or more. */
+    private static List<String> reportedLines(String document) {
+        List<String> out = new ArrayList<>();
+        Matcher row = Pattern.compile("^\\|(.*)\\|\\s*$", Pattern.MULTILINE)
+                .matcher(document);
+        while (row.find()) {
+            String[] cells = row.group(1).split("\\|");
+            if (cells.length < 2) {
+                continue;
+            }
+            Matcher said = Pattern.compile("`([^`]+)`").matcher(cells[cells.length - 1]);
+            while (said.find()) {
+                String one = said.group(1);
+                if (one.split("\\s+").length >= 3) {
+                    out.add(one);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Every source of a tree, read as one text, a line built from two
+     *  strings read as one. */
+    private static String tree(Path at, String ending) throws IOException {
+        StringBuilder out = new StringBuilder();
+        try (java.util.stream.Stream<Path> found = Files.walk(at)) {
+            for (Path one : found
+                    .filter(p -> p.toString().endsWith(ending))
+                    .filter(p -> !p.toString().contains("/test")
+                            && !p.toString().contains("/obj/")
+                            && !p.toString().contains("/bin/"))
+                    .toList()) {
+                out.append(Files.readString(one)).append('\n');
+            }
+        }
+        return out.toString().replaceAll("\"\\s*\\+\\s*\\$?\"", "");
+    }
+
     private static final Path SPEC = Path.of("doc/SPEC.md");
 
     private static final Path REQ = Path.of("doc/requirements.md");
