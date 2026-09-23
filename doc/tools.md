@@ -282,12 +282,21 @@ release does not need a packer beside it either.
 
 ## The rigs
 
-`.github/workflows/test.yml` runs `mvn test` on a GitHub runner, with
+`.github/workflows/test.yml` runs `bin/suite` on a GitHub runner, with
 Go, the .NET SDK, rmac 2.4.3 and ST4's packer on it so that no check
 skips: the parity check of the three trees reads the first three, and
 `St4Test` reads the copy of the packer here against the real one. No
 push starts it: a caller starts it from the Actions tab or by `gh
 workflow run test.yml`. The rig below runs by hand as well.
+
+`bin/suite [maven argument ...]` runs that suite on the caller's machine.
+A skipped test is a check that did not run, so the script requires go and
+dotnet on the path, rmac on it or at `RMAC`, python3 with unicorn in it,
+and ST4's packer at `ST4`, exit 2 where one of them is absent, and reads
+the count of skipped tests off the run, exit 1 and the lines that report
+it where the count is above 0. `go.mod` requires one release of ST4, and
+the message names it: another release of that packer is another set of
+bytes.
 
 ```
 python3 68k/test/emu/test_dtx.py
