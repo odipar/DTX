@@ -287,7 +287,9 @@ Go, the .NET SDK, rmac 2.4.3 and ST4's packer on it so that no check
 skips: the parity check of the three trees reads the first three, and
 `St4Test` reads the copy of the packer here against the real one. No
 push starts it: a caller starts it from the Actions tab or by `gh
-workflow run test.yml`. The rig below runs by hand as well.
+workflow run test.yml`. `RigCallsTest` runs the rig below whole within
+that suite, about four minutes, with `ST4` left out of its environment
+so that it packs with the carried packer; it runs by hand as well.
 
 `bin/suite [maven argument ...]` runs that suite on the caller's machine.
 A skipped test is a check that did not run, so the script requires go and

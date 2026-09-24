@@ -29,6 +29,12 @@ import org.junit.jupiter.api.Test;
  * table of two rows. No emulator runs and no assembler, and it runs in
  * under a second. It catches a tool's interface moving under the rig, the fault
  * that broke it.
+ *
+ * <p>It also runs the rig whole: every variant and width against the
+ * 68000 reader, the round trip from the text to the 68000 and back, several
+ * tables in one image, copies at a small ring, and the cells of
+ * performance.md the rig counts. The whole run was left to a hand as
+ * minutes of emulation; it is about four of them.
  */
 final class RigCallsTest {
 
@@ -133,5 +139,30 @@ final class RigCallsTest {
                 StandardCharsets.UTF_8);
         assertTrue(ran.waitFor() == 0 && said.contains("the rig reaches the tools"),
                 () -> RIG + " does not reach the tools it runs:\n" + said);
+    }
+
+    /**
+     * The rig run whole, its every check. It packs with the copy of the
+     * packer in this tree: ST4 names a packer beside it for the rig to pack with,
+     * and St4Test reads ST4 too, so the run here leaves it out.
+     *
+     * <p>Skipped where python3, Unicorn or rmac is absent, which bin/suite
+     * requires.
+     */
+    @Test
+    void theRigPassesEveryCheckWhole() throws Exception {
+        Assumptions.assumeTrue(onThePath("python3", "-c", "import unicorn"),
+                "no unicorn for python3");
+        Assumptions.assumeTrue(onThePath(Rig.rmac(), "-v"), "no rmac at " + Rig.rmac());
+        ProcessBuilder build = new ProcessBuilder("python3", RIG.toString())
+                .directory(Rig.root().toFile())
+                .redirectErrorStream(true);
+        build.environment().remove("ST4");
+        Path out = Files.createTempFile("dtx-rig", ".txt");
+        Process ran = build.redirectOutput(out.toFile()).start();
+        int exit = ran.waitFor();
+        String said = Files.readString(out, StandardCharsets.UTF_8);
+        assertTrue(exit == 0 && said.contains("every check passed"),
+                () -> RIG + " fails a check:\n" + said);
     }
 }
