@@ -53,6 +53,25 @@ clauses changed for them.
 `TASK.md` cited SOURCES.md as though a run could read it; it reads that
 the file is outside a run now.
 
+**The second run**, the same day, against the kit with the clauses of the
+first in it and a second implementer. It produced all nineteen tables byte
+for byte; its notes had 4 entries marked *decides output*, three of them in
+ST4's document and one here.
+
+- SPEC.md 2.3 read `M` as `N` divided by `k`, where ST4's 2.1 has every
+  data set record `M` at byte 24, and no clause read which of the two a
+  reader runs on. The two are equal in the nine payloads of this kit. A
+  writer puts `N` divided by `k` in a data set's `M` now, and a reader of
+  copies reads `M` out of the data set.
+
+Three more changed in ST4's document: its 3.5 reads the left bit of a
+class pair first, its 3.4 reads that a literals block leaves the last
+offset as it is, and its 3.2.1 that a match longer than its offset copies
+unit by unit as the output grows. The reader built each competing reading
+and ran it over the 38 data sets: with the last offset reset at each
+literals block, every data set still unpacks to its length, and 183 of the
+256 bytes of each `dtx2-w4-k1` column differ.
+
 **The third run**, the same day, against the kit with the clauses of the
 first two in it and a third implementer. The reader was 423 lines and
 produced all nineteen tables byte for byte; its notes had 20 entries with
