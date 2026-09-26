@@ -25,7 +25,7 @@ same change (requirements.md, R0.6 to R0.9).
 | payload | What follows the header: a table's rows in bytes, and in DTX2 the `N`, `k`, the flags and the offsets that reach them. | SPEC.md 2 |
 | period | `P`, the rows between one column's refills in a packaged DTX2 reader. | abi.md 4 |
 | pointer | The address, in a ring or in a payload, of the row a packaged reader's cursor is on. | abi.md 3 |
-| `R` | The table's row count, of the rows in it. | terminology.md, tables, rows and columns |
+| `R` | The table's row count. | terminology.md, tables, rows and columns |
 | reader | What reads rows out of a table. | terminology.md, tables, rows and columns |
 | ring | The bytes of a column a reader has at a time, `N` of them, in place of the unpacked column. | SPEC.md 2.3 |
 | row | One step of a table: `C` values, with nothing in it about what any of them is for. | terminology.md, tables, rows and columns |

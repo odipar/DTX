@@ -2,7 +2,7 @@
 
 The machine's terms, and no second word for a thing that has one
 (requirements.md, R0.6 to R0.9). [glossary.md](glossary.md) lists every
-term this repository uses and names where each is explained.
+term this repository uses and where each is explained.
 
 ---
 
@@ -46,7 +46,7 @@ DTX2 column by column with each column packed.
 The three are for two things. DTX0 and DTX1 are for reading and writing
 plainly: the bytes are the rows, so a reader finds a value by arithmetic
 and reads it, and a writer puts a row down as it is. Row by row a whole
-row is one run of bytes; column by column a column's values sit together,
+row is one run of bytes; column by column a column's values lie together,
 so a reader reads one column and leaves the others unread.
 
 DTX1 pads for one thing more: a column begins on a word, so every value
@@ -62,16 +62,16 @@ next by adding it.
 
 DTX2 is for size. Packing a column costs the plainness: a reader no longer
 finds a value by arithmetic, and has a ring of `N` bytes on each column
-rather than the column itself. The ring does not grow as the table does.
-Packing is the table in fewer bytes, once the table has rows enough for
-the packing to cost less than it saves. A short one packs to more than it
-has, since what the packing costs does not grow with `R` (requirements.md,
+rather than the column itself. The ring stays one size as the table grows.
+Packing is the table in fewer bytes, once the table has rows enough for the
+packing to cost less than it saves. A short one packs to more than it has,
+since what the packing costs stays fixed as `R` grows (requirements.md,
 R5.7).
 
 ---
 
 ## What a column contains
 
-Nothing here. A column is `W` bytes wide and no more, and what its bytes
-are for belongs to the format built on this one that reads them. That
-format defines it in its repository.
+A column is `W` bytes wide and no more, and what its bytes are for belongs
+to the format built on this one that reads them, which defines it in its
+repository.
