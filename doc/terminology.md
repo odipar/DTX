@@ -47,10 +47,10 @@ The three are for two things. DTX0 and DTX1 are for reading and writing
 plainly: the bytes are the rows, so a reader finds a value by arithmetic
 and reads it, and a writer puts a row down as it is. Row by row a whole
 row is one run of bytes; column by column a column's values sit together,
-so a reader reads one column without touching the others.
+so a reader reads one column and leaves the others unread.
 
 DTX1 pads for one thing more: a column begins on a word, so every value
-stands where a 68000 reads it as one. That costs a byte a column at a
+is where a 68000 reads it as one. That costs a byte a column at a
 width of 1 and an odd `R`, and nothing at a width of 2 or 4, where a
 column is a whole number of words already. In DTX0 a row begins where the
 row before it ends, so at a width of 1 and an odd `C` a row falls on an

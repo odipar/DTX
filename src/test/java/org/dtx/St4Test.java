@@ -109,7 +109,7 @@ final class St4Test {
         // same one. The executable is run with -l65535, ST4_wrap's
         // assumption 4, and the carried packer passes the same figure, so
         // one set of bytes from the two covers the longest operation as
-        // well. Skipped where no executable stands beside this to check it
+        // well. Skipped where no executable is beside this to check it
         // to.
         Path beside = packer();
         for (int width : WIDTHS) {

@@ -35,7 +35,7 @@ final class ConsistencyTest {
      * Every line tools.md reports reads the same in the three trees: a
      * line reworded in one tree and the document, or in the document
      * alone, fails here. The letters a table writes for a figure, V or N
-     * or K, and the figures a tool builds a line from stand outside the
+     * or K, and the figures a tool builds a line from are outside the
      * comparison, and this reads the words around them.
      *
      * <p>The check came from YMXR, where a release moved a descriptor's
@@ -69,7 +69,7 @@ final class ConsistencyTest {
      *  short runs. */
     private static String longestRun(String said) {
         String longest = "";
-        // a letter a table writes for a figure stands alone: a capital
+        // a letter a table writes for a figure is a lone capital, one
         // with no letter after it and no capital before it
         for (String part : said.split("(?<![A-Z])[A-Z](?![A-Za-z])|\\bi\\b|\\b[0-9]+\\b")) {
             String one = part.strip();
@@ -288,7 +288,7 @@ final class ConsistencyTest {
      * SPEC.md's pictures against the example table the same section defines.
      * Every count a caption names is recomputed from `R`, `C` and the width,
      * so a caption reworded away from what its picture draws fails here
-     * rather than standing.
+     * rather than lasting.
      */
     @Test
     void everyPictureAddsUpToTheExampleItDraws() throws IOException {
@@ -484,7 +484,7 @@ final class ConsistencyTest {
     }
 
     /** The clauses one document defines: `**N.N**` and `## N.N`, a section
-     *  number standing for itself and for the clauses under it. */
+     *  number marking itself and the clauses under it. */
     private static Set<String> clausesOf(String said) {
         Set<String> out = new HashSet<>();
         Matcher m = Pattern.compile("(?m)^(?:\\*\\*|#+ )R?(\\d+(?:\\.\\d+)*)").matcher(said);

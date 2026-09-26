@@ -37,7 +37,7 @@ public static class Tools
     }
 
     /// <summary>
-    /// The whole number an argument stands for behind its two letter flag. An
+    /// The whole number an argument encodes behind its two letter flag. An
     /// argument with anything else behind the flag is one the tool does not
     /// read.
     /// </summary>
@@ -292,7 +292,7 @@ public static class Tools
                 + $" {header.Columns} columns, state block"
                 + $" {StateOf(file, header)} bytes");
         // A caller hands init the header of the table to read (abi.md 2), so
-        // the image says where each one stands.
+        // the image says where each one is.
         for (int i = 1; !defines && i < named.Count; i++)
         {
             Header its = Format.ReadHeader(files[i]);

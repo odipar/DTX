@@ -5,8 +5,8 @@ package org.dtx;
  * values in row order.
  *
  * <p>A column begins on a word, so under a width of 1 and an odd {@code R} a
- * zero byte stands between one column and the next (R4.3). Under a width of
- * 2 or 4 a column is a whole number of words already and nothing stands
+ * zero byte is between one column and the next (R4.3). Under a width of
+ * 2 or 4 a column is a whole number of words already and nothing is
  * between them. Every column is the same length, so they lie at one stride
  * and a reader steps from one to the next by adding it.
  */

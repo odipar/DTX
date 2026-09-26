@@ -116,7 +116,7 @@ func run(args []string, in io.Reader, out io.Writer) error {
 		named[0], header.Variant, len(image), len(file), header.Rows,
 		header.Columns, state)
 	// A caller hands init the header of the table to read (abi.md 2), so
-	// the image says where each one stands.
+	// the image says where each one is.
 	for i := 1; i < len(named); i++ {
 		its, err := dtx.ReadHeader(files[i])
 		if err != nil {

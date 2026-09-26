@@ -31,7 +31,7 @@ import org.dtx.style.Construct.Match;
  * @param carried fragments of a path that mark a file as carried from
  *     another repository
  * @param own ends of a path that mark a file as the tree's despite
- *     standing among carried ones
+ *     being among carried ones
  */
 public record HouseStyle(List<Construct> constructs, List<String> names,
         List<String> carried, List<String> own) {
@@ -143,10 +143,10 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
     /**
      * The hits in one run of lines that begins at line {@code first} of
      * {@code file}. The lines are read joined, since a phrase broken by a
-     * line wrap stands in neither of its lines, and a hit is reported at the
+     * line wrap is in neither of its lines, and a hit is reported at the
      * line the matched text begins on. A line joins without its indent and
      * without the marks a comment writes in front of it, or those would
-     * stand inside the phrase a wrap broke. The code spans are blanked once
+     * are inside the phrase a wrap broke. The code spans are blanked once
      * the lines are joined, so a span a wrap breaks is blanked whole.
      */
     public List<Hit> hits(Path file, int first, List<String> lines) {
@@ -197,7 +197,7 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
      * <p>A span opens and closes over the run rather than the line: a
      * message as wide as the document wraps, and the half on each line is
      * quoted as much as a message that fits one line. Blanking needs the
-     * pair, so where one mark stands alone in the run the words after it
+     * pair, so where one mark is alone in the run the words after it
      * are read.
      */
     private static String quoted(String line) {
@@ -233,7 +233,7 @@ public record HouseStyle(List<Construct> constructs, List<String> names,
      * <p>A fenced block is quoted material, as a code span is: a command, a
      * file, a run of output. Its words are those of what it quotes rather
      * than this tree's, so the check reads past the block and the two
-     * fences around it. A script a document quotes stands in the tree as
+     * fences around it. A script a document quotes is in the tree as
      * well, and is read there, under {@code sources}.
      *
      * <p>An indent reads two ways, and where it falls decides which. An

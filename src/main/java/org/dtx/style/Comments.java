@@ -9,7 +9,7 @@ import java.util.List;
  * with.
  *
  * <p>A mark inside a string is not a comment, so the scan tracks what it
- * stands in: a URL in a literal does not open a comment, and a struck word
+ * is in: a URL in a literal does not open a comment, and a struck word
  * in one is not read. Java, Go and C# write {@code //} and {@code /* *}{@code /};
  * an assembler source writes {@code ;}; Python and a shell script write
  * {@code #}, and Python's triple-quoted docstrings are read as comments too.

@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>Every table in the kit is written here, from the text and options
  * SOURCES.md defines, and compared byte for byte with the file in the tree;
- * beside each table stands the rows in it, as DTX0 lays them out, and a
+ * beside each table is the rows in it, as DTX0 lays them out, and a
  * reader of it reads those back. A table the tree does not have yet is
  * written, and SOURCES.generated.md beside the kit lists what SOURCES.md
  * then has to say.
@@ -44,7 +44,7 @@ class ConformanceTest {
             new Source("dtx0-repeat", Rig.numbers(8, 2, 251), 0, 1, 3, 1, 960, false,
                     "DTX0: a table that repeats at row 3"),
             new Source("dtx1-w1-odd-rows", Rig.numbers(7, 3, 251), 1, 1, null, 1, 960, false,
-                    "DTX1 at a width of 1 and an odd R, so a pad byte stands between columns"),
+                    "DTX1 at a width of 1 and an odd R, so a pad byte is between columns"),
             new Source("dtx1-w2", Rig.numbers(8, 3, 251), 1, 2, null, 1, 960, false,
                     "DTX1 at a width of 2, where a column is a whole number of words"),
             new Source("dtx1-w4", Rig.numbers(6, 3, 251), 1, 4, null, 1, 960, false,

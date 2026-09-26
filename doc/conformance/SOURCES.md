@@ -12,7 +12,7 @@ rows of two columns where row `r` is `r` modulo 37 and seven times that,
 so a pattern 37 rows long repeats, further back than a ring of 64 bytes
 reaches.
 
-Beside every `NAME.dtx` stands `NAME.rows`: the rows in the table, as DTX0
+Beside every `NAME.dtx` is `NAME.rows`: the rows in the table, as DTX0
 lays them out, with nothing between the values. A reader of the table
 reads that file back (TASK.md).
 
@@ -23,7 +23,7 @@ reads that file back (TASK.md).
 | `dtx0-w4` | numbers 6 3 | `-v0 -w4` | 88 | b00e5ace6866c63d | DTX0 at a width of 4 |
 | `dtx0-one-column` | numbers 5 1 | `-v0 -w1` | 21 | ec7aec710189936c | DTX0: one column, one byte, five rows |
 | `dtx0-repeat` | numbers 8 2 | `-v0 -w1 -r3` | 32 | 6965f829b5459d2a | DTX0: a table that repeats at row 3 |
-| `dtx1-w1-odd-rows` | numbers 7 3 | `-v1 -w1` | 39 | e7977b28533dcb4d | DTX1 at a width of 1 and an odd R, so a pad byte stands between columns |
+| `dtx1-w1-odd-rows` | numbers 7 3 | `-v1 -w1` | 39 | e7977b28533dcb4d | DTX1 at a width of 1 and an odd R, so a pad byte is between columns |
 | `dtx1-w2` | numbers 8 3 | `-v1 -w2` | 64 | 98f9da272a4e65cb | DTX1 at a width of 2, where a column is a whole number of words |
 | `dtx1-w4` | numbers 6 3 | `-v1 -w4` | 88 | 793f8d82d9ac7b53 | DTX1 at a width of 4 |
 | `dtx1-one-row` | numbers 1 2 | `-v1 -w4` | 24 | 980824999c012be3 | DTX1: one row, R of 1 |

@@ -52,7 +52,7 @@ final class PlainVariantTest {
     void aColumnBeginsOnAWord() {
         // At a width of 2 or 4 a column is a whole number of words already,
         // so DTX1 is the same length as DTX0 (R4.3). At a width of 1 and an
-        // odd R one zero byte stands between one column and the next.
+        // odd R one zero byte is between one column and the next.
         assertEquals(0, Dtx1.write(Example.table()).length
                 - Dtx0.write(Example.table()).length);
         Table odd = Table.of(3, 3, 1, new byte[][] {

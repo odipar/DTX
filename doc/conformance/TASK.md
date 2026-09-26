@@ -17,7 +17,7 @@ Compare your reader's `RR` with the header's instead.
 
 ## The tables
 
-SOURCES.md lists them, and stands outside a run against this kit, since the
+SOURCES.md lists them, and is outside a run against this kit, since the
 text a table was written from has the table's rows in it. Each table is
 complete: the header, and the payload of its variant. A DTX2 table's data
 sets are ST4 version 7 (SPEC.md 2.3), packed with the copy of ST4 in this

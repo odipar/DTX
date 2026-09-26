@@ -46,7 +46,7 @@ public static class Images
     }
 
     /// <summary>
-    /// The file one build stands in. A variant assembles to one code any
+    /// The file one build is in. A variant assembles to one code any
     /// table that follows it, and under DTX2 to one a build of the decoder
     /// built into it: the unit it decodes at, with the copy code and
     /// without.

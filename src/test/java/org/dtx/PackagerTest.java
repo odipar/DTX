@@ -57,7 +57,7 @@ final class PackagerTest {
 
     @Test
     void theFiguresDoNotContainAnInstruction() {
-        // The templates under 68k/ are where every instruction stands. What
+        // The templates under 68k/ are where every instruction is. What
         // the packager writes is equates, and a move or a bra in it would be
         // an instruction the template does not contain.
         for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1}) {
@@ -180,7 +180,7 @@ final class PackagerTest {
                 set[2] = 7;
                 set[3] = (byte) k;
                 // Three offsets apart, so a record that carried B where C
-                // stands fails rather than passing on equal values.
+                // belongs fails rather than passing on equal values.
                 Dtx.putLong(set, 8, 28 + bytes.length / 4);
                 Dtx.putLong(set, 12, 28 + bytes.length / 2);
                 Dtx.putLong(set, 16, 28 + bytes.length);
@@ -268,7 +268,7 @@ final class PackagerTest {
         // While a column had a separate width, a read reached a column by
         // a displacement off its class base, and 40 columns at a ring of 960
         // reached past the 32767 a 68000 displacement runs to. One width for
-        // the table ended that rule: a column's ring stands its number
+        // the table ended that rule: a column's ring is its number
         // times N from the first, so C of 40 packages.
         byte[] file = packed(64, 40, 1, 1, 960);
         Dtx.Header header = Dtx.header(file);
@@ -378,7 +378,7 @@ final class PackagerTest {
         int header = Dtx.getLong(image, 24);
         assertEquals("DTX", new String(image, header, 3),
                 "the header the format block points at");
-        // The width byte stands beside the unit at +19 of the block, so at
+        // The width byte is beside the unit at +19 of the block, so at
         // 35 of the image: the format defines the place, and reading it
         // there checks the packager against the format.
         assertEquals(0, image[35],

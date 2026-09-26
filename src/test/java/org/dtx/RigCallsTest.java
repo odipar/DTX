@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>The rig runs the reader under emulation over every variant and every
  * width, and the misaligned access it watches for proves that a word or a
- * long never stands at an odd address. It costs minutes, so no build runs
+ * long is never at an odd address. It costs minutes, so no build runs
  * it; that left its calls unread, and when the two tools became filters
  * (tools.md) the rig went on naming files and stopped at its first table.
  * The check was in the rig and the rig was not run.

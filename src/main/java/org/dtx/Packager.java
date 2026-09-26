@@ -29,7 +29,7 @@ public final class Packager {
     static final int PARK = 4;
     static final int POINTER = 8;
 
-    /** Where the format block stands: behind the four slots. */
+    /** Where the format block is: behind the four slots. */
     static final int FORMAT_AT = 16;
 
     /** What the format block runs to, so where the bodies begin. */
@@ -46,7 +46,7 @@ public final class Packager {
     static final int COLUMNS_AT = 20;
     static final int STRIDE_AT = 24;
 
-    /** Where the carried code stands on the classpath. */
+    /** Where the carried code is on the classpath. */
     private static final String CARRIED = "/org/dtx/68k/";
 
     /** What one stream record runs to, one a column under DTX2. */
@@ -181,7 +181,7 @@ public final class Packager {
 
     /**
      * The stride from one column's value to the next, in the row an advance
-     * points at: the width under DTX0, where a row's values stand one after
+     * points at: the width under DTX0, where a row's values are one after
      * another; the length of a column under DTX1, where the columns lie at
      * one stride; and {@code N} under DTX2, where every column has a ring of
      * that size. {@code DTX_metadata} reports it, out of the format block.
@@ -194,12 +194,12 @@ public final class Packager {
         };
     }
 
-    /** Where the decoder states stand in the state block, doc/abi.md 3. */
+    /** Where the decoder states are in the state block, doc/abi.md 3. */
     static int decoders() {
         return PACKED_HEAD;
     }
 
-    /** Where the rings stand in the state block: behind a decoder state a turn. */
+    /** Where the rings are in the state block: behind a decoder state a turn. */
     static int ring(Dtx.Header header, Packed packed) {
         return decoders() + STATE * period(header, packed);
     }
@@ -258,7 +258,7 @@ public final class Packager {
                 .append(equ("DTX_POINTER", POINTER));
         if (variant != Dtx.DTX2) {
             // Nothing parks a6 under the plain variants, so the payload
-            // init was seeded on stands in that long instead, which a jump
+            // init was seeded on is in that long instead, which a jump
             // reaches (abi.md 3). Under DTX2 the template names it.
             out.append(equ("DTX_PAYLOAD", PARK));
         }
@@ -297,7 +297,7 @@ public final class Packager {
      * <p>A record marks where the column's four ST4 streams begin, from the
      * payload. Its ring and its decoder state are strides rather than
      * fields: every ring is {@code N} bytes and every decoder state 32, so
-     * column {@code i}'s stand {@code i} strides past column 0's.
+     * column {@code i}'s are {@code i} strides past column 0's.
      */
     static byte[] columnTable(byte[] file) {
         Dtx.Header header = Dtx.header(file);
@@ -324,7 +324,7 @@ public final class Packager {
         return out;
     }
 
-    /** Where the templates and the carried decoder stand. */
+    /** Where the templates and the carried decoder are. */
     static String carried() {
         String named = System.getenv("DTX_68K");
         return named == null ? "68k" : named;
@@ -337,7 +337,7 @@ public final class Packager {
     }
 
     /**
-     * The file the code for one build stands in. A build assembles to one
+     * The file the code for one build is in. A build assembles to one
      * code for any table it reads: DTX0 one, DTX1 one a width, DTX2 one a
      * width, a unit and the copy code or not.
      */
@@ -379,7 +379,7 @@ public final class Packager {
      * The six fields a combine writes, zeroed.
      *
      * <p>Carried code does not define a table. The assembler read one to build
-     * it, and what it read stands in the format block: zeroing those six
+     * it, and what it read is in the format block: zeroing those six
      * makes the file a function of the template alone, and makes code shipped
      * without a combine read a state block of zero bytes rather than some
      * other table's.
@@ -448,7 +448,7 @@ public final class Packager {
         }
     }
 
-    /** An image and where each of its tables' headers stands in it, from
+    /** An image and where each of its tables' headers is in it, from
      *  the image's first byte: what a caller hands {@code DTX_init} in
      *  a1, one a table, in the order the tables were named. */
     public record Packaged(byte[] image, int[] headers) {
@@ -517,7 +517,7 @@ public final class Packager {
                     + header.width());
         }
         int rowBytes = header.rowBytes();
-        // Each table's column table stands immediately before it, and the
+        // Each table's column table is immediately before it, and the
         // pair begins on a long: init reaches the records at the header
         // less 16C, and SPEC.md 1 requires a header on a long of a
         // table's bytes.
@@ -551,7 +551,7 @@ public final class Packager {
                     files.get(i).length);
         }
         Dtx.putLong(image, FORMAT_AT + STATE_BYTES, state);
-        // The first table stands behind both, and only the packager has
+        // The first table is behind both, and only the packager has
         // the figure: the column table's size moves with C, so the
         // assembler could not have worked it out.
         Dtx.putLong(image, FORMAT_AT + TABLE_AT, headers[0]);
@@ -609,7 +609,7 @@ public final class Packager {
     /**
      * The same, of one table or several: the code every one of them needs,
      * then a column table and a table's bytes for each, in the order named.
-     * What comes back names where each table's header stands, the address
+     * What comes back names where each table's header is, the address
      * a caller hands {@code DTX_init} (doc/abi.md 2).
      *
      * <p>The first file names the code, and every other meets it: an image
@@ -722,7 +722,7 @@ public final class Packager {
                         : rmac == null ? "image" : "image assembled",
                 bytes, file.length, header.rows(), header.columns(), state);
         // A caller hands init the header of the table to read (abi.md 2),
-        // so the image says where each one stands.
+        // so the image says where each one is.
         for (int i = 1; !defines && i < named.size(); i++) {
             byte[] next = files.get(i);
             Dtx.Header its = Dtx.header(next);

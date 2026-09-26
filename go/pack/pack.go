@@ -25,7 +25,7 @@ const (
 	Pointer = 8
 )
 
-// The format block: what it runs to, where it stands behind the four slots,
+// The format block: what it runs to, where it is behind the four slots,
 // and its fields.
 const (
 	Format     = 28
@@ -71,13 +71,13 @@ func ReadPacked(file []byte, header dtx.Header) (Packed, error) {
 	return dtx.ReadPacked(file, header)
 }
 
-// Decoders returns where the decoder states stand in the state block,
+// Decoders returns where the decoder states are in the state block,
 // doc/abi.md 3.
 func Decoders() int {
 	return PackedHead
 }
 
-// Ring returns where the rings stand in the state block: behind a decoder
+// Ring returns where the rings are in the state block: behind a decoder
 // state a turn.
 func Ring(header dtx.Header, given Packed) (int, error) {
 	period, err := Period(header, given)
@@ -111,7 +111,7 @@ func PackedStateBytes(header dtx.Header, given Packed) (int, error) {
 }
 
 // Stride returns the stride from one column's value to the next, in the row an
-// advance points at: the width under DTX0, where a row's values stand one
+// advance points at: the width under DTX0, where a row's values are one
 // after another; a column's length under DTX1, R times the width up to a
 // word; and N under DTX2, where every column has a ring of that size.
 // DTX_metadata reports it, out of the format block.
@@ -203,7 +203,7 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 }
 
 // CombineMany returns the image of one table or several, and where each
-// table's header stands in it: the code once, then a column table and a
+// table's header is in it: the code once, then a column table and a
 // table's bytes for each, every pair on a long. What comes back names the
 // address a caller hands DTX_init (doc/abi.md 2).
 //
@@ -269,7 +269,7 @@ func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int,
 			return nil, nil, err
 		}
 	}
-	// Each table's column table stands immediately before it, and the pair
+	// Each table's column table is immediately before it, and the pair
 	// begins on a long: init reaches the records at the header less 16C,
 	// and SPEC.md 1 requires a header on a long of a table's bytes.
 	// The code ends on a long and a column table is a multiple of 16, so
@@ -312,7 +312,7 @@ func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int,
 		out = append(out, next...)
 	}
 	dtx.PutLong(out, FormatAt+StateAt, state)
-	// The first table stands behind both, and only the packager has the
+	// The first table is behind both, and only the packager has the
 	// figure: the column table's size moves with C, so the assembler could
 	// not have worked it out.
 	dtx.PutLong(out, FormatAt+TableAt, at[0])
@@ -386,7 +386,7 @@ func Image(file []byte) ([]byte, error) {
 }
 
 // Images returns the image of one table or several, and where each table's
-// header stands in it. The first file names the code and every other meets
+// header is in it. The first file names the code and every other meets
 // it: an image defines the variant, the width, the unit and, under DTX2, the
 // period and the ring once.
 func Images(files [][]byte) ([]byte, []int, error) {
@@ -461,7 +461,7 @@ func Figures(file []byte) (string, error) {
 	out.WriteString(equ("DTX_POINTER", Pointer))
 	if variant != dtx.DTX2 {
 		// Nothing parks a6 under the plain variants, so the payload
-		// init was seeded on stands in that long instead, which a jump
+		// init was seeded on is in that long instead, which a jump
 		// reaches (abi.md 3). Under DTX2 the template names it.
 		out.WriteString(equ("DTX_PAYLOAD", Park))
 	}
@@ -493,7 +493,7 @@ func Figures(file []byte) (string, error) {
 	return out.String(), nil
 }
 
-// Templates returns where the templates and the carried decoder stand.
+// Templates returns where the templates and the carried decoder are.
 func Templates() string {
 	if named := os.Getenv("DTX_68K"); named != "" {
 		return named
@@ -504,7 +504,7 @@ func Templates() string {
 // Code returns rmac's assembly of the variant's template for this table, the
 // code alone. This is the one step an assembler is needed for.
 //
-// templates is where 68k/ stands. A tool run from outside this repository
+// templates is where 68k/ is. A tool run from outside this repository
 // does not have a directory to resolve a relative one against, so the
 // caller names it rather than reading Templates.
 func Code(file []byte, rmac, templates string) ([]byte, error) {
@@ -548,7 +548,7 @@ func Code(file []byte, rmac, templates string) ([]byte, error) {
 // Blank zeroes the six fields a combine writes.
 //
 // Built code does not define a table. The assembler read one to build it, and
-// what it read stands in the format block: zeroing those six makes the file
+// what it read is in the format block: zeroing those six makes the file
 // a function of the template alone, and makes code shipped without a combine
 // read a state block of zero bytes rather than some other table's.
 func Blank(code []byte) {

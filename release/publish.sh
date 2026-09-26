@@ -87,7 +87,7 @@ for target in $TARGETS; do
 done
 
 # The images for a caller who packages without a tool, named by release so
-# two of them do not stand in one directory unlabelled, and packed in one
+# two of them never share one directory unlabelled, and packed in one
 # zip so they are one download.
 for image in "$OUT"/release/*.bin; do
     mv "$image" "${image%.bin}-v$VERSION.bin"

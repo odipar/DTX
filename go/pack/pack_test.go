@@ -62,7 +62,7 @@ func sets(rows, repeat, columns, width, unit, ring int, copies bool,
 		set[0], set[1], set[2] = 'S', '4', 7
 		set[3] = byte(unit)
 		dtx.PutLong(set, 4, bytes/unit)
-		// Three offsets apart, so a record that carried B where C stands
+		// Three offsets apart, so a record that carried B where C is
 		// fails rather than passing on equal values.
 		dtx.PutLong(set, 8, 28+bytes/4)
 		dtx.PutLong(set, 12, 28+bytes/2)
@@ -108,12 +108,12 @@ func TestTheFormatBlockDefinesWhatTheTableFixes(t *testing.T) {
 		if got := dtx.GetWord(out, FormatAt+RowBytesAt); got != one.row {
 			t.Fatalf("%s: the row's bytes are %d, not %d", one.name, got, one.row)
 		}
-		// The table stands where the block puts it, and defines the same variant.
+		// The table is where the block puts it, and defines the same variant.
 		at := dtx.GetLong(out, FormatAt+TableAt)
 		if string(out[at:at+3]) != "DTX" || int(out[at+3]) != one.variant {
 			t.Fatalf("%s: no header at %d", one.name, at)
 		}
-		// The column table stands between the code and the table, and a
+		// The column table is between the code and the table, and a
 		// plain variant does not have one: its two offsets then meet.
 		columns := dtx.GetLong(out, FormatAt+ColumnsAt)
 		if columns > at {
@@ -144,10 +144,10 @@ func TestTheStrideReachesTheNextColumnsValue(t *testing.T) {
 		stride int
 	}{
 		// DTX0 lays a row's values one after another, so the next column's
-		// value stands one width on.
+		// value is one width on.
 		{"DTX0 strides by the width", plain(dtx.DTX0, 64, 3, 2), 2},
 		{"DTX0 at a width of 4", plain(dtx.DTX0, 64, 3, 4), 4},
-		// DTX1 lays a column's values together, so the next column stands a
+		// DTX1 lays a column's values together, so the next column is a
 		// column's length on: R times the width, up to a word.
 		{"DTX1 strides by a column's length", plain(dtx.DTX1, 64, 3, 2), 128},
 		{"DTX1 at an odd R of one byte values", plain(dtx.DTX1, 3, 3, 1), 4},
@@ -382,7 +382,7 @@ func TestThePeriodIsTheSmallestThatMeetsEveryRule(t *testing.T) {
 		// needs the first period above C that does: 960 by 7 leaves 1.
 		{"the first period above C of 7 that divides N",
 			packed(64, 7, 1, 1, 960), 8},
-		// A column's ring stands its number times N from the first, so
+		// A column's ring is its number times N from the first, so
 		// no displacement bounds C: forty columns package.
 		{"P is C at forty columns", packed(64, 40, 1, 1, 960), 40},
 	} {

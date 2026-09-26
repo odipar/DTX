@@ -60,7 +60,7 @@ func TestAPlainVariantWritesWhatItReads(t *testing.T) {
 }
 
 // A DTX1 column begins on a word, so at a width of 1 and an odd R a zero
-// byte stands between one column and the next (R4.3). At a width of 2 or 4
+// byte is between one column and the next (R4.3). At a width of 2 or 4
 // a column is a whole number of words already, and DTX1 runs to what DTX0
 // runs to.
 func TestAColumnBeginsOnAWord(t *testing.T) {
@@ -119,7 +119,7 @@ func TestTheBoundsAreChecked(t *testing.T) {
 	}
 }
 
-// A packer that stands in for ST4: a twenty-eight byte header and the column
+// A packer that replaces ST4: a twenty-eight byte header and the column
 // behind it. What it packs to does not matter to DTX2's layout, only where
 // the payload puts it.
 type standin struct{}
@@ -176,7 +176,7 @@ func TestThePayloadDefinesTheRingAndTheUnitOnceAndThenAnOffsetAColumn(
 }
 
 // R5.9: every data set begins on a long, and the pad to it is zero. Column 0
-// packs to 34 bytes from offset 16, so two bytes stand before the next.
+// packs to 34 bytes from offset 16, so two bytes are before the next.
 func TestEveryDataSetBeginsOnALongAndThePadBetweenIsZero(t *testing.T) {
 	file, err := WriteDtx2(table(t, 3, 3, 2), standin{}, 1, 960)
 	if err != nil {

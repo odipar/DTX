@@ -16,7 +16,7 @@
 ; the table behind them differs.
 ;
 ; That costs a read-only image. The code writes to itself at init, so it
-; stands in RAM rather than ROM, and a 68030 caller flushes the instruction
+; is in RAM rather than ROM, and a 68030 caller flushes the instruction
 ; cache after DTX_init. A 68000 writes to its code freely.
 ;
 ; DTX0 lays the rows one after another, so one pointer walks them and a read is
@@ -63,7 +63,7 @@
 ;
 ; The row's bytes come out of the table's header and not out of the
 ; format block, which records the first table's: an image contains several
-; tables, and the figure below stands in three instructions, so it is this
+; tables, and the figure below is in three instructions, so it is this
 ; table's or the reads are another's.
 
 DTX_init:
@@ -74,7 +74,7 @@ DTX_init:
         moveq   #0,d2
         move.w  8(a2),d2                ; C
         moveq   #0,d3
-        move.b  14(a2),d3               ; W, the bytes a value stands in
+        move.b  14(a2),d3               ; W, a value's width in bytes
         mulu.w  d3,d2                   ; the row's bytes
 
 ; The row's bytes, into the step and into the two mulu a jump runs. A row
@@ -113,7 +113,7 @@ jump_low:
 
 ; -----------------------------------------------------------------------------
 ; DTX_advance. One row on: a1 comes back the row's first value, and the
-; values of a DTX0 row stand one after another, so the caller reads column i
+; values of a DTX0 row are one after another, so the caller reads column i
 ; at i widths from it. Which row that is the caller counts (abi.md 2): no
 ; call keeps a row number, and an advance past row R minus one reads past
 ; the table.

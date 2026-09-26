@@ -23,7 +23,7 @@ of the same shapes under emulation in `68k/test/emu/test_dtx.py`.
 
 An implementer reads SPEC.md, requirements.md and TASK.md, and ST4's
 SPEC.md for the packed payloads, writes a reader from those alone, and
-produces the rows of every table. The `.rows` files and SOURCES.md stand
+produces the rows of every table. The `.rows` files and SOURCES.md are
 outside the run, since either has the rows of a table in it. A run passes
 where every table's bytes equal the kit's and every reading the notes
 record is one the documents decide.
@@ -39,8 +39,8 @@ clauses changed for them.
   offset before a block sets one. It is 1 unit, and 22 columns of this kit
   open on a block that reads it: ST4 names it now.
 - ST4's 3.8 reads that a block is an even number of bits, where the first
-  block stands without a flag and is odd; 2.3 runs each stream to the next,
-  where stream D stands last; and 3.5 left the order a block reads its
+  block is without a flag and is odd; 2.3 runs each stream to the next,
+  where stream D is last; and 3.5 left the order a block reads its
   offset stream in.
 - SPEC.md 2.3 read that "nothing in an ST4 data set defines which kind it
   is", where a copy is an offset above `M` (ST4, SPEC.md 4.4): what the
@@ -52,7 +52,7 @@ clauses changed for them.
   off the payload's length.
 
 `TASK.md` cited SOURCES.md as though a run could read it; it reads that
-the file stands outside a run now.
+the file is outside a run now.
 
 **The third run**, the same day, against the kit with the clauses of the
 first two in it and a third implementer. The reader was 423 lines and
@@ -70,6 +70,6 @@ produced all nineteen tables byte for byte; its notes had 20 entries with
 
 Three more changed in ST4's document, which the same reader read for the
 payloads: its 3.1 lists three kinds of block and its 3.4 three cases of
-the flag, a copy standing among neither, so a reader reads a copy as a
+the flag, a copy among neither, so a reader reads a copy as a
 match block, which governs every byte of `dtx2-copies` after its second
 block.

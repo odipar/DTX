@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
  * <p>Under DTX2 the decoder is built for one unit and for copies or not, so
  * k and copies may move the code and R, C and RR may not: those are grouped.
  *
- * <p>Skipped where no rmac stands on the path or at {@code $RMAC}.
+ * <p>Skipped where no rmac is on the path or at {@code $RMAC}.
  */
 class StabilityTest {
 
@@ -64,7 +64,7 @@ class StabilityTest {
 
     /**
      * The instructions alone: rmac's assembly of the template for this
-     * table, with the four slots, the format block and what stands behind the
+     * table, with the four slots, the format block and what is behind the
      * code dropped.
      *
      * <p>The packager's other path combines code the build already made, and

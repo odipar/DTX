@@ -28,7 +28,7 @@ func TestContainsEveryImageOrNone(t *testing.T) {
 			t.Fatalf("%s is %d bytes, too few for a format block",
 				build.Name(), len(bytes))
 		}
-		// doc/abi.md 1: the format block stands at +16, behind the four
+		// doc/abi.md 1: the format block is at +16, behind the four
 		// slots, and opens with the variant this image reads.
 		if string(bytes[16:19]) != "DTX" || int(bytes[19]) != build.Variant {
 			t.Fatalf("%s opens %q at +16, not DTX%d",

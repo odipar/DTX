@@ -20,7 +20,7 @@ public static class Pack
     public const int Park = 4;
     public const int Pointer = 8;
 
-    /// <summary>The format block: where it stands, behind the four slots;
+    /// <summary>The format block: where it is, behind the four slots;
     /// what it runs to, so where the bodies begin; and its fields.</summary>
     public const int FormatAt = 16;
     public const int FormatSize = 28;
@@ -98,10 +98,10 @@ public static class Pack
                 (file[payload + 3] & Format.CopiesFlag) != 0, replayed, at);
     }
 
-    /// <summary>Where the decoder states stand in the state block, doc/abi.md 3.</summary>
+    /// <summary>Where the decoder states are in the state block, doc/abi.md 3.</summary>
     public static int Decoders() => PackedHead;
 
-    /// <summary>Where the rings stand in the state block: behind a decoder
+    /// <summary>Where the rings are in the state block: behind a decoder
     /// state a turn.</summary>
     public static int Ring(Header header, Packed given) =>
             Decoders() + State * Period(header, given);
@@ -125,7 +125,7 @@ public static class Pack
 
     /// <summary>
     /// The stride from one column's value to the next, in the row an advance
-    /// points at: the width under DTX0, where a row's values stand one after
+    /// points at: the width under DTX0, where a row's values are one after
     /// another; the length of a column under DTX1, where the columns lie at
     /// one stride; and N under DTX2, where every column has a ring of that
     /// size. DTX_metadata reports it, out of the format block.
@@ -191,7 +191,7 @@ public static class Pack
     /// <para>A record marks where the column's four ST4 streams begin, from
     /// the payload. Its ring and its decoder state are strides rather than
     /// fields: every ring is N bytes and every decoder state 32, so column
-    /// i's stand i strides past column 0's.</para>
+    /// i's are i strides past column 0's.</para>
     /// </summary>
     public static byte[] ColumnTable(byte[] file, Header header)
     {
@@ -235,7 +235,7 @@ public static class Pack
     /// <summary>
     /// The same, of one table or several: the code once, then a column
     /// table and a table's bytes for each. <paramref name="headers"/> comes
-    /// back naming where each table's header stands, the address a caller
+    /// back naming where each table's header is, the address a caller
     /// hands DTX_init (doc/abi.md 2).
     /// </summary>
     public static byte[] Combine(byte[] code, List<byte[]> files, Header header,
@@ -286,7 +286,7 @@ public static class Pack
                     + $" {code[FormatAt + WidthAt]} bytes and the table's are"
                     + $" {header.Width}");
         }
-        // Each table's column table stands immediately before it, and the
+        // Each table's column table is immediately before it, and the
         // pair begins on a long: init reaches the records at the header
         // less 16C. The code ends on a long and a column table is a
         // multiple of 16, so the first pair lands on a long without
@@ -317,7 +317,7 @@ public static class Pack
         }
         byte[] out_ = body.ToArray();
         Format.PutLong(out_, FormatAt + StateAt, state);
-        // The first table stands behind both, and only the packager has
+        // The first table is behind both, and only the packager has
         // the figure: the column table's size moves with C, so the
         // assembler could not have worked it out.
         Format.PutLong(out_, FormatAt + TableAt, headers[0]);
@@ -441,7 +441,7 @@ public static class Pack
         if (variant != Format.Dtx2)
         {
             // Nothing parks a6 under the plain variants, so the payload
-            // init was seeded on stands in that long instead, which a jump
+            // init was seeded on is in that long instead, which a jump
             // reaches (abi.md 3). Under DTX2 the template names it.
             out_.Append(Equ("DTX_PAYLOAD", Park));
         }
@@ -477,7 +477,7 @@ public static class Pack
         return out_.ToString();
     }
 
-    /// <summary>Where the templates and the carried decoder stand.</summary>
+    /// <summary>Where the templates and the carried decoder are.</summary>
     public static string Templates()
     {
         string? named = Environment.GetEnvironmentVariable("DTX_68K");
@@ -533,7 +533,7 @@ public static class Pack
     /// The six fields a combine writes, zeroed.
     ///
     /// <para>Built code does not define a table. The assembler read one to
-    /// build it, and what it read stands in the format block: zeroing those
+    /// build it, and what it read is in the format block: zeroing those
     /// six makes the file a function of the template alone, and makes code
     /// shipped without a combine read a state block of zero bytes rather
     /// than some other table's.</para>

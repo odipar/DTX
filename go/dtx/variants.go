@@ -11,7 +11,7 @@ import (
 //
 // A value falls where the width puts it, so under a width of 1 a row can
 // begin on an odd offset and a reader reads it as bytes (R3.4). Under a
-// width of 2 or 4 every value stands on its boundary.
+// width of 2 or 4 every value is on its boundary.
 func WriteDtx0(t *Table) []byte {
 	head := t.Header(DTX0)
 	width := t.Width()
@@ -70,8 +70,8 @@ func PayloadLengthDtx1(rows, columns, width int) int {
 // order.
 //
 // A column begins on a word, so under a width of 1 and an odd R a zero byte
-// stands between one column and the next (R4.3). Under a width of 2 or 4 a
-// column is a whole number of words already and nothing stands between
+// is between one column and the next (R4.3). Under a width of 2 or 4 a
+// column is a whole number of words already and nothing is between
 // them. Every column is the same length, so they lie at one stride and a
 // reader steps from one to the next by adding it.
 func WriteDtx1(t *Table) []byte {
