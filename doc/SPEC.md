@@ -23,8 +23,7 @@ by 2, and on a long where it divides by 4.
 | 15 | 1 | zero, so the payload begins on a long |
 
 `RR` names a row, so 0 to `R` minus one. `RR` equal to `R` marks a table
-that does not repeat, and a reader that reaches the last row does not have
-a next one.
+that does not repeat, and a reader of such a table stops at its last row.
 
 One width for the table and not one a column (R6.3). Every value is
 `W` bytes, so a row is `C` times `W`, a column is `R` times `W`, and a
@@ -32,11 +31,11 @@ reader works both out without reading a width a column.
 
 The header is 16 bytes under every variant and every `C`, and the payload
 begins on a long. A long and not a word, because DTX2's data sets begin on
-longs (2.3); DTX0 and DTX1 do not need more than a word, and follow the same
+longs (2.3); DTX0 and DTX1 need a word at most, and follow the same
 rule so that a header is one shape under every variant.
 
-A reader reads the variant from byte 3 and does not read further where it
-does not read that variant (R2.3).
+A reader reads the variant from byte 3, and stops there for a variant it
+was not built for (R2.3).
 
 A table of `R` = 3 rows and `C` = 3 columns of two byte values has this
 header, and the pictures below lay out that same table:
@@ -48,7 +47,6 @@ header, and the pictures below lay out that same table:
   +-----+---+-------+-----+---------+---+---+
      3    1     4      2       4      W  pad
 ```
-
 
 ---
 
@@ -102,8 +100,8 @@ zero byte is between them. Its row `n` is `n` times `W` further on.
 Every column is the same length, so they lie at one stride: `R` times `W`,
 up to a word. Column `i` begins at `i` strides, and a reader steps from one
 column of a row to the next by adding one (R4.2). The payload is `C` minus
-one strides and the last column's `R` times `W` bytes, the padding
-between one column and the next.
+one strides and the last column's `R` times `W` bytes, the padding between
+one column and the next inside the strides.
 
 DTX1 has that padding over DTX0 (R4.3). It costs a byte between one column
 and the next at a width of 1 and an odd `R`, and nothing at a width of 2 or
@@ -148,7 +146,7 @@ sets are:
 
 A writer puts `N` divided by `k` in a data set's `M` (ST4, SPEC.md 2.1),
 the same ring in the unit ST4 counts in, and a reader of copies reads `M`
-out of the data set to tell a copy from a match (ST4, SPEC.md 7.4): the
+out of the data set to separate a copy from a match (ST4, SPEC.md 7.4): the
 two figures describe one ring, and the data set's is the one a decoder
 runs on.
 
@@ -159,11 +157,11 @@ point of that stream is this format's `RR` (R5.11): a reader of both
 documents meets one figure under the two names.
 
 R5.8 needs `N`. A reader reads it once and has a ring of that many bytes,
-and the ring does not grow as `R` does.
+and the ring stays one size as `R` grows.
 
 One `N` for the payload does for the rings what one `k` does for the code:
-no data set reaches back further than `N`, so one ring size is enough for
-them all, the rings are at a fixed stride from one another, and one
+every data set reaches back `N` bytes at most, so one ring size is enough
+for them all, the rings are at a fixed stride from one another, and one
 pointer arithmetic runs every column (R5.4, R5.5).
 
 `k` need not be `W`: a table of two byte values packs at a unit of 1 or of
@@ -174,10 +172,9 @@ that a match beyond the ring copies from that column's literal stream,
 which ST4 packs with `-c`. A copy is an offset above `M`, the ring in
 units (ST4, SPEC.md 4.4), which a decoder built without the copy code
 reads as a match, so such a decoder reads such a column wrongly: the
-payload names the build a reader needs before it opens a data set
-(R5.10). In a payload
-that defines it every column contains copies, and in one that does not,
-none does.
+payload marks the build a reader needs before it opens a data set
+(R5.10). In a payload that sets the bit every column contains copies, and
+in one that clears it, none does.
 
 A file written before this byte was used reads zero here, no copies,
 and a decoder without the copy code is the one such a file always
@@ -198,8 +195,8 @@ where the payload does. The data sets follow, each beginning on a long:
 where one ends short of the next boundary, the bytes between are zero.
 
 A reader reads a column from its offset alone: a data set defines the
-length of what it unpacks to, and the bits that pack it end on the end code,
-so no offset is read against the next.
+length of what it unpacks to, and the bits that pack it end on the end
+code.
 
 **What an ST4 data set is.** What a reader of DTX2 needs of it; the format
 is defined in full in [ST4](https://github.com/odipar/ST4).
@@ -209,7 +206,7 @@ is defined in full in [ST4](https://github.com/odipar/ST4).
 - Its ST4 header is twenty-eight bytes, and a data set begins on a long
   so a reader reads that header a long at a time. DTX2 aligns its data
   sets for that (R5.9).
-- A reader built for one unit rejects a data set whose fourth byte names
+- A reader built for one unit rejects a data set whose fourth byte is
   another. The payload's `k` is that same unit (R5.2), and a reader checks
   the two against each other: one compare of a data set's first long
   against `$53 $34 $07 k` checks the signature, the format version and
