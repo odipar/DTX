@@ -418,7 +418,7 @@ DTX_init:
 
 ; Where the decoders' registers go, behind the rings, and 0 where nothing is
 ; put away. Byte 20 of a data set records the unit its loop begins at, or
-; $FFFFFFFF where the set's end marker loops it and no pass is replayed;
+; $FFFFFFFF where the set's end code loops it and no pass is replayed;
 ; every set of a payload has the same form, so column 0 defines it.
         clr.l   DTX_SAVED(a6)
         movea.l DTX_PAYLOAD(a6),a3

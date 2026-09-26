@@ -547,7 +547,7 @@ all: a DTX2 table that repeats. What broke is the 68000 side.
   out of the format block, as it always could.
 - A 0.4.0 image reads a 0.3.0 DTX2 file that repeats wrongly: its data sets
   end where this release's loop, so the reader runs the decoder past the
-  end marker. Write such a file again with this release's `dtx-write`. A DTX2
+  end code. Write such a file again with this release's `dtx-write`. A DTX2
   file that does not repeat, and every DTX0 and DTX1 file, is byte for byte
   what 0.3.0 wrote.
 

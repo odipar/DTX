@@ -97,7 +97,7 @@ func (h plain) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	dtx.PutLong(set, 12, 28+len(column))
 	dtx.PutLong(set, 16, 28+len(column))
 	// Nothing decodes this set, so it does not loop where the table does:
-	// the end marker loops it and no pass is replayed.
+	// the end code loops it and no pass is replayed.
 	dtx.PutLong(set, 20, st4.NoRewind)
 	dtx.PutLong(set, 24, ring/unit)
 	copy(set[28:], column)

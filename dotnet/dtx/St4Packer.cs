@@ -67,7 +67,7 @@ public sealed class St4Packer : IPacker
                     + $" {units.Length - 1} of the column, not {loop}");
         }
         // ST4 packs a loop two ways, and this makes the same test its
-        // packer makes: the end marker's endless match where a back
+        // packer makes: the end code's endless match where a back
         // reference reaches the loop's first unit, and a replayed pass
         // where it does not.
         return Nt4.Nt4.Container(

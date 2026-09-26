@@ -157,7 +157,7 @@ final class PackagerTest {
 
     /** A table repeating at {@code repeat}, whose data sets record a loop
      *  at {@code loop}, a unit, so the reader replays the pass; -1 where the
-     *  sets loop by their end marker. */
+     *  sets loop by their end code. */
     private static byte[] packed(int rows, int repeat, int columns, int width, int unit,
             int ring, boolean copies, int loop) {
         byte[][] column = new byte[columns][];
@@ -184,7 +184,7 @@ final class PackagerTest {
                 Dtx.putLong(set, 8, 28 + bytes.length / 4);
                 Dtx.putLong(set, 12, 28 + bytes.length / 2);
                 Dtx.putLong(set, 16, 28 + bytes.length);
-                // the set loops by its end marker where the loop is -1, and
+                // the set loops by its end code where the loop is -1, and
                 // records the unit its loop begins at where a pass is replayed
                 Dtx.putLong(set, 20, loop);
                 System.arraycopy(bytes, 0, set, 28, bytes.length);
