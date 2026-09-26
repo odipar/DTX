@@ -275,7 +275,7 @@ rather than in a release.
 Writing DTX2 needs an ST4 packer. The Java and C# trees contain one,
 `src/main/java/org/st4` and `dotnet/nt4`, and `68k/ST4_wrap.S` is ST4's
 decoder; the three are copied from odipar/ST4@3e466ac, release 0.1.11,
-with the comments and the label names of odipar/ST4@073ee5c, and edited
+with the comments and the label names of odipar/ST4@5145a85, and edited
 nowhere here. The Go tree requires `github.com/odipar/st4/go` instead;
 `go/st4` has what belongs to DTX alone, a `Packer` that packs in this
 process and a `Beside` that runs an ST4 executable. The three pack the
