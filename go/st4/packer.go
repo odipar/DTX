@@ -39,7 +39,7 @@ func (p Packer) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 			" not %d", len(units)-1, loop)
 	}
 	// ST4 packs a loop two ways, and this makes the same test its packer
-	// makes: the end marker's endless match where a back reference reaches
+	// makes: the end code's endless match where a back reference reaches
 	// the loop's first unit, and a replayed pass where it does not.
 	if loop >= 0 && len(units)-loop > offsetLimit {
 		return p.replayed(units, unit, offsetLimit, loop).Container(), nil

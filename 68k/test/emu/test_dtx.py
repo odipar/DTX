@@ -17,7 +17,7 @@ from the text, by a reader that does not share code with the one under
 test - so neither the writer nor the 68000 is checked against itself.
 Under DTX2 it also counts the decoder's calls, the one thing a wrong
 stopping rule shows up in: the output does not change when a column is
-driven one call past its end marker, but the count does.
+driven one call past its end code, but the count does.
 
     python3 68k/test/emu/test_dtx.py
 
@@ -663,7 +663,7 @@ PACKED = [
     ("a replayed pass", numbers(512, 2), 2, 0, 1, 960),
     ("a replayed pass from row 128", numbers(512, 2), 2, 128, 1, 64),
     # A loop a back reference reaches, in a table whose R does not divide by
-    # P: the set loops by its end marker, and the reader's count comes round
+    # P: the set loops by its end code, and the reader's count comes round
     # at the first period end past R rather than on it.
     ("a loop by the marker, R odd", numbers(51, 2), 1, 20, 1, 960),
     # A replayed pass whose loop begins and ends on no period: the reader

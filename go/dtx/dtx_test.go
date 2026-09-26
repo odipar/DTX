@@ -129,7 +129,7 @@ func (standin) Copies() bool { return false }
 func (standin) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 	set := make([]byte, 28+len(column))
 	set[0], set[1], set[2], set[3] = 'S', '4', 7, byte(unit)
-	// the set loops by its end marker, so no pass is replayed
+	// the set loops by its end code, so no pass is replayed
 	PutLong(set, 20, -1)
 	copy(set[28:], column)
 	return set, nil
@@ -368,7 +368,7 @@ func TestEveryDataSetLoopsAtTheRowTheTableRepeatsAt(t *testing.T) {
 
 // A loop longer than a back reference reaches is replayed: the set records
 // the loop's first unit at byte 20 rather than the $FFFFFFFF of a set its end
-// marker loops, and it reads back to the same table.
+// code loops, and it reads back to the same table.
 func TestALoopLongerThanABackReferenceReachesIsReplayed(t *testing.T) {
 	// 512 rows of two byte values are 1024 units at k of 1, and a ring of
 	// 960 reaches 960 of them, so the pass from row 0 is replayed.
@@ -402,7 +402,7 @@ func TestALoopLongerThanABackReferenceReachesIsReplayed(t *testing.T) {
 		t.Fatal("a replayed data set read back another table")
 	}
 	// The same table at a ring of 65280 reaches its first unit, so its
-	// end marker loops it and no pass is replayed.
+	// end code loops it and no pass is replayed.
 	short, err := WriteDtx2(want, st4.Packer{}, 1, 65280)
 	if err != nil {
 		t.Fatal(err)

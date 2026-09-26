@@ -44,7 +44,7 @@ func packedCopies(rows, columns, width, unit, ring int, copies bool) []byte {
 }
 
 // The same at this repeat, whose sets record rewind as their loop: a rewind
-// of -1 loops a set by its end marker and any other replays its pass.
+// of -1 loops a set by its end code and any other replays its pass.
 func sets(rows, repeat, columns, width, unit, ring int, copies bool,
 	rewind int) []byte {
 	head := header(dtx.DTX2, rows, repeat, columns, width)
@@ -482,7 +482,7 @@ func TestAReplayedPayloadTakesThePeriodForEveryRepeat(t *testing.T) {
 		file   []byte
 		period int
 	}{
-		{"P is C where the sets loop by their end marker",
+		{"P is C where the sets loop by their end code",
 			sets(64, 16, 3, 2, 1, 960, false, -1), 3},
 		{"P is C where the pass is replayed from a row it does not divide",
 			sets(64, 16, 3, 2, 1, 960, false, 32), 3},

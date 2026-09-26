@@ -236,12 +236,18 @@ a noun as a verb
 
 ## One vocabulary
 
-One word for a thing that has one: the ring a data set unpacks through.
+One word for a thing that has one: the ring a data set unpacks through,
+and the end code that ends a data set (ST4, SPEC.md 3.6).
 
 a second word for the ring
     \b(?:container|window|buffer)s?\b
     in: the window the decoder reads through
     not: the ring
+
+the end marker
+    \bend marker
+    in: the set loops by its end marker
+    not: the set loops by its end code
 
 ## The verb that says the action
 
