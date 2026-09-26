@@ -75,7 +75,7 @@ and the payload is `R` times a row.
 A row begins where the row before it ends, so at a width of 1 and an odd
 `C` a row begins on an odd offset and a reader reads its values as bytes
 (R3.4). At a width of 2 or 4 the payload begins on a long and every value
-is a whole number of them from it, so every value stands where a 68000
+is a whole number of them from it, so every value is where a 68000
 reads it as one.
 
 ```
@@ -97,18 +97,18 @@ reads it as one.
 
 `C` columns, each its `R` values in row order. Column `i` is `R` times
 `W` bytes and begins on a word: where the column before it ends odd, a
-zero byte stands between them. Its row `n` is `n` times `W` further on.
+zero byte is between them. Its row `n` is `n` times `W` further on.
 
 Every column is the same length, so they lie at one stride: `R` times `W`,
 up to a word. Column `i` begins at `i` strides, and a reader steps from one
 column of a row to the next by adding one (R4.2). The payload is `C` minus
-one strides and the last column's `R` times `W` bytes, the padding standing
+one strides and the last column's `R` times `W` bytes, the padding
 between one column and the next.
 
 DTX1 has that padding over DTX0 (R4.3). It costs a byte between one column
 and the next at a width of 1 and an odd `R`, and nothing at a width of 2 or
 4, where a column is a whole number of words already. In return every value
-stands on a word under every `C`, where DTX0 at a width of 1 puts a row on
+is on a word under every `C`, where DTX0 at a width of 1 puts a row on
 an odd offset.
 
 The other difference is the reach of one read: a row of DTX0, a column of
@@ -149,7 +149,7 @@ sets are:
 A writer puts `N` divided by `k` in a data set's `M` (ST4, SPEC.md 2.1),
 the same ring in the unit ST4 counts in, and a reader of copies reads `M`
 out of the data set to tell a copy from a match (ST4, SPEC.md 7.4): the
-two figures stand for one ring, and the data set's is the one a decoder
+two figures describe one ring, and the data set's is the one a decoder
 runs on.
 
 Note: `R` in ST4's document is the loop point of a stream (ST4, SPEC.md
@@ -163,7 +163,7 @@ and the ring does not grow as `R` does.
 
 One `N` for the payload does for the rings what one `k` does for the code:
 no data set reaches back further than `N`, so one ring size is enough for
-them all, the rings stand at a fixed stride from one another, and one
+them all, the rings are at a fixed stride from one another, and one
 pointer arithmetic runs every column (R5.4, R5.5).
 
 `k` need not be `W`: a table of two byte values packs at a unit of 1 or of

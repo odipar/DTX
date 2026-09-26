@@ -48,8 +48,8 @@ plus one), modulo 251, so the first rows of the three column table are:
 
 There are four calls (abi.md 2), and none of them moves a value: an advance
 leaves the pointer at the row's first value and the caller reads from there.
-So a read costs the image nothing, and what it costs the caller stands in
-the table below.
+So a read costs the image nothing, and the table below has what it costs
+the caller.
 
 An advance under DTX2 is a range where the columns differ in what their
 refills decode, and one figure where they do not: a row refills one column
@@ -81,7 +81,7 @@ Those are the manual's figures for the move, which the rig reads out of the
 same tables it counts a call with. A caller that reads every column of a
 row makes `C` of them, and one that reads a single column makes one: DTX1
 and DTX2 lay a column's values together, so reading one column of a wide
-table never touches the others (R4.4).
+table leaves the others unread (R4.4).
 
 ## What the copy code costs
 

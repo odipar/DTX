@@ -7,7 +7,7 @@ THE CALLS. Every table is written by the Java tools, packaged by
 org.dtx.Packager, assembled by rmac and run on a plain 68000 through
 Unicorn: every row through advance, a jump to every row forward and
 backward, the repeat at RR, the sticky end, metadata before init, the
-registers that stand across a call, and every word or long on its
+registers that survive a call, and every word or long on its
 alignment.
 
 THE ROUND TRIP. The same text through the writer, the packager and the
@@ -192,7 +192,7 @@ def write_table(csv, variant, width=None, repeat=None, unit=1, ring=960,
         argv.append("-r%d" % repeat)
     if variant == 2:
         argv += ["-k%d" % unit, "-m%d" % ring]
-        # The tree contains a copy of ST4, so no packer stands beside it. $ST4
+        # The tree contains a copy of ST4, so no packer is beside it. $ST4
         # names one to pack with instead of the carried one.
         if ST4:
             argv.append("-p" + ST4)
@@ -202,7 +202,7 @@ def write_table(csv, variant, width=None, repeat=None, unit=1, ring=960,
 
 
 def package(blob):
-    """The raw image the packager makes, and where every label of it stands.
+    """The raw image the packager makes, and where every label of it is.
 
     The image comes from the packager, which combines the code the build made
     from 68k/DTX*.S: the path a caller follows. A run of rmac over the
@@ -274,14 +274,14 @@ class Machine:
 
     def call(self, name, d0=0, a0=STATE, a1=0):
         """One call through its slot, back at the sentinel. The state block
-        stands in a6 (doc/abi.md 2), which the caller names a0 here for the
+        is in a6 (doc/abi.md 2), which the caller names a0 here for the
         argument's sake. Init reads the header of the table to read in a1;
         every other call leaves it at zero, the value a caller of those
         calls passes."""
         mu = self.mu
         for r in D + A:
             mu.reg_write(r, 0)
-        # d6, d7 and a6 stand across a call: seed them with a mark and check
+        # d6, d7 and a6 survive a call: seed them with a mark and check
         # it after.
         mu.reg_write(UC_M68K_REG_D6, 0x6D6D6D6D)
         mu.reg_write(UC_M68K_REG_D7, 0x7D7D7D7D)
@@ -394,7 +394,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
     # A table that repeats, under DTX2: every data set loops at RR (R5.11),
     # so the rows come round from there and nothing is decoded twice. Where
     # the table does not repeat the set loops on its last unit, which is a
-    # row only where the unit divides the width, so what stands past the
+    # row only where the unit divides the width, so what is past the
     # last row is not defined and the caller stops (abi.md 7). Under DTX0
     # and DTX1 an advance past the last row reads past the table.
     if kind == 2 and rr < rows:
@@ -414,7 +414,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
             assert values(got) == want[r + 1], \
                 "the row after a jump and an advance"
 
-    # the row an advance leaves stands until the next advance (doc/abi.md 2):
+    # the row an advance leaves remains until the next advance (doc/abi.md 2):
     # under DTX2 the refill that would write over it is P advances away
     m.call("init", a1=IMAGE + header_at)
     before = None
@@ -468,7 +468,7 @@ def numbers(rows, columns, span=251):
 # 68000, and back to the rows the text defines.
 
 def package_many(blobs):
-    """One image of several tables, and where each table's header stands in
+    """One image of several tables, and where each table's header is in
     it. The packager prints a line a table past the first, and the offsets
     come off those lines: a caller of DTX_init reads them the same way."""
     work = tempfile.mkdtemp(prefix="dtx68")
@@ -496,7 +496,7 @@ def package_many(blobs):
 
 def one_image_several_tables():
     """Two tables of one shape in one image, each read through init on a
-    separate header (doc/abi.md 2). The code stands once and every row of both
+    separate header (doc/abi.md 2). The code appears once and every row of both
     comes back, so what a caller saves is the code and what it keeps is
     every value."""
     for variant, unit, width in ((0, 1, 2), (1, 1, 2), (2, 1, 2), (2, 2, 2),
@@ -506,7 +506,7 @@ def one_image_several_tables():
         blobs = [write_table(csv, variant, width, None, unit, 960)
                  for csv in (first, second)]
         image, at = package_many(blobs)
-        # The code stands once: the image is smaller than two images of the
+        # The code appears once: the image is smaller than two images of the
         # same tables by one code, less the header the second no longer
         # repeats.
         alone = sum(len(package(b)[0]) for b in blobs)
@@ -672,8 +672,8 @@ PACKED = [
     ("a replayed pass of 511 rows", numbers(511, 2), 2, 0, 1, 64),
     # A width of 4 through the paths a width of 1 or 2 reached alone: a
     # ring that wraps often, a loop the ring does not fit, and a table
-    # whose R is odd. The ring stands on a long and N divides by P times
-    # the width, so every value of every column stands on its width; these
+    # whose R is odd. The ring is on a long and N divides by P times
+    # the width, so every value of every column is on its width; these
     # walk the pointer round a ring and past a loop to read it back.
     ("a small ring at a width of 4", numbers(64, 2), 4, None, 1, 64),
     ("a replayed pass at a width of 4", numbers(512, 2), 4, 0, 1, 960),

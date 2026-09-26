@@ -11,7 +11,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * What the checks that drive the tools share: where the tools stand, how one
+ * What the checks that drive the tools share: where the tools are, how one
  * is run, and the tables they are run over.
  *
  * <p>A check here drives the built tools rather than the classes behind
@@ -40,7 +40,7 @@ final class Rig {
         return named == null ? "rmac" : named;
     }
 
-    /** Whether one stands where that names it. */
+    /** Whether one exists where that names it. */
     static boolean onThePath(String tool) {
         if (tool.contains("/")) {
             return Files.isExecutable(Path.of(tool));
@@ -106,7 +106,7 @@ final class Rig {
         }
     }
 
-    /** Every work directory and what stands under it, removed deepest
+    /** Every work directory and what is under it, removed deepest
      * first. */
     private static void removeWork() {
         synchronized (WORK) {

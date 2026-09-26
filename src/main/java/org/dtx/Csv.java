@@ -23,7 +23,7 @@ import java.util.List;
  *
  * <p>A table is written out the other way as well: a comment that declares
  * the shape, a line of column names, then one row a line, each value the
- * unsigned number its bytes stand for. Read back, the comment declares the
+ * unsigned number its bytes encode. Read back, the comment declares the
  * width and the repeat where the caller does not name them, and the names
  * are passed over, so the text a table was written as reads back to that
  * table.
@@ -88,7 +88,7 @@ public final class Csv {
      * {@code table} as text: a comment declaring {@code R}, {@code C}, the
      * width and {@code RR}; a line of column names, {@code c0} onward; then
      * one row a line, one value a column, each the unsigned number its bytes
-     * stand for. {@link #table(String)} reads it back to the same table.
+     * encode. {@link #table(String)} reads it back to the same table.
      */
     public static String text(Table table) {
         StringBuilder out = new StringBuilder();

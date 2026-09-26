@@ -97,8 +97,8 @@ width fits every value of the table rather than of a column, and column 1
 has values from 256 up.
 
 Written out, a table is a comment declaring its shape, a line of names `c0`
-onward, and one row a line, each value the unsigned number its bytes stand
-for:
+onward, and one row a line, each value the unsigned number its bytes
+encode:
 
 ```
 # 3 rows, 3 columns, width 2, RR 3
@@ -191,7 +191,7 @@ only, and reads neither flag below.
 
 Under DTX0 and DTX1 the table's bytes follow the code with nothing between
 them, every column being one width and one length. Under DTX2 one stream
-record a column stands there, four longs each (abi.md 1). The tool prints
+record a column is there, four longs each (abi.md 1). The tool prints
 the image's bytes and the state block's, which the format block also
 defines for a caller reading the file.
 
@@ -240,7 +240,7 @@ writes the same twenty-two into directories you name.
 | flag | what it sets |
 |---|---|
 | `-aRMAC` | the assembler to run. The default is `rmac` on the path |
-| `-tTEMPLATES` | where `68k/` stands. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository does not have a directory to resolve a relative one against, so it names this |
+| `-tTEMPLATES` | where `68k/` is. The default is `$DTX_68K`, or `68k` beside the caller. An executable run from outside this repository does not have a directory to resolve a relative one against, so it names this |
 
 The table each build is assembled from is made rather than read: at the
 build's width the code is the same for any table, and the six fields a

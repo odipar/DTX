@@ -171,8 +171,8 @@ public final class Write {
     }
 
     /**
-     * The whole number an argument stands for behind its two letter flag, or the
-     * tool's line and exit 2 where what stands there is not one.
+     * The whole number an argument encodes behind its two letter flag, or the
+     * tool's line and exit 2 where what is there is not one.
      */
     private static int number(String arg) {
         try {

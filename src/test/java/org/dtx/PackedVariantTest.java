@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 
 /**
- * DTX2's layout, with a packer that stands in for ST4: a twenty-eight byte
+ * DTX2's layout, with a packer that replaces ST4: a twenty-eight byte
  * header and the column behind it. What it packs to does not matter here,
  * only where the payload puts it.
  */

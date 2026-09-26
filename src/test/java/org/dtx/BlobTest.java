@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
  * from.
  *
  * <p>The packager combines rather than assembles, so a template edited
- * without {@code bin/dtx-blobs} run after it would ship the code as it stood
+ * without {@code bin/dtx-blobs} run after it would ship the code as it was
  * before the edit. These checks assemble every build again and compare the
  * carried file with it, and the combined image with the assembled one.
  * They are skipped where no rmac is on the path.

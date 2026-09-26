@@ -1,6 +1,6 @@
 # releases
 
-What a release contains stands here, and each one published is listed
+This file defines what a release contains, and each one published is listed
 below it.
 
 ## What a release contains
@@ -52,7 +52,7 @@ not.
 - **The lines are in the document.** tools.md has a table for reading a
   table, one for writing a DTX2 table and one for either tool, and
   `ConsistencyTest` reads each line against the three trees: the longest
-  run of words between the figures a tool writes into a line must stand
+  run of words between the figures a tool writes into a line must be
   in each.
 
 A data set loops where its table does (SPEC.md 2.3's note), the
@@ -68,7 +68,7 @@ test ./...` green.
 tagged `v0.11.10`.
 
 One build runs at a time, and a quoted block keeps its words. Every file a
-tool is built from stands as 0.11.8 has it - `go/`, `68k/`, `dotnet/` and
+tool is built from matches 0.11.8 - `go/`, `68k/`, `dotnet/` and
 every document - so the tools are that release's, the twenty-two images
 are its bytes, and `go/dtx` reads ST4 at v0.1.9 still, whose module is the
 module v0.1.11 tags. This release is the style check, the script under
@@ -106,7 +106,7 @@ module v0.1.11 tags. This release is the style check, the script under
 tagged `v0.11.9`.
 
 The document checks are one package, kept here. Every file a tool is built
-from stands as 0.11.8 has it - `go/`, `68k/`, `dotnet/`, `bin/` and every
+from matches 0.11.8 - `go/`, `68k/`, `dotnet/`, `bin/` and every
 document - so the tools are that release's, the twenty-two images are its
 bytes, and `go/dtx` reads ST4 at v0.1.9 still, whose module is the module
 v0.1.10 tags.
@@ -142,7 +142,7 @@ the twenty-two images is 0.11.7's byte for byte.
   in order to strike it, reported a hit on the words it quotes. AGENTS.md says
   a quoted message keeps its words. YMXR carried the package and hit that
   one, on two of its tools' messages.
-- Both lines stand in the copies ST4, YMXS and YMXR carry, so the four read
+- Both lines are in the copies ST4, YMXS and YMXR carry, so the four read
   the same 370 lines.
 - `README.md` counts the Java tests the tree runs: 110, where the row read
   101 and no check read the figure back.
@@ -222,8 +222,8 @@ conformance kit reads back byte for byte.
   slot became `ST4_resume` itself. The Java and C# copies of the packer and
   the Go module are 0.11.3's, ST4 having changed no packer since.
 - The eighteen DTX2 images lose 12 to 16 bytes each; DTX0's and DTX1's
-  stand. Assembled alone the decoder is 310, 314 and 316 bytes where it was
-  324, 328 and 330.
+  keep their size. Assembled alone the decoder is 310, 314 and 316 bytes
+  where it was 324, 328 and 330.
 - An init of three columns at `k` of 1 costs 7,700 cycles where it cost
   7,844, and of twenty columns 54,524 where it cost 55,324. An advance is
   within a few cycles either way. performance.md lists all 65 figures, and
@@ -406,7 +406,7 @@ image and no packaged byte moves.
 <https://github.com/odipar/DTX/releases/tag/v0.8.0>, built from the commit
 tagged `v0.8.0`.
 
-**Every caller changes: the state block stands in `a6` and not in `a0`,
+**Every caller changes: the state block is in `a6` and not in `a0`,
 on the three calls that read it.** `DTX_metadata` reads the image alone
 and is as it was.
 
@@ -422,7 +422,7 @@ and is as it was.
 - DTX2's code is 1,412 bytes at `k` of 1 where it was 1,444, 1,408 at
   `k` of 2 and 1,420 at `k` of 4.
 - The state block's long at +4 is unused under DTX2, where it parked
-  `a6`; under DTX0 and DTX1 it stands at the payload, as it did.
+  `a6`; under DTX0 and DTX1 it is at the payload, as it did.
 - A caller whose own base is `a6` reaches the block at a fixed offset of
   it, so the `lea` that forms the argument writes `a6` itself and costs
   what the old one cost.
@@ -433,8 +433,8 @@ and is as it was.
 tagged `v0.7.0`.
 
 **Every caller changes: `DTX_init` reads the header of the table to read in
-`a1`.** A caller that leaves `a1` where it stood seeds its block on the
-address that register stood at. A caller of an image of one table passes
+`a1`.** A caller that leaves `a1` as it was seeds its block on the
+address in that register. A caller of an image of one table passes
 the image plus the format block's +8, which it may read at build time.
 
 - An image contains one table or several: the code once, then a column
@@ -448,11 +448,11 @@ the image plus the format block's +8, which it may read at build time.
   reached at the header less 16`C`, which is where the packager lays it.
 - Init parks the payload it was seeded on, and `DTX_jump` reads it there
   rather than deriving the format block's again. Under DTX0 and DTX1 the
-  block's +4 stands at that payload, where it parked the caller's `a6`
-  under DTX2 and stood unused under the plain two.
+  block's +4 is at that payload, where it parked the caller's `a6`
+  under DTX2 and was unused under the plain two.
 - Under DTX0 init forms the row's bytes from the header in `a1`,
   `C` times the width, where it read the format block's field: the figure
-  stands in three instructions, so it is the table the block was seeded
+  is in three instructions, so it is the table the block was seeded
   on.
 - The format block's +4, +8, +12, +20 and +24 are the first table's, and
   +14, +16, +18 and +19 the image's. An image of one table is the bytes
@@ -463,11 +463,11 @@ the image plus the format block's +8, which it may read at build time.
   under DTX2 on the three column example. DTX1's code is 80 bytes where
   it was 84 and DTX2's 1,444 at `k` of 1 where it was 1,448.
 - `Packager.packaged`, Go's `pack.Images` and C#'s `Pack.Image` read the
-  files and return the image and where each table's header stands.
+  files and return the image and where each table's header is.
   `dtx-package [in.dtx...] > out.bin` reads the tables it is named and
-  prints where each stands.
+  prints where each is.
 - Two sentences of abi.md that were wrong are corrected: DTX1 leaves its
-  code unwritten, so a DTX1 image may stand in ROM, and no site is
+  code unwritten, so a DTX1 image may be in ROM, and no site is
   written with `R` or `RR` for an advance's compares.
 
 ### 0.6.0, 2026-09-07
@@ -587,7 +587,7 @@ What changed since 0.2.0:
 
 - **The reader is smaller.** `DTX_payload` and the macro that installs a
   long moved into `68k/DTX_image.S`, where three templates include the one
-  copy, and the six fields a combine writes stand at zero in the format
+  copy, and the six fields a combine writes are at zero in the format
   block rather than being assembled in and then written over. DTX0's code
   is 208 bytes where it was 232, DTX1's 160 where it was 176, and DTX2's
   884 where it was 924. An image the packager assembles and one it reads
@@ -627,9 +627,9 @@ What changed since 0.1.0:
   stride and DTX2's rule weakens to `R` times `W` divides by `k`.
 - **Four calls, and none of them copies a value.** An advance leaves the
   address of the row's first value and `DTX_metadata` reports the stride, so
-  a caller reads the columns it needs where they stand. `DTX_read` and
+  a caller reads the columns it needs where they are. `DTX_read` and
   `DTX_take` are gone, the slots run to 16 bytes and the format block
-  stands at +16 in 28 bytes.
+  is at +16 in 28 bytes.
 - **Twenty-two images**, not eight: one for DTX0 at every width, one a
   width for DTX1, and one a width a unit with the copy code and without
   for DTX2.

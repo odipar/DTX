@@ -3,7 +3,7 @@
 //
 // DTX carried a copy of that library until this: the copy drifted, missing
 // the -pN parse and forty-two constructs of the house style before it was
-// noticed. What stands here belongs to DTX alone - a Packer that packs in
+// noticed. What is here belongs to DTX alone - a Packer that packs in
 // this process and a Beside that runs an ST4 executable - and the names the
 // library defines are re-exported, so a caller writes st4.Packer and
 // st4.Result as it did.

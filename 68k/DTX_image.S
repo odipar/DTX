@@ -21,10 +21,10 @@
 
 ; What a value is installed with. A 68000 reaches PC relative for a source
 ; and never for a destination, so a site is lea'd into a4 and written
-; through it. The assembler works out where each site stands: nothing here
+; through it. The assembler works out where each site is: nothing here
 ; counts an offset, and every reach into the image is PC relative.
 ;
-; The operand of an instruction whose opcode is one word stands at +2 of it,
+; The operand of an instruction whose opcode is one word is at +2 of it,
 ; and the L form adds that.
         .macro  DTX_INSTALL_L   value,site
         lea     \site+2(pc),a4
@@ -32,10 +32,10 @@
         .endm
 
 ; The four slots, the format block, DTX_metadata and DTX_payload. Six fields
-; of the block stand at zero here and the packager writes them at a combine
+; of the block are at zero here and the packager writes them at a combine
 ; (doc/abi.md 5): the assembler does not read the table they describe. The
 ; two figures a variant defines for itself reach this macro as arguments: k
-; stands at 0 where nothing is packed, and the width at 0 where the code does
+; is at 0 where nothing is packed, and the width at 0 where the code does
 ; not move with it.
         .macro  DTX_IMAGE variant,unit,width
 _base:
@@ -47,7 +47,7 @@ _base:
 _fmt:
         dc.b    'D','T','X',\variant
         dc.l    0                       ; the first table's state block bytes
-        dc.l    0                       ; where the first table stands
+        dc.l    0                       ; where the first table is
         dc.w    0                       ; the first table's row bytes
         dc.w    0                       ; P, which every table shares
         dc.w    0                       ; N, which every table shares
@@ -86,13 +86,13 @@ DTX_payload:
         rts
         .endm
 
-; What follows the code. Nothing stands after this label: the packager
+; What follows the code. Nothing is assembled after this label: the packager
 ; appends a column table and then a .dtx file for each of the image's
 ; tables, so _columns is where the first pair lands and the code ends on a
 ; long to put it there. DTX0 and DTX1 do not have a column table, so under
 ; those two the first table's header is the first byte there. Where
-; _columns stands is assembled in and the format block repeats it; a
-; table's header stands behind a column table of 16C bytes, which moves
+; _columns is assembled in and the format block repeats it; a
+; table's header is behind a column table of 16C bytes, which moves
 ; with that table's C, so no instruction reaches a header by a displacement
 ; the assembler works out.
         .macro  DTX_TABLE_FOLLOWS

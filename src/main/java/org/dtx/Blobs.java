@@ -38,7 +38,7 @@ public final class Blobs {
      */
     public record Build(int variant, int width, int unit, boolean copies) {
 
-        /** The file this build stands in. */
+        /** The file this build is in. */
         public String name() {
             return Packager.carriedName(variant, width, unit, copies);
         }

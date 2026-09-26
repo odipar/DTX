@@ -102,7 +102,7 @@ public final class St4 implements Packer {
     /**
      * One parse of {@code units}, with the copy code where this packs it.
      * Neither optimizer reports progress: a tool writes what it wrote, and
-     * a meter on standard output would stand in the middle of it.
+     * a meter on standard output would be in the middle of it.
      */
     private St4Block parse(int[] units, int unit, int limit) {
         return copies

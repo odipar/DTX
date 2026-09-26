@@ -262,8 +262,8 @@ func packerFor(named, copies string) (dtx.Packer, error) {
 	return st4.Packer{CopiesFlag: true, Seconds: search}, nil
 }
 
-// seconds returns what -copiesS searches for, zero where -copies stands on its
-// own, and the tool's line for an S that is not a number.
+// seconds returns what -copiesS searches for, zero where -copies is passed
+// alone, and the tool's line for an S that is not a number.
 func seconds(copies string) (float64, error) {
 	if len(copies) <= 2 {
 		return 0, nil

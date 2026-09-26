@@ -48,7 +48,7 @@ before what it describes, and what things are called comes before both.
   thing two layouts of one table differ in (R1.3).
 - **R2.2** **DTX0**, **DTX1** and **DTX2** are the variants this
   specification defines, in R3, R4 and R5. A variant it does not define
-  stands at the next number, and **DTXN** names one of those.
+  is at the next number, and **DTXN** names one of those.
 - **R2.3** A table defines which variant it is, and a reader which variants
   it reads. Where either defines it is SPEC.md's.
 - **R2.4** A variant's number is fixed once assigned, and a later
@@ -58,7 +58,7 @@ before what it describes, and what things are called comes before both.
 ## R3. DTX0
 
 - **R3.1** The rows laid out row by row.
-- **R3.2** The rows as they stand. A reader reads a row by finding it,
+- **R3.2** The rows as they are. A reader reads a row by finding it,
   unpacking nothing and keeping nothing between one row and the next, and
   a writer puts a row down the same way.
 - **R3.3** Finding a row, or a column within one, is arithmetic on `R`,
@@ -71,14 +71,14 @@ before what it describes, and what things are called comes before both.
 ## R4. DTX1
 
 - **R4.1** The rows laid out column by column.
-- **R4.2** The rows as they stand and found by arithmetic, as R3.2 and
+- **R4.2** The rows as they are and found by arithmetic, as R3.2 and
   R3.3 have DTX0's.
 - **R4.3** A column begins on a word, so every value sits where a 68000
   reads it as one. DTX1 has this over DTX0, at a byte between one column
   and the next where the width is 1 and `R` odd, and at nothing where the
   width is 2 or 4.
 - **R4.4** A column's values together, so a reader reads one column
-  without touching the others, which DTX1 is for.
+  and leaves the others unread, which DTX1 is for.
 
 ## R5. DTX2
 
@@ -93,10 +93,10 @@ before what it describes, and what things are called comes before both.
 - **R5.4** One ring size `N` for a payload. No data set in it reaches back
   further than `N`, so a ring of `N` bytes is enough for any of them, and
   every data set was packed for the `N` the payload defines.
-- **R5.5** A reader's rings are all that one size, so they stand at a
+- **R5.5** A reader's rings are all that one size, so they are at a
   fixed stride from one another and one pointer arithmetic runs every
   column. Every column is one width (R6.3), so one pointer does: column
-  `i`'s value for a row stands `i` rings past column 0's.
+  `i`'s value for a row is `i` rings past column 0's.
 - **R5.6** `R` times the width divides by `k`. ST4 packs whole units, so a
   column that is not a whole number of them unpacks to more bytes than it
   has.

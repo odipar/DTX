@@ -25,7 +25,7 @@ import (
 //go:embed data
 var data embed.FS
 
-// Name returns the file one build stands in: a variant, the width its values
+// Name returns the file one build is in: a variant, the width its values
 // are written in, and under DTX2 the unit its decoder decodes at and whether
 // that decoder has the copy code.
 //
@@ -58,7 +58,7 @@ func Read(variant, width, unit int, copies bool) []byte {
 // does not contain one, from build/68k, where the Maven build writes the
 // twenty-two.
 //
-// DTX_68K names where the templates stand, 68k/, and build/68k stands beside
+// DTX_68K names where the templates are, 68k/, and build/68k is beside
 // it under the same parent.
 func Code(variant, width, unit int, copies bool) ([]byte, error) {
 	name := Name(variant, width, unit, copies)
@@ -87,7 +87,7 @@ type Build struct {
 	Copies  bool
 }
 
-// Name returns the file this build stands in.
+// Name returns the file this build is in.
 func (b Build) Name() string {
 	return Name(b.Variant, b.Width, b.Unit, b.Copies)
 }

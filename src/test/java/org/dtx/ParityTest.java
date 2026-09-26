@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
  * same packages, so a caller who runs any one of them has the same bytes
  * at every step.
  *
- * <p>No ST4 packer stands beside this: each tree contains a copy, and what
+ * <p>No ST4 packer is beside this: each tree contains a copy, and what
  * these check is that the three copies pack the same bytes.
  *
  * <p>Skipped where Go, the .NET SDK or rmac is not installed.

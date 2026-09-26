@@ -4,7 +4,7 @@ What was measured against real tables, and what came out. A test reads the
 three tables of figures back: `ExperimentsTest` checks the two of bytes
 against the writer and the packager, and `StabilityTest` checks the
 decoder's against rmac. Every other figure here was measured once, at the
-change that wrote the sentence it stands in: ST4_ring's bytes, out of a
+change that wrote the sentence it is in: ST4_ring's bytes, out of a
 repository this one does not contain; the code sizes before and after the
 read tested every value; the row a wrong flag read wrong; and the cycles,
 which performance.md records and the rig `68k/test/emu/test_dtx.py` counts.
@@ -68,7 +68,7 @@ ST4_wrap.S assembled alone, without the copy code and with it:
 | 4 | 316 | 352 | 36 |
 
 In an image the difference is 28, 32 and 36 bytes: what follows the decoder
-stands on a long, so a plain build of 310 pads by two and the 340 beside it
+is on a long, so a plain build of 310 pads by two and the 340 beside it
 does not. In cycles, on a column without copies,
 the copy code costs what performance.md's last table records, about 0.2
 percent, at every `k`: the two decoders differ at init, where the one with
@@ -99,7 +99,7 @@ bytes to 716 and DTX2's from 1352 to 1476.
 
 One width a table (R6.3) dropped the test again, and the ABI dropped the
 move with it: an advance leaves the pointer at the row's first value and
-the caller reads where the values stand (abi.md 2), so nothing in an image
+the caller reads where the values are (abi.md 2), so nothing in an image
 moves one. DTX1's code is 84 bytes now and DTX2's 1448, and the rig's
 alignment hook passes every table it runs.
 

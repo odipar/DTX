@@ -18,10 +18,10 @@
 ; defines.
 ;
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C, RR, P and N reach it at run
-; time and stand in the state block.
+; time and are in the state block.
 ;
 ; A READ IS THE CALLER'S. An advance leaves the pointer at column 0's value
-; for the row, and every ring is N bytes, so column i's value stands i rings
+; for the row, and every ring is N bytes, so column i's value is i rings
 ; further on. DTX_metadata reports that stride, and nothing here copies a row
 ; anywhere.
 ;
@@ -37,17 +37,17 @@
 ; where the last refill left the next state's, and the state records its
 ; ring's end, its budget and where its registers go at a loop: a refill
 ; reads its fields and compares once. ST4 leaves only d6, d7 and a6
-; alone, so nothing else stands across a call into it.
+; alone, so nothing else survives a call into it.
 ;
-; THE COLUMN TABLE stands behind the code, and the format block defines where.
+; THE COLUMN TABLE is behind the code, and the format block defines where.
 ; It is one record a column, four longs, and nothing else:
 ;
 ;   +0   4  stream A, from the payload    +8   4  stream C
 ;   +4   4  stream B                      +12  4  stream D
 ;
 ; a6 IS THE STATE BLOCK through init, jump and advance, and the caller's a6
-; stands parked in the block for the length of the call. ST4 leaves d6, d7
-; and a6 alone, and nothing here touches d6 or d7, so a6 is the one register
+; is parked in the block for the length of the call. ST4 leaves d6, d7
+; and a6 alone, and nothing here writes d6 or d7, so a6 is the one register
 ; to put back.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
@@ -67,12 +67,12 @@ DTX_S_C             equ     8
 DTX_S_D             equ     12
 
 ; The state block beyond what doc/abi.md 3 defines: the payload, where the
-; stream records stand, the column a seed is at, the five figures the table
+; stream records are, the column a seed is at, the five figures the table
 ; defines, the count kept where the sets end, the state whose turn the next
-; row is, and column 0's ring. The decoder states stand at DTX_DECODERS, 48 a
+; row is, and column 0's ring. The decoder states are at DTX_DECODERS, 48 a
 ; turn, and the rings behind them, N a column.
 DTX_PAYLOAD         equ     12
-DTX_RECORDS         equ     16              ; where the stream records stand
+DTX_RECORDS         equ     16              ; where the stream records are
 DTX_FILL            equ     20              ; a word: the column a seed is at
 DTX_CFIG            equ     22              ; C, a word
 DTX_RINGS           equ     24              ; where the rings begin, in the block
@@ -121,7 +121,7 @@ DTX_D_SIZE          equ     48
 
 ; -----------------------------------------------------------------------------
 ; The first stream record in a3, out of the header in a2. A table's column
-; table stands immediately before it, one record of 16 bytes a column, so
+; table is immediately before it, one record of 16 bytes a column, so
 ; the records begin 16C below the header. The format block's field records
 ; the first table's and is not read here: an image contains several tables and
 ; init is seeded on the header of the one to read.
@@ -136,10 +136,10 @@ DTX_columns:
 ; -----------------------------------------------------------------------------
 ; The column a seed is at, in three places. Every record is 16 bytes, every
 ; decoder state 48 and every ring N, so each is that column's number times a
-; stride. d4 works them out: ST4 clobbers it, and it stands in none of the
+; stride. d4 works them out: ST4 clobbers it, and it is in none of the
 ; decoder's state.
 
-; The stream record in a3. Where the records stand is worked out once, at
+; The stream record in a3. The records' place is worked out once, at
 ; init, and a record is 16 bytes, so the multiply is a shift.
 DTX_record:
         movea.l DTX_RECORDS(a6),a3
@@ -205,7 +205,7 @@ DTX_state:
 ; the first mark puts them away, and every mark after puts them back.
 ; ST4 leaves a1, the write pointer, out of a replay: it walks the ring on
 ; and the pass it belongs to is the caller's, not the stream's, so the
-; copy back moves seven registers and a1 stands as it is.
+; copy back moves seven registers and a1 is left as it is.
 ;
 ; A macro rather than a subroutine: the advance runs it in line, and the
 ; seed once a column.
@@ -264,7 +264,7 @@ DTX_state:
 ; first period's budget in every state. Init runs it, and so does a jump
 ; that runs from row 0.
 ;
-; One loop over the columns. ST4 clobbers a3, so where the column stands is
+; One loop over the columns. ST4 clobbers a3, so the column's place is
 ; worked out again after every call into it. The state's fields are
 ; written before the decoder runs: a loop that begins at row 0 begins where
 ; ST4_init leaves the decoder, so those registers are put away here, and
@@ -342,7 +342,7 @@ seed_column:
 
 ; The seed left every column a period's rows, or R, which the count
 ; starts from; the first turn is column 0's, and a period of turns is to
-; come. The pointer stands a row below column 0's first row, so the
+; come. The pointer is a row below column 0's first row, so the
 ; advance into row 0 steps like any other advance. Then the first period's
 ; budget, which is short where R is under 2P.
         move.l  DTX_PERIODFIG(a6),d3
@@ -382,7 +382,7 @@ DTX_init:
         move.l  d0,DTX_NFIG(a6)
 
 ; Where the rings begin: behind the decoder states, one of 48 bytes a turn.
-; Column 0's ring is the pointer ring, so its two ends stand in the block.
+; Column 0's ring is the pointer ring, so its two ends are in the block.
         move.w  DTX_PERIODFIG+2(a6),d2
         mulu.w  #DTX_D_SIZE,d2
         addi.w  #DTX_DECODERS,d2
@@ -527,7 +527,7 @@ DTX_step:
 
 ; -----------------------------------------------------------------------------
 ; DTX_jump. ST4_resume clobbers d3, d4, d5 and a3, so nothing but a6 and the
-; stack stands across a step: the target is on the stack.
+; stack survives a step: the target is on the stack.
 
 DTX_jump:
         move.l  d0,-(a7)                ; the rows still to step

@@ -116,7 +116,7 @@ func TestWhatIsRefused(t *testing.T) {
 }
 
 // A table written as text opens with its shape and its column names, then
-// one row a line, each value the unsigned number its bytes stand for.
+// one row a line, each value the unsigned number its bytes encode.
 func TestATableWrittenAsTextOpensWithItsShapeAndItsColumnNames(t *testing.T) {
 	table, err := TableAt(text, 2)
 	if err != nil {

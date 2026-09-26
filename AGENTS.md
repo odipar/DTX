@@ -43,7 +43,7 @@ player *assumes* a rule, a document *defines* an operation, a reader
 ## No possessive decoration
 
 `a table of its own` is `a table`, and `the two chips' own figures` are `the
-figures of the two chips`. Drop *own* wherever the sentence stands without
+figures of the two chips`. Drop *own* wherever the sentence reads without
 it, and prefer *each*, *separate* or *a* to a possessive: `each timer is a
 separate object`, `each source opens a table`.
 
@@ -88,10 +88,10 @@ instead:
 ## The verb that says the action
 
 Something *uses* a resource, a bit *marks* a case, a code *selects* an option,
-a field *is* the value it stands for. Reserve *names* for what a thing is
+a field *is* the value it encodes. Reserve *names* for what a thing is
 called.
 
-Five stand-ins for the action are struck, and a test reads every document for
+Seven stand-ins for the action are struck, and a test reads every document for
 them:
 
 - **holds.** `what a tune holds` is `the tune data structure`. A table *has*
@@ -109,7 +109,14 @@ them:
   cycles, a packager *uses* the decoder a payload names, and a width *fits*
   every value of a column.
 - **nothing.** `it states nothing about X` and `and no form is the format` are
-  a negation standing where the sentence that says what is there belongs.
+  a negation in place of the sentence that says what is there.
+- **stands.** `What stands today` is `The format today`, and `the end code
+  stands where the output reaches O` is `the end code comes where the output
+  reaches O`. A value *is* where it is, a block *comes* before another, a
+  figure *remains* as it was measured.
+- **touches.** `What building it touches` is `What building it changes`, and
+  `no step above touches it` is `every step above leaves it as it was`. A
+  step *reads* or *writes* a value, and a change *edits* a file.
 
 Reserve *names* for what a thing is called, and *state* for the noun: a
 state block, a decoder state. Negate the verb, not the object: `an image

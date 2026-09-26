@@ -11,7 +11,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
 
 # ParityTest reads the three trees against one another, and skips where
-# go, dotnet or rmac is absent; RMAC names rmac where it stands outside
+# go, dotnet or rmac is absent; RMAC names rmac where it is outside
 # the path. BlobTest and PackagerTest assemble the readers, which is rmac
 # again.
 for one in go dotnet; do
@@ -34,7 +34,7 @@ if ! python3 -c "import unicorn" >/dev/null 2>&1; then
 fi
 
 # St4Test reads the packer this tree has against the real one, which
-# stands at ST4. The release go.mod requires is the one the workflow
+# is at ST4. The release go.mod requires is the one the workflow
 # builds, so a packer of another release is another set of bytes.
 st4=$(sed -n 's|.*st4/go v\([0-9.]*\).*|\1|p' go/go.mod)
 if [ ! -x "${ST4:-st4}" ]; then

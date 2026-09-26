@@ -24,7 +24,7 @@ using System.Text;
 ///
 /// <para>A table is written out the other way as well: a comment that
 /// declares the shape, a line of column names, then one row a line, each
-/// value the unsigned number its bytes stand for. Read back, the comment
+/// value the unsigned number its bytes encode. Read back, the comment
 /// declares the width and the repeat where the caller does not name them,
 /// and the names are passed over, so the text a table was written as reads
 /// back to that table.</para>
@@ -81,7 +81,7 @@ public static class Csv
     /// <summary>
     /// table as text: a comment declaring R, C, the width and RR; a line of
     /// column names, c0 onward; then one row a line, one value a column,
-    /// each the unsigned number its bytes stand for. TableAt(text) reads it
+    /// each the unsigned number its bytes encode. TableAt(text) reads it
     /// back to the same table.
     /// </summary>
     public static string Text(Table table)

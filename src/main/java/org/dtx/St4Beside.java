@@ -84,7 +84,7 @@ public final class St4Beside implements Packer {
                 }
                 // The packer reads the column on standard input and
                 // writes the packed bytes on standard output (ST4,
-                // doc/tools.md), so the two files stand at those rather
+                // doc/tools.md), so the two files are at those rather
                 // than on the command line. Redirecting both keeps the
                 // pipes from filling while this writes one and reads the
                 // other.

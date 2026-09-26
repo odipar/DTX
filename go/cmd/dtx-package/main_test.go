@@ -86,7 +86,7 @@ func TestATableIsPackagedAndTheReportNamesItsFigures(t *testing.T) {
 		!strings.Contains(said, "8 rows, 2 columns, state block 12 bytes") {
 		t.Fatalf("the report is %q", said)
 	}
-	// doc/abi.md 1: the format block stands at +16, behind the four slots,
+	// doc/abi.md 1: the format block is at +16, behind the four slots,
 	// and opens with the variant the code reads.
 	if string(built[pack.FormatAt:pack.FormatAt+3]) != "DTX" ||
 		int(built[pack.FormatAt+3]) != dtx.DTX1 {

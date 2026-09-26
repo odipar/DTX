@@ -33,11 +33,11 @@ DTX0, 200 to 204 for a DTX1 image, and 924 to 972 for a DTX2 image.
 
 An image itself does not define a table. The six fields of its format
 block that come from a table - the state block's bytes, where the table's
-header stands, the row's bytes, `P`, `N` and the stride - read zero until a
+header is, the row's bytes, `P`, `N` and the stride - read zero until a
 tool writes them, so an image shipped uncombined does not define a table,
 rather than the one it was built from.
 
-## Where they stand
+## Where they are
 
 Each tree contains the twenty-two: the Java jar on its classpath, the Go
 executables through `go:embed`, the C# assembly as embedded resources. A
@@ -51,7 +51,7 @@ the tree.
 A tool reads the image for the table - the variant from the header, the
 width at header byte 14, and under DTX2 the unit at payload byte 2 and the
 copies flag at byte 3 - writes the six fields, and appends the table's
-bytes behind the code. Under DTX2 a column table stands between the two,
+bytes behind the code. Under DTX2 a column table is between the two,
 one stream record a column and nothing else; DTX0 and DTX1 do not have
 one, so there the table's header is the first byte behind the code.
 

@@ -9,7 +9,7 @@ public static class Variants
     ///
     /// <para>A value falls where the width puts it, so at a width of 1 a row
     /// can begin on an odd offset and a reader reads it as bytes (R3.4). At
-    /// a width of 2 or 4 every value stands on its boundary.</para>
+    /// a width of 2 or 4 every value is on its boundary.</para>
     /// </summary>
     public static byte[] WriteDtx0(Table table)
     {
@@ -76,7 +76,7 @@ public static class Variants
     /// table as a DTX1 file: C columns, each its R values in row order.
     ///
     /// <para>A column begins on a word, so at a width of 1 and an odd R a
-    /// zero byte stands between one column and the next (R4.3). Every column
+    /// zero byte is between one column and the next (R4.3). Every column
     /// is the same length, so they lie at one stride and a reader steps from
     /// one to the next by adding it.</para>
     /// </summary>

@@ -12,7 +12,7 @@
 ; THE CODE DOES NOT MOVE WITH THE TABLE. R, C and RR reach it at run time
 ; rather than at assembly time, so every DTX1 image of one width contains the
 ; same instructions and the table behind them differs. That costs a read-only
-; image: the code writes to itself at init, so it stands in RAM and a 68030
+; image: the code writes to itself at init, so it is in RAM and a 68030
 ; caller flushes the instruction cache after DTX_init.
 ;
 ; THE WIDTH DOES MOVE THE CODE. Every value of a table is one width (R6.3),
@@ -21,13 +21,13 @@
 ; the table's header names.
 ;
 ; DTX1 lays a column's values together and every column is the same length,
-; so the columns stand at one stride: the value of column i for the row the
-; cursor stands on is the pointer an advance leaves plus i strides. The image
+; so the columns are at one stride: the value of column i for the row the
+; cursor is on is the pointer an advance leaves plus i strides. The image
 ; does not have a column table or an entry a column, and it does not copy a
-; row anywhere: the caller reads the values where they stand.
+; row anywhere: the caller reads the values where they are.
 ;
 ; DTX_metadata reports the stride, R times the width rounded up to a word
-; (R4.3). It stands in the format block, so a caller that builds against
+; (R4.3). It is in the format block, so a caller that builds against
 ; one image reads it out of the file instead.
 ;
 ; NOTHING IS CHECKED. No call checks the table, the state block, the row
@@ -46,7 +46,7 @@
 ; -----------------------------------------------------------------------------
 ; A value times the width, in one instruction: add.l dn,dn is the cheapest
 ; double a 68000 has, so a width of 2 uses that and a width of 4 a shift.
-; At a width of 1 the value stands as it is and this macro is empty.
+; At a width of 1 the value is left as it is and this macro is empty.
 
         .macro  DTX_SCALE value
         .if     DTX_WIDTH=2

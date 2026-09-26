@@ -91,7 +91,7 @@ final class WriteTest {
         // Every number a flag names is read in one place, so a flag with
         // nothing behind it, or with letters, prints the tool's line and
         // exits 2 rather than a stack trace. The tool is run as a caller runs
-        // it, since it exits the JVM it stands in.
+        // it, since it exits the JVM it is in.
         Path text = work.resolve("t.csv");
         Files.writeString(text, Rig.numbers(4, 2));
         Path out = work.resolve("t.dtx");

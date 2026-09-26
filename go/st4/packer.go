@@ -65,7 +65,7 @@ func (p Packer) replayed(units []uint32, unit, limit, loop int) Result {
 
 // parse returns one parse of units, with the copy code where this packs it.
 // Neither optimizer reports progress: a tool writes what it wrote, and a
-// meter on standard output would stand in the middle of it.
+// meter on standard output would be in the middle of it.
 func (p Packer) parse(units []uint32, unit, limit int) *Block {
 	if p.CopiesFlag {
 		return OptimizeCopies(units, unit, limit, maxOp, p.Seconds, false)

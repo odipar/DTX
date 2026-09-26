@@ -99,7 +99,7 @@ public sealed class St4Packer : IPacker
     /// <summary>
     /// One parse of units, with the copy code where this packs it. Neither
     /// optimizer reports progress: a tool writes what it wrote, and a meter
-    /// on standard output would stand in the middle of it.
+    /// on standard output would be in the middle of it.
     /// </summary>
     private Nt4.Block Parse(int[] units, int unit, int limit) => copies
             ? Nt4.LiteralCopySearch.Optimize(units, unit, limit, MaxOp,
