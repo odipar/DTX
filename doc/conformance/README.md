@@ -37,15 +37,14 @@ clauses changed for them.
 
 - ST4's 3.4 reaches a block at the last offset with no value for that
   offset before a block sets one. It is 1 unit, and 22 columns of this kit
-  open on a block that reads it: ST4 names it now.
+  open on a block that reads it: ST4 defines it now.
 - ST4's 3.8 reads that a block is an even number of bits, where the first
   block is without a flag and is odd; 2.3 runs each stream to the next,
   where stream D is last; and 3.5 left the order a block reads its
   offset stream in.
 - SPEC.md 2.3 read that "nothing in an ST4 data set defines which kind it
-  is", where a copy is an offset above `M` (ST4, SPEC.md 4.4): what the
-  flags byte names is the build a reader needs, which R5.10 reads the same
-  way now.
+  is", where a copy is an offset above `M` (ST4, SPEC.md 4.4): the flags
+  byte marks the build a reader needs, which R5.10 reads the same way now.
 - SPEC.md 2.3 reads `M` against `N`, `N` divided by `k`, which every data
   set of this kit has and no clause had; and 2.2 reads that the payload is
   `C` minus one strides and the last column's bytes, which the reader read
