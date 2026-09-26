@@ -5,11 +5,11 @@
 **AI wrote most of DTX.** Claude (Anthropic's Claude Code) wrote the three
 tool trees, the 68000 reader, the tests, the emulation rig and most of what is
 written here, under Robbert van Dalen's direction: he requested, read and
-merged every change. [LICENSE](LICENSE) is the terms, and its attribution
-records who did what. Whether to use software written that way is the reader's
-decision, and this section is here so that the decision is informed.
+merged every change. [LICENSE](LICENSE) sets the terms, and its attribution
+records who did what. This section informs the reader's decision to use
+software written this way.
 
-What it is built on is older than it. [ST4](https://github.com/odipar/ST4),
+DTX builds on older work. [ST4](https://github.com/odipar/ST4),
 which a DTX2 column is packed with, derives from Einar Saukas's
 [ZX1](https://github.com/einar-saukas/ZX1) through
 [ST1](https://github.com/odipar/ST1), and its 68000 decoder is carried here
@@ -40,8 +40,8 @@ packer or runtime beside it.
 
 A table starts as text: one row a line and one value a column. A value is
 decimal, or hexadecimal where it opens with `$`, and negative where it
-opens with `-`. A line that is blank, or opens with `#`, is not a row, and
-neither is a line of column names before the first row of numbers:
+opens with `-`. A reader skips a blank line, a line that opens with `#`,
+and a line of column names before the first row of numbers:
 
 ```
 # a time, a note and a step
@@ -209,8 +209,8 @@ YMXR, DTX and ST4 fit together.
 ## License and attribution
 
 The format may be implemented freely. [SPEC.md](doc/SPEC.md) is the
-contract, and an
-independent reader or writer owes only the acknowledgement.
+contract, and an independent reader or writer owes only the
+acknowledgement.
 
 The readers, writers and tests under `src/`, `go/`, `dotnet/` and `68k/`
 can be used freely within your programs, for any platform, including
