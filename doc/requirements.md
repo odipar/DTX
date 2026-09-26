@@ -8,15 +8,15 @@ before what it describes, and what things are called comes before both.
 - **R0.1** `AGENTS.md` defines the rules, for every document, code comment
   and commit message.
 - **R0.2** A test reads every document, and every code comment this
-  repository writes, against a list of phrases struck in review, and names
-  the file and line of each hit.
-- **R0.3** The test walks the tree for documents. A document is checked
-  because it is there, not because someone listed it.
+  repository writes, against a list of phrases struck in review, and
+  reports the file and line of each hit.
+- **R0.3** The test walks the tree for documents and checks every one it
+  finds.
 - **R0.4** Striking a phrase adds it to the list, in the same change.
 - **R0.5** Using a struck phrase again removes it from the list, in the same
   change.
-- **R0.6** [glossary.md](glossary.md) lists every term and names the
-  document that explains it. The terms are this repository's ubiquitous
+- **R0.6** [glossary.md](glossary.md) lists every term and the document
+  that explains it. The terms are this repository's ubiquitous
   language.
 - **R0.7** Every document, comment and name in this repository uses those
   terms, and no second word for a thing that has one.
@@ -39,16 +39,16 @@ before what it describes, and what things are called comes before both.
 - **R1.3** How the rows are laid out is a variant's (R2). The table does
   not change with the variant: the same `R`, `C` and `RR`, the same width,
   and the same rows in the same order.
-- **R1.4** Nothing about what a column contains. A format built on this one
-  defines that in its repository.
+- **R1.4** What a column contains is left to the format built on this one,
+  which defines it in its repository.
 
 ## R2. The variants
 
 - **R2.1** A **variant** is one way of laying the rows out, and the only
   thing two layouts of one table differ in (R1.3).
 - **R2.2** **DTX0**, **DTX1** and **DTX2** are the variants this
-  specification defines, in R3, R4 and R5. A variant it does not define
-  is at the next number, and **DTXN** names one of those.
+  specification defines, in R3, R4 and R5. A later variant gets the next
+  number, and **DTXN** names one of those.
 - **R2.3** A table defines which variant it is, and a reader which variants
   it reads. Where either defines it is SPEC.md's.
 - **R2.4** A variant's number is fixed once assigned, and a later
@@ -63,8 +63,8 @@ before what it describes, and what things are called comes before both.
   a writer puts a row down the same way.
 - **R3.3** Finding a row, or a column within one, is arithmetic on `R`,
   `C` and the width. An index is absent.
-- **R3.4** Nothing padded inside the payload. A value falls where the width
-  puts it, so at a width of 1 and an odd `C` a row may fall on an odd
+- **R3.4** The payload is unpadded. A value falls where the width puts
+  it, so at a width of 1 and an odd `C` a row may fall on an odd
   offset, where a 68000 reads its values as bytes.
 - **R3.5** A whole row in one run of bytes, which DTX0 is for.
 
@@ -73,7 +73,7 @@ before what it describes, and what things are called comes before both.
 - **R4.1** The rows laid out column by column.
 - **R4.2** The rows as they are and found by arithmetic, as R3.2 and
   R3.3 have DTX0's.
-- **R4.3** A column begins on a word, so every value sits where a 68000
+- **R4.3** A column begins on a word, so every value is where a 68000
   reads it as one. DTX1 has this over DTX0, at a byte between one column
   and the next where the width is 1 and `R` odd, and at nothing where the
   width is 2 or 4.
@@ -90,9 +90,9 @@ before what it describes, and what things are called comes before both.
 - **R5.3** A reader has one ST4 decoder, built for that `k`, and runs
   every column of the payload through it. ST4 code is built for a unit,
   and with one unit a payload one build reads every column.
-- **R5.4** One ring size `N` for a payload. No data set in it reaches back
-  further than `N`, so a ring of `N` bytes is enough for any of them, and
-  every data set was packed for the `N` the payload defines.
+- **R5.4** One ring size `N` for a payload. Every data set in it reaches
+  back `N` bytes at most, so a ring of `N` bytes is enough for any of them,
+  and every data set was packed for the `N` the payload defines.
 - **R5.5** A reader's rings are all that one size, so they are at a
   fixed stride from one another and one pointer arithmetic runs every
   column. Every column is one width (R6.3), so one pointer does: column
@@ -102,23 +102,21 @@ before what it describes, and what things are called comes before both.
   has.
 - **R5.7** The same table in fewer bytes than DTX1, once it has rows
   enough for the packing to cost less than it saves, which DTX2 is for.
-  What the packing costs does not grow with `R`, where what it saves
-  does, so a short table packs to more than it has.
-- **R5.8** Read back through a ring that does not grow with `R`. A reader
-  has `N` bytes of a column at a time, not the column.
+  What the packing costs stays fixed as `R` grows, where what it saves
+  grows, so a short table packs to more than it has.
+- **R5.8** Read back through a ring that stays one size as `R` grows. A
+  reader has `N` bytes of a column at a time, not the column.
 - **R5.9** An ST4 data set begins on a long.
 - **R5.10** The payload defines whether its columns contain copies from their
   literal streams. A copy is an offset above `M`, the ring in units (ST4,
   SPEC.md 4.4), which a decoder built without the copy code reads as a
-  match, so a reader reads the build it needs out of the file rather than
-  out of anywhere else.
-
+  match, so a reader reads the build it needs out of the file alone.
 - **R5.11** Where `RR` is below `R`, every data set of the payload loops at
   row `RR`: the set never ends, the rows come round and nothing is decoded
   twice. Row `RR` begins a unit of the column, so `RR` times the width
   divides by `k`. Where the table does not repeat, every set ends where the
   rows do, and a reader counts the rows it has decoded so that no refill
-  reaches past the end marker.
+  reaches past the end code (ST4, SPEC.md 3.6).
 
 ## R6. The constraints
 
