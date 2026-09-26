@@ -70,18 +70,18 @@ packs. Every column is packed with `-l65535` as well (abi.md 5).
 ### The text
 
 One row a line, one value a column. The first row of numbers defines `C`,
-and every row after it has that many. A line that is blank, or whose first
-character other than a space is `#`, is not a row, and neither is a line
-before the first row of numbers in which no cell is a number: a line of
-column names, or a line describing the table.
+and every row after it has that many. A reader skips a blank line, a line
+whose first character other than a space is `#`, and a line before the
+first row of numbers in which no cell is a number: a line of column names,
+or a line describing the table.
 
 A value is decimal, or hexadecimal where it opens with `$`, and negative
 where it opens with `-`. Every value of the table is the same width `W`
 (R6.3), stored most significant byte first as every field of the header is,
-and a negative one in two's complement. A value fits `W` bytes where it
-lies from -2^(8W-1) to 2^(8W)-1, so one width fits a signed column's values
-and an unsigned one's alike. DTX does not define more of a column than its
-width, so which of the two a column is is defined elsewhere.
+and a negative one in two's complement. A value fits `W` bytes where it lies
+from -2^(8W-1) to 2^(8W)-1, so one width fits a signed column's values and
+an unsigned one's alike. DTX defines a column's width alone, so a format
+built on it defines which of the two a column is.
 
 ```
 # a time, a note and a step
@@ -91,7 +91,7 @@ time, note, step
 2, $0102,  0
 ```
 
-The first two lines are not rows, and the column names a reader prints are
+A reader skips the first two lines, and the column names a reader prints are
 the reader's, a DTX file defining none. That table needs a width of 2: the
 width fits every value of the table rather than of a column, and column 1
 has values from 256 up.
@@ -163,7 +163,7 @@ Either tool:
 
 | condition | reported as |
 |---|---|
-| standard output cannot be written | `cannot write standard output` |
+| a write of standard output fails | `cannot write standard output` |
 | a flag F outside the flags of the tool | `dtx-write does not read F` |
 
 ## Package
@@ -179,10 +179,10 @@ bin/dtx-package a.dtx b.dtx > both.bin
 
 It combines rather than assembles: it reads the image for the build the
 table needs, writes the six fields the table defines into the format block,
-and appends the table's bytes. No assembler runs, so a caller who unpacks a
-release does not install one. The Go tool contains the twenty-two images
-and so needs neither this repository nor a runtime beside it; it combines
-only, and reads neither flag below.
+and appends the table's bytes. It combines without an assembler, so a
+release runs where it is unpacked. The Go tool contains the twenty-two
+images and so needs neither this repository nor a runtime beside it; it
+combines only, and reads neither flag below.
 
 | flag | what it does |
 |---|---|
@@ -195,7 +195,7 @@ record a column is there, four longs each (abi.md 1). The tool prints
 the image's bytes and the state block's, which the format block also
 defines for a caller reading the file.
 
-A DTX2 image asks more of the caller: its state block contains a decoder
+A DTX2 image needs more of the caller: its state block contains a decoder
 state a turn and a ring a column, so it runs to `NC` bytes and more. The
 packager forms the period from the table and fails the package where none
 meets every rule abi.md 4 defines, naming the rule and the figures that
@@ -209,7 +209,7 @@ under DTX2 the unit and the copy code with it:
 
 | variant | builds | why |
 |---|---:|---|
-| DTX0 | 1 | a row is one run of bytes, so the width does not move the code |
+| DTX0 | 1 | a row is one run of bytes, so the code is the same at every width |
 | DTX1 | 3 | one a width |
 | DTX2 | 18 | one a width, a unit of 1, 2 or 4, with the copy code and without |
 
@@ -228,8 +228,8 @@ Maven build contains all of them; one built from a tree whose build had not
 run resolves an image through `DTX_68K` instead, and `go/image/data` is
 committed empty so the package compiles either way.
 
-This is the one step rmac is needed for. `-Drmac=PATH` names one that is
-not on the path, and a build without either fails at it and names which.
+This is the one step rmac is needed for. `-Drmac=PATH` names one off the
+path, and a build without either fails at that step and reports which.
 
 ```
 bin/dtx-blobs DIR [DIR..]
@@ -265,12 +265,12 @@ and `go build` cross-compiles to any target from any host.
 It writes `dist/release`: one zip a platform, one zip of the twenty-two
 images, and `MANIFEST.txt` from `release/manifest.sh`, which lists every
 file's size and sha256 beside what identifies it, so one release's file is
-told from another's without opening it. It builds `dtx-blobs` first, from a
-tree with no image, that being the one command that makes them rather than
-containing them; it fails where fewer than twenty-two come out; and it ends
-by writing and packaging a table with the host's executables from outside
-this repository, so an executable with no image fails there rather than in
-a release.
+distinguished from another's without opening it. It builds `dtx-blobs`
+first, from a tree with no image, that being the one command that makes them
+rather than containing them; it fails where fewer than twenty-two come out;
+and it ends by writing and packaging a table with the host's executables
+from outside this repository, so an executable with no image fails there
+rather than in a release.
 
 Writing DTX2 needs an ST4 packer. The Java and C# trees contain one,
 `src/main/java/org/st4` and `dotnet/nt4`, both copied from
@@ -350,8 +350,8 @@ compared with what abi.md 5 records. It needs rmac.
 
 `org.dtx.style.HouseStyle` reads every document and every code comment this
 repository writes against `STRUCK.md`, the constructs struck under the
-rules of `AGENTS.md`. A hit names the file, the line, the text matched and
-the rule. `mvn test` runs it; so does
+rules of `AGENTS.md`. A hit reports the file, the line, the text matched
+and the rule. `mvn test` runs it; so does
 
     java -cp target/classes org.dtx.style.HouseStyle
 
