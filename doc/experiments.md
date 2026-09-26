@@ -34,9 +34,9 @@ DTX2:
 | 512 | 1552 | 908 | 0.59 |
 
 DTX2 is the larger up to 256 rows on this table and the smaller at 512,
-where it is under three fifths of DTX1. What packing costs does not shrink
-with `R`: the 28 byte ST4 header a column, and the payload's offsets. What
-it saves does, and on this table it overtakes between 256 and 512 rows,
+where it is under three fifths of DTX1. What packing costs stays fixed as
+`R` grows: the 28 byte ST4 header a column, and the payload's offsets. What
+it saves grows, and on this table it overtakes between 256 and 512 rows,
 where the values begin to repeat: they run modulo 251.
 
 ## Copies from the literal stream, at a small ring
@@ -55,7 +55,7 @@ back than a ring of 64:
 Without copies the ring is too short for the pattern and DTX2 packs to
 more than DTX1. With them a match beyond the ring copies from the column's
 literal stream, and the file is under a fifth of DTX1's. The image
-moves less than the file, since the code inside it does not move.
+moves less than the file, since the code inside it is the same size.
 
 ## What the copy code costs
 
@@ -100,8 +100,9 @@ bytes to 716 and DTX2's from 1352 to 1476.
 One width a table (R6.3) dropped the test again, and the ABI dropped the
 move with it: an advance leaves the pointer at the row's first value and
 the caller reads where the values are (abi.md 2), so nothing in an image
-moves one. DTX1's code is 84 bytes now and DTX2's 1448, and the rig's
-alignment hook passes every table it runs.
+moves one. DTX1's code came to 84 bytes at that change and DTX2's to 1448
+(performance.md has the sizes today), and the rig's alignment hook passes
+every table it runs.
 
 ## A column packed with copies, read without them
 

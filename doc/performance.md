@@ -6,8 +6,8 @@ The figures are cycle counts read out of the rig `68k/test/emu/test_dtx.py`.
 It runs each image under emulation and counts every instruction the machine
 runs at the cycles the M68000 user's manual's tables list for it, out of the
 opcode and, for a branch or a loop, out of where the machine went next; the
-rig checks this document against its totals and fails where a figure here is
-not the one it counts. Before it counts, it checks its tables against the
+rig checks this document against its totals and fails where a figure here
+differs from its count. Before it counts, it checks its tables against the
 manual on a set of encodings. The cycles are the processor's, with no wait
 state: a machine whose bus rounds an access up, as an Atari ST's does,
 runs longer.
