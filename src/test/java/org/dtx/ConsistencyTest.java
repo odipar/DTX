@@ -245,10 +245,10 @@ final class ConsistencyTest {
     void theNewestReleaseListedIsTheVersionOfTheBuild() throws IOException {
         Matcher pom = Pattern.compile("<version>([^<]+)</version>")
                 .matcher(read(Path.of("pom.xml")));
-        assertTrue(pom.find(), "pom.xml names no version");
+        assertTrue(pom.find(), "pom.xml lacks a version");
         Matcher listed = Pattern.compile("^### (\\d+\\.\\d+\\.\\d+), ",
                 Pattern.MULTILINE).matcher(read(Path.of("doc/RELEASES.md")));
-        assertTrue(listed.find(), "RELEASES.md lists no release");
+        assertTrue(listed.find(), "RELEASES.md lacks a release");
         assertTrue(pom.group(1).equals(listed.group(1)),
                 () -> "the pom is " + pom.group(1) + " and the newest release listed is "
                         + listed.group(1));
@@ -312,7 +312,7 @@ final class ConsistencyTest {
         if (!offsets.find()) {
             wrong.add("the header picture does not draw offsets");
         } else {
-            draws(wrong, offsets.group(1), 15, "the pad byte stands at");
+            draws(wrong, offsets.group(1), 15, "the pad byte is at");
             draws(wrong, offsets.group(2), Dtx.HEADER, "the header runs to");
         }
         defines(wrong, spec, "| " + width + " | 0 |",
@@ -390,7 +390,7 @@ final class ConsistencyTest {
         List<String> wrong = new ArrayList<>();
         int third = Integer.parseInt(first.group(1), 16);
         if (third != Integer.parseInt(first.group(2))) {
-            wrong.add("the signature's third byte gives version " + third
+            wrong.add("the signature's third byte is version " + third
                     + ", and the sentence beside it reads " + first.group(2));
         }
         defines(wrong, spec, "shorter than the " + bytes + " bytes of an ST4 header",
@@ -439,7 +439,7 @@ final class ConsistencyTest {
             }
         }
         assertTrue(bad.isEmpty(), () -> String.join("\n", bad)
-                + "\nterminology.md holds " + sections);
+                + "\nterminology.md has " + sections);
     }
 
     @Test
@@ -463,14 +463,14 @@ final class ConsistencyTest {
             Path script = Path.of(m.group(1));
             named.add(m.group(1));
             if (!Files.isRegularFile(script)) {
-                wrong.add("tools.md gives " + script + ", which is not there");
+                wrong.add("tools.md lists " + script + ", which is not there");
             } else if (!Files.isExecutable(script)) {
                 wrong.add(script + " is not executable");
             }
         }
-        assertTrue(!named.isEmpty(), "tools.md does not give a script");
+        assertTrue(!named.isEmpty(), "tools.md lacks a script");
         assertTrue(wrong.isEmpty(), () -> String.join("\n", wrong)
-                + "\ntools.md gives " + named);
+                + "\ntools.md lists " + named);
     }
 
     @Test
@@ -480,7 +480,7 @@ final class ConsistencyTest {
                 + " documents read; the check is asleep");
         List<String> wide = Documents.wide(read, 78);
         assertTrue(wide.isEmpty(), () -> String.join("\n", wide)
-                + "\nAGENTS.md gives one wrap width, and a document keeps it.");
+                + "\nAGENTS.md sets one wrap width, and a document keeps it.");
     }
 
     /** The clauses one document defines: `**N.N**` and `## N.N`, a section
@@ -516,7 +516,7 @@ final class ConsistencyTest {
             Matcher m = Pattern.compile("\\((\\d+(?:\\.\\d+){1,3})\\)").matcher(said);
             while (m.find()) {
                 if (!clauses.contains(m.group(1))) {
-                    wrong.add(at + " cites (" + m.group(1) + "), which is no clause of it");
+                    wrong.add(at + " cites (" + m.group(1) + "), which is outside its clauses");
                 }
             }
         }

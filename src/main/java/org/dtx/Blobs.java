@@ -182,8 +182,8 @@ public final class Blobs {
                         + build.name() + " with an assembler at " + rmac
                         + " and templates at " + templates
                         + ": the build runs one, and -Drmac=PATH names"
-                        + " another. A release contains what it built, and a"
-                        + " caller who takes one does not run an assembler.",
+                        + " another. A release contains what it built, so a"
+                        + " caller who uses one runs without an assembler.",
                         failed);
             }
             for (Path at : into) {

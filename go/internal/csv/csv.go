@@ -71,7 +71,7 @@ func Width(text string) (int, error) {
 	width, err := strconv.Atoi(given)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"the comment gives %q, which is not a width", given)
+			"the width %q in the comment is not a number", given)
 	}
 	return width, nil
 }
@@ -86,7 +86,7 @@ func Repeat(text string) (int, error) {
 	repeat, err := strconv.Atoi(given)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"the comment gives %q, which is not a repeat", given)
+			"the repeat %q in the comment is not a number", given)
 	}
 	return repeat, nil
 }
@@ -171,7 +171,7 @@ func table(row [][]int64, width, repeat int) (*dtx.Table, error) {
 			value := row[r][i]
 			if !fits(value, width) {
 				return nil, fmt.Errorf(
-					"row %d column %d gives %d, which %d bytes do not take",
+					"row %d column %d is %d, which is outside the range of width %d",
 					r, i, value, width)
 			}
 			put(column[i], r*width, value, width)
@@ -200,7 +200,7 @@ func rows(text string) ([][]int64, error) {
 				return nil, fmt.Errorf("C is 1 to 256, not %d", columns)
 			}
 		} else if len(cell) != columns {
-			return nil, fmt.Errorf("line %d gives %d values, not %d",
+			return nil, fmt.Errorf("line %d has %d values, not %d",
 				at+1, len(cell), columns)
 		}
 		row := make([]int64, columns)
@@ -260,8 +260,8 @@ func narrowest(row [][]int64) (int, error) {
 		for _, value := range read {
 			for !fits(value, taken) {
 				if taken == 4 {
-					return 0, fmt.Errorf("the text gives %d, which no width"+
-						" of 1, 2 or 4 bytes takes", value)
+					return 0, fmt.Errorf("the text has %d, which is outside"+
+						" the range of 1, 2 and 4 bytes", value)
 				}
 				if taken == 1 {
 					taken = 2
@@ -277,7 +277,7 @@ func narrowest(row [][]int64) (int, error) {
 // value returns the number cell reads as, or what it is that is not one.
 func value(cell string, line, column int) (int64, error) {
 	where := fmt.Sprintf("line %d column %d", line, column)
-	notANumber := fmt.Errorf("%s gives %q, which is not a number", where, cell)
+	notANumber := fmt.Errorf("%s is %q, which is not a number", where, cell)
 	switch {
 	case strings.HasPrefix(cell, "$"):
 		out, err := strconv.ParseInt(cell[1:], 16, 64)

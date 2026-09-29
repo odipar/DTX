@@ -164,8 +164,8 @@ public final class Csv {
                 long value = row.get(r)[i];
                 if (!fits(value, width)) {
                     throw new IllegalArgumentException("row " + r + " column "
-                            + i + " gives " + value + ", which " + width
-                            + " bytes do not take");
+                            + i + " is " + value + ", which is outside the"
+                            + " range of width " + width);
                 }
                 put(column[i], r * width, value, width);
             }
@@ -196,7 +196,7 @@ public final class Csv {
                 }
             } else if (cell.length != columns) {
                 throw new IllegalArgumentException("line " + (at + 1)
-                        + " gives " + cell.length + " values, not " + columns);
+                        + " has " + cell.length + " values, not " + columns);
             }
             long[] row = new long[columns];
             for (int i = 0; i < columns; i++) {
@@ -241,9 +241,9 @@ public final class Csv {
             for (long value : read) {
                 while (!fits(value, taken)) {
                     if (taken == 4) {
-                        throw new IllegalArgumentException("the text gives "
-                                + value + ", which no width of 1, 2 or 4"
-                                + " bytes takes");
+                        throw new IllegalArgumentException("the text has "
+                                + value + ", which is outside the range of"
+                                + " 1, 2 and 4 bytes");
                     }
                     taken = taken == 1 ? 2 : 4;
                 }
@@ -264,7 +264,7 @@ public final class Csv {
             }
             return Long.parseLong(cell);
         } catch (NumberFormatException notANumber) {
-            throw new IllegalArgumentException(where + " gives \"" + cell
+            throw new IllegalArgumentException(where + " is \"" + cell
                     + "\", which is not a number");
         }
     }

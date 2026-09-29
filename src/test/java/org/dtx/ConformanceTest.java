@@ -147,12 +147,12 @@ class ConformanceTest {
                 assertArrayEquals(table, Files.readAllBytes(at),
                         source.name() + ".dtx is not the table the writer writes");
                 assertArrayEquals(kept, Files.readAllBytes(rowsAt),
-                        source.name() + ".rows is not the rows the table holds");
+                        source.name() + ".rows is not the rows of the table");
             }
             String row = row(source, table);
             listing.add(row);
             if (!sources.contains(row)) {
-                wrong.add(source.name() + ": SOURCES.md does not hold its row");
+                wrong.add(source.name() + ": SOURCES.md does not have its row");
             }
         }
         if (!wrong.isEmpty()) {
@@ -160,8 +160,8 @@ class ConformanceTest {
                     String.join("\n", listing) + "\n", StandardCharsets.UTF_8);
         }
         assertTrue(wrong.isEmpty(), String.join("\n", wrong)
-                + "\ndoc/conformance/SOURCES.generated.md holds every row as the"
-                + " writer gives it; SOURCES.md takes them.");
+                + "\ndoc/conformance/SOURCES.generated.md has every row as the"
+                + " writer writes it; copy them into SOURCES.md.");
     }
 
     /**
@@ -178,7 +178,7 @@ class ConformanceTest {
                     tables.resolve(source.name() + ".dtx")));
             assertArrayEquals(
                     Files.readAllBytes(tables.resolve(source.name() + ".rows")),
-                    rows(table), source.name() + ": the Java reader gives"
+                    rows(table), source.name() + ": the Java reader reads"
                             + " other rows than the kit");
         }
     }

@@ -133,7 +133,7 @@ def csv_width(values):
     for row in values:
         for one in row:
             while not fits(one, taken):
-                assert taken != 4, "%d does not take a width" % one
+                assert taken != 4, "%d is outside the range of 4 bytes" % one
                 taken = 2 if taken == 1 else 4
     return taken
 
@@ -161,7 +161,7 @@ def ran(argv, stdin=None):
     report on standard error."""
     done = subprocess.run(argv, input=stdin, capture_output=True)
     if done.returncode != 0:
-        raise SystemExit("%s gave %s%s" % (argv[0],
+        raise SystemExit("%s reported %s%s" % (argv[0],
                                            done.stdout.decode(errors="replace"),
                                            done.stderr.decode(errors="replace")))
     return done.stdout, done.stderr.decode(errors="replace")
@@ -176,7 +176,7 @@ def run(argv, stdin=None):
     """
     done = subprocess.run(argv, input=stdin, capture_output=True)
     if done.returncode != 0:
-        raise SystemExit("%s gave %s%s" % (argv[0],
+        raise SystemExit("%s reported %s%s" % (argv[0],
                                            done.stdout.decode(errors="replace"),
                                            done.stderr.decode(errors="replace")))
     return done.stdout
@@ -297,7 +297,7 @@ class Machine:
         except UcError as bad:
             raise AssertionError("%s faulted at %08x: %s"
                                  % (name, mu.reg_read(UC_M68K_REG_PC), bad))
-        assert not self.misaligned, "%s took a word or long at an odd" \
+        assert not self.misaligned, "%s accessed a word or long at an odd" \
             " address, which a 68000 faults on: pc %08x, address %08x, %d bytes" \
             % ((name,) + self.misaligned[0])
         assert mu.reg_read(UC_M68K_REG_D6) == 0x6D6D6D6D, name + " moved d6"
@@ -350,7 +350,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
     assert defined_row == row_bytes, "the format block's row bytes"
     want_stride = {0: width, 1: (rows * width + 1) // 2 * 2}.get(kind, n)
     assert stride == want_stride, \
-        "the format block gives a stride of %d, not %d" % (stride, want_stride)
+        "the format block has a stride of %d, not %d" % (stride, want_stride)
     if kind == 2:
         assert p >= columns, "P is at least C"
         assert n == ring and fmt[18] == unit, "N and k the payload defines"
@@ -369,13 +369,13 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
 
     # metadata may be called before init
     got = m.call("metadata")
-    assert got["d0"] == rows, "metadata gave R = %d" % got["d0"]
-    assert got["d1"] & 0xFFFF == columns, "metadata gave C"
-    assert got["d2"] == rr, "metadata gave RR"
-    assert got["d3"] == stride, "metadata gave a stride of %d, not %d" \
+    assert got["d0"] == rows, "metadata returned R = %d" % got["d0"]
+    assert got["d1"] & 0xFFFF == columns, "metadata returned C"
+    assert got["d2"] == rr, "metadata returned RR"
+    assert got["d3"] == stride, "metadata returned a stride of %d, not %d" \
         % (got["d3"], stride)
-    assert got["a0"] == IMAGE + 16, "metadata gave the format block"
-    assert got["a1"] == IMAGE + header_at, "metadata gave the header"
+    assert got["a0"] == IMAGE + 16, "metadata returned the format block"
+    assert got["a1"] == IMAGE + header_at, "metadata returned the header"
 
     m.call("init", a1=IMAGE + header_at)
 
@@ -486,11 +486,8 @@ def package_many(blobs):
         m = re.search(r"table (\d+) at image\+(\d+)", line)
         if m:
             at[int(m.group(1)) - 1] = int(m.group(2))
-        m = re.search(r"table 1 stands at image\+(\d+)", line)
-        if m:
-            at[0] = int(m.group(1))
     assert all(x is not None for x in at), \
-        "the packager did not say where every table stands:\n" + said
+        "the packager left out the offset of a table:\n" + said
     return image, at
 
 
@@ -510,7 +507,7 @@ def one_image_several_tables():
         # same tables by one code, less the header the second no longer
         # repeats.
         alone = sum(len(package(b)[0]) for b in blobs)
-        assert len(image) < alone, "an image of two is no smaller than two"
+        assert len(image) < alone, "an image of two is at least the size of two"
         state = struct.unpack(">I", image[20:24])[0]
         for csv, table in zip((first, second), at):
             _, want = csv_rows(csv, width)
@@ -532,7 +529,7 @@ def one_image_several_tables():
             for _ in range(len(want)):
                 row = m.call("advance")
                 got.append(m.row(row["a1"], columns, stride, width))
-            assert got == want, ("the table at image+%d gave %s, not %s"
+            assert got == want, ("the table at image+%d read %s, not %s"
                                  % (table, got[:2], want[:2]))
         yield "DTX%d, W=%d%s" % (variant, width,
                                  "" if variant != 2 else ", k=%d" % unit), \
@@ -586,24 +583,24 @@ def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
             due = columns * (1 + (len(want) + p - 1) // p)
             assert resumes <= due, \
                 "the decoder was called %d times, and reading %d rows at a" \
-                " period of %d takes at most %d" % (resumes, len(want), p, due)
+                " period of %d needs at most %d" % (resumes, len(want), p, due)
             asked = "  %d resumes at P=%d" % (resumes, p)
         # The writer's link, where this rig can read the file: the bytes the
         # writer laid down are the rows the text defines.
         if variant != 2:
             _, _, _, _, _, _, _, laid = read_dtx(blob)
             assert laid == want, \
-                "DTX%d: the writer laid down rows the text does not give" % variant
+                "DTX%d: the writer laid down rows other than those of the text" % variant
         # The reader's link: a 68000 reads the rows the text defines.
         assert len(got) == len(want), \
-            "DTX%d gave %d rows, not %d" % (variant, len(got), len(want))
+            "DTX%d read %d rows, not %d" % (variant, len(got), len(want))
         for r, (a, b) in enumerate(zip(got, want)):
-            assert a == b, "DTX%d row %d read %s, the text gives %s" % (
+            assert a == b, "DTX%d row %d read %s, the text has %s" % (
                 variant, r, a.hex(), b.hex())
         given[variant] = got
         sizes.append(len(image))
-    assert given[0] == given[1], "DTX0 and DTX1 give different rows"
-    assert given[1] == given[2], "DTX1 and DTX2 give different rows"
+    assert given[0] == given[1], "DTX0 and DTX1 read different rows"
+    assert given[1] == given[2], "DTX1 and DTX2 read different rows"
     print("  %-32s R=%-5d C=%-2d W=%d images %s%s"
           % (name, len(want), columns, width,
              "/".join(str(s) for s in sizes), asked))
@@ -1033,7 +1030,7 @@ def cycle_tables():
         pc = 0x1000
         got, length = cycles_of(words, sr, dn, pc,
                                 None if went is None else pc + went, source)
-        assert got == cycles, "%s: the tables give %d cycles, the manual %d" % (
+        assert got == cycles, "%s: the tables count %d cycles, the manual %d" % (
             " ".join("%04x" % w for w in words), got, cycles)
         assert length == len(words), "%s: read as %d words, not %d" % (
             " ".join("%04x" % w for w in words), length, len(words))
@@ -1218,7 +1215,7 @@ def performance():
         for row in rows:
             for column, one in enumerate(calls[name]):
                 assert row[1 + column] == one[row[0]], \
-                    "doc/performance.md gives %s for %s, %s, column %d; the" \
+                    "doc/performance.md has %s for %s, %s, column %d; the" \
                     " rig counts %s" % (row[1 + column], row[0], name,
                                         column + 1, one[row[0]])
                 cells += 1
@@ -1227,13 +1224,13 @@ def performance():
         len(listed), at)
     for width, row in reads.items():
         assert said_reads.get(width) == row, \
-            "doc/performance.md gives %s for one value at a width of %d; the" \
+            "doc/performance.md has %s for one value at a width of %d; the" \
             " rig counts %s" % (said_reads.get(width), width, row)
         cells += 2
     for unit, (without, with_) in costs.items():
         want = [str(without), str(with_), str(with_ - without)]
         assert said_costs.get(unit) == want, \
-            "doc/performance.md gives %s for the copy code at k of %d; the rig" \
+            "doc/performance.md has %s for the copy code at k of %d; the rig" \
             " counts %s" % (said_costs.get(unit), unit, want)
         cells += 3
     print("  %d cells of doc/performance.md, each the figure the rig counts"

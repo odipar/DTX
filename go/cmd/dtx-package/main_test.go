@@ -107,10 +107,10 @@ func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 		_, _, err := ran(t, table(t), flag)
 		var m misuse
 		if !errors.As(err, &m) {
-			t.Fatalf("%s gave %v, not a misuse", flag, err)
+			t.Fatalf("%s returned %v, not a misuse", flag, err)
 		}
 		if want := "dtx-package does not read " + flag; err.Error() != want {
-			t.Fatalf("%s gave %q, not %q", flag, err, want)
+			t.Fatalf("%s returned %q, not %q", flag, err, want)
 		}
 	}
 }

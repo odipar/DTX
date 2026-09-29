@@ -76,8 +76,8 @@ public final class Write {
         Table table;
         if (isDtx(in)) {
             if (!width.isEmpty()) {
-                System.err.println(width + " gives text its width, and the"
-                        + " input is a DTX file with its own");
+                System.err.println(width + " sets the width of text, and the"
+                        + " input is a DTX file, which has a width");
                 System.exit(2);
                 return;
             }

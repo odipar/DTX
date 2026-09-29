@@ -117,7 +117,7 @@ func TestTheFormatBlockDefinesWhatTheTableFixes(t *testing.T) {
 		// plain variant does not have one: its two offsets then meet.
 		columns := dtx.GetLong(out, FormatAt+ColumnsAt)
 		if columns > at {
-			t.Fatalf("%s: the column table at %d stands past the table at %d",
+			t.Fatalf("%s: the column table at %d is past the table at %d",
 				one.name, columns, at)
 		}
 		if one.variant != dtx.DTX2 && columns != at {
@@ -172,7 +172,7 @@ func TestTheStrideReachesTheNextColumnsValue(t *testing.T) {
 			t.Fatalf("%s: %v", one.name, err)
 		}
 		if got := dtx.GetLong(out, FormatAt+StrideAt); got != one.stride {
-			t.Fatalf("%s: the block gives a stride of %d, not %d",
+			t.Fatalf("%s: the block has a stride of %d, not %d",
 				one.name, got, one.stride)
 		}
 	}
@@ -255,7 +255,7 @@ func TestTheStateBlockIsTheSameAtEveryWidth(t *testing.T) {
 					t.Fatal(err)
 				}
 				if got := dtx.GetLong(out, FormatAt+StateAt); got != 12 {
-					t.Fatalf("DTX%d of %d columns at a width of %d takes %d"+
+					t.Fatalf("DTX%d of %d columns at a width of %d is %d"+
 						" bytes, not 12", variant, columns, width, got)
 				}
 			}
@@ -419,7 +419,7 @@ func TestARingTheWidthDoesNotDivideIsRefused(t *testing.T) {
 	}
 	_, err = Period(head, given)
 	if err == nil {
-		t.Fatal("a ring of six bytes took a period")
+		t.Fatal("a ring of six bytes has a period")
 	}
 	if !strings.HasPrefix(err.Error(), "no period from C of 2 up") {
 		t.Fatalf("the error is %q", err)
@@ -439,11 +439,11 @@ func TestAPackedStateBlockContainsADecoderStateAndARingAColumn(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := Decoders(); got != 72 {
-		t.Fatalf("the decoder states stand at %d, not the 72 that 68k/DTX2.S"+
+		t.Fatalf("the decoder states are at %d, not the 72 that 68k/DTX2.S"+
 			" puts them at", got)
 	}
 	if got, err := Ring(head, given); err != nil || got != 72+48*2 {
-		t.Fatalf("the rings stand at %d, not behind two decoder states of 48"+
+		t.Fatalf("the rings are at %d, not behind two decoder states of 48"+
 			" bytes, one a turn (%v)", got, err)
 	}
 	if got, err := PackedStateBytes(head, given); err != nil || got != 72+48*2+2*960 {
@@ -521,7 +521,7 @@ func TestAReplayedLoopUnderThePeriodIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = Period(head, given); err == nil {
-		t.Fatal("a replayed loop of 20 rows under a period of 30 took a period")
+		t.Fatal("a replayed loop of 20 rows under a period of 30 has a period")
 	}
 	if !strings.HasPrefix(err.Error(), "a replayed loop of 20 rows is under the period of 30") {
 		t.Fatalf("the error is %q", err)
@@ -542,7 +542,7 @@ func TestAUnitTheDecoderDoesNotDecodeIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Combine(code, file, head); err == nil {
-		t.Fatal("a k of 2 decoder took a table packed at 1")
+		t.Fatal("a table packed at 1 combined with a k of 2 decoder")
 	}
 }
 
@@ -560,7 +560,7 @@ func TestAWidthTheCodeDoesNotReadIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Combine(code, file, head); err == nil {
-		t.Fatal("code of four byte values took a table of two byte ones")
+		t.Fatal("a table of two byte values combined with code of four byte ones")
 	}
 }
 
@@ -593,11 +593,11 @@ func TestADataSetThatDoesNotDefineThePayloadsUnitIsRefused(t *testing.T) {
 	at := head.Length() + dtx.GetLong(file, head.Length()+4+4)
 	file[at+3] = 2 // column 1 now defines a unit of 2
 	if _, err := ReadPacked(file, head); err == nil {
-		t.Fatal("a payload took a data set defining another unit")
+		t.Fatal("a payload with a data set defining another unit was read")
 	}
 	file[at+3] = 1
 	file[at+2] = 6 // and the format version before this one
 	if _, err := ReadPacked(file, head); err == nil {
-		t.Fatal("a payload took a data set of another format version")
+		t.Fatal("a payload with a data set of another format version was read")
 	}
 }

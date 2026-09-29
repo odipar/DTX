@@ -178,7 +178,7 @@ class ParityTest {
         record Case(String name, int variant, int width,
                 @Nullable Integer repeat, int unit, int ring, boolean copies) {}
         for (Case one : List.of(
-                new Case("DTX0, a width given", 0, 2, null, 1, 960, false),
+                new Case("DTX0, a width passed", 0, 2, null, 1, 960, false),
                 new Case("DTX1, a repeat", 1, 1, 32, 1, 960, false),
                 new Case("DTX1, four byte values", 1, 4, null, 1, 960, false),
                 new Case("DTX2, k of 1", 2, 1, null, 1, 960, false),

@@ -1,5 +1,5 @@
-# The Java suite, run by hand. The Python rig stands
-# outside it, which wants an emulator and unicorn; doc/tools.md has it.
+# The Java suite, run by hand. The Python rig is outside
+# it, since it needs an emulator and unicorn; doc/tools.md has it.
 name: test
 
 # Off by default: no push and no pull request starts it. A caller starts
@@ -36,8 +36,8 @@ jobs:
       # RigCallsTest drives the 68000 reader under emulation and skips
       # where unicorn is absent.
       - run: python3 -m pip install --quiet unicorn
-      # St4Test reads the packer this tree carries against the real
-      # one, and skips where no executable stands at $ST4 or on the
+      # St4Test reads the copy of the packer in this tree against the
+      # real one, and skips where no executable is at $ST4 or on the
       # path. ST4 is built at the release go.mod requires, read from
       # go.mod so the two cannot drift.
       - name: ST4's packer at the release go.mod requires

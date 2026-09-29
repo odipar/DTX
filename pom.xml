@@ -14,8 +14,8 @@
         <maven.compiler.release>23</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- The assembler that builds the code the packager combines from.
-             Nothing else in the build runs it, and a caller who takes a
-             release runs it never. -->
+             Nothing else in the build runs it, and a caller of a release
+             runs without it. -->
         <rmac>rmac</rmac>
         <jspecify.version>1.0.0</jspecify.version>
         <errorprone.version>2.36.0</errorprone.version>
@@ -112,7 +112,7 @@
                              build. Three directories read them: the classes
                              the jar is made of, build/68k for the C# assembly
                              to embed, and go/image/data, which
-                             go:embed reaches only inside its own module. This
+                             go:embed reaches only inside its module. This
                              is the one step rmac is needed for: name another
                              with -Drmac=PATH. -->
                         <id>blobs</id>

@@ -108,7 +108,7 @@ public final class Packager {
                 throw new IllegalArgumentException(String.format(
                         "column %d's data set opens %08X and the payload"
                         + " defines %08X: an ST4 data set opens with S4, the"
-                        + " format version 7 and the payload's own k",
+                        + " format version 7 and the k of the payload",
                         i, said, signature));
             }
         }
@@ -263,15 +263,15 @@ public final class Packager {
             out.append(equ("DTX_PAYLOAD", PARK));
         }
         out
-                .append("\n; What the code takes at assembly time.\n")
+                .append("\n; What the code reads at assembly time.\n")
                 .append(equ("DTX_WIDTH", width));
         if (variant == Dtx.DTX2) {
             out.append(equ("ST4_UNIT", packed.unit()));
         }
-        out.append("\n; The rest of what the table gives. A combine writes"
+        out.append("\n; The rest of the table's figures. A combine writes"
                         + " these into the format\n; block and the code"
                         + " reads them from there (doc/abi.md 1), so they"
-                        + " stand\n; here for a caller reading the figures"
+                        + " are\n; here for a caller reading the figures"
                         + " rather than for the assembler.\n")
                 .append(equ("DTX_ROWBYTES", rowBytes))
                 .append(equ("DTX_STATE", variant == Dtx.DTX2
@@ -282,7 +282,8 @@ public final class Packager {
             if (copies) {
                 out.append(equ("ST4_WINDOW", 1))
                         .append("; the columns were packed with st4 -c, so"
-                                + " the decoder takes the copy code\n");
+                                + " the decoder is built with the copy"
+                                + " code\n");
             }
         }
 
@@ -587,9 +588,9 @@ public final class Packager {
 
     private static void apart(String what, int first, int next) {
         if (first != next) {
-            throw new IllegalStateException("one image gives " + what
-                    + " once, and the first table gives " + first
-                    + " where another gives " + next);
+            throw new IllegalStateException("one image shares " + what
+                    + ", and the first table has " + first
+                    + " where another has " + next);
         }
     }
 
@@ -733,7 +734,7 @@ public final class Packager {
                             ? stateBytes(its, packed(next, its)) : stateBytes());
         }
         if (!defines && named.size() > 1) {
-            System.err.printf("table 1 stands at image+%d%n", headers[0]);
+            System.err.printf("table 1 at image+%d%n", headers[0]);
         }
     }
 }

@@ -26,7 +26,7 @@ const help = `dtx-package [in.dtx...] < in.dtx > out.bin
 Packages one DTX file or several as a 68000 image, on standard output: the
 code for their variant and, under DTX1 and DTX2, their width, then a column
 table and a file for each. One table comes in on standard input, and several
-are named. doc/abi.md gives the four calls into the image.
+are named. doc/abi.md defines the four calls into the image.
 
   -help        this text
 
@@ -36,9 +36,8 @@ Examples
       the image of a table, from the code the build made
 
   dtx-package a.dtx b.dtx > both.bin
-      one image of two tables, the code in it once, with a line
-      saying where each table stands: a caller hands that to
-      DTX_init
+      one image of two tables, the code in it once, and on standard
+      error where each table is: a caller hands that to DTX_init
 
 doc/tools.md, Package.
 `
@@ -131,7 +130,7 @@ func run(args []string, in io.Reader, out io.Writer) error {
 			named[i], i+1, at[i], len(files[i]), its.Rows, its.Columns, mine)
 	}
 	if len(named) > 1 {
-		fmt.Fprintf(os.Stderr, "table 1 stands at image+%d\n", at[0])
+		fmt.Fprintf(os.Stderr, "table 1 at image+%d\n", at[0])
 	}
 	return nil
 }

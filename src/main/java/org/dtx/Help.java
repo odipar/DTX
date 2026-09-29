@@ -46,11 +46,11 @@ final class Help {
 
               -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for
                            text)
-              -wW          text: the bytes every value takes, 1, 2 or 4 (what the
-                           text's first comment gives, or else the narrowest that
-                           fits every value)
+              -wW          text: the bytes of every value, 1, 2 or 4 (what the
+                           text's first comment declares, or else the narrowest
+                           that fits every value)
               -rRR         the repeat: the row an advance past the last steps to, R for
-                           none (what the file or the text's first comment gives, or R)
+                           none (what the file or the text's first comment declares, or R)
               -kK          DTX2: the unit, 1, 2 or 4 (1)
               -mN          DTX2: the ring, in bytes (960)
               -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)
@@ -72,7 +72,7 @@ final class Help {
                   text into a DTX0 file of four byte values, repeating at row 32
               dtx-write -k2 -copies < t.dtx > again.dtx
                   a DTX2 file repacked at a unit of 2, with copies from the
-                  literal stream. The width is the file's own
+                  literal stream, at the width of the file
               dtx-write -text < t.dtx > t.csv
                   a DTX file of any variant read out as text
               dtx-write -v2 -k1 < t.csv | dtx-package > t.bin
@@ -94,7 +94,7 @@ final class Help {
             Packages one DTX file or several as a 68000 image, on standard output:
             the code for their variant and, under DTX1 and DTX2, their width, then a
             column table and a file for each. One table comes in on standard input,
-            and several are named. doc/abi.md gives the four calls into the image.
+            and several are named. doc/abi.md defines the four calls into the image.
 
               -aRMAC       assembles the code with the rmac at RMAC, in place of the
                            image the build made. The templates are read from 68k
@@ -108,15 +108,13 @@ final class Help {
               dtx-package < t.dtx > t.bin
                   the image of a table, from the code the build made
               dtx-package a.dtx b.dtx > both.bin
-                  one image of two tables, the code in it once, with a line
-                  saying where each table stands: a caller hands that to
-                  DTX_init
+                  one image of two tables, the code in it once, and on standard
+                  error where each table is: a caller hands that to DTX_init
               dtx-package -a/usr/local/bin/rmac < t.dtx > t.bin
                   the same, with the code assembled from the templates by that
                   rmac
               dtx-package -s < t.dtx > t.i
-                  the table's figures as assembler equates, for a build of your
-                  own
+                  the table's figures as assembler equates, for a separate build
 
             doc/tools.md, Package.
             """;

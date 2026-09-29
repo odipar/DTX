@@ -81,7 +81,7 @@ final class WriteTest {
             assertEquals(Dtx.read(Files.readAllBytes(packed)),
                     Dtx.read(Files.readAllBytes(back)),
                     "through text and back, with the width and repeat the"
-                            + " comment gives");
+                            + " comment declares");
         }
     }
 
@@ -106,7 +106,7 @@ final class WriteTest {
             String last = flags[flags.length - 1];
             assertTrue(said != null && said.contains(
                             "dtx-write does not read " + last),
-                    "dtx-write " + last + " gave " + said);
+                    "dtx-write " + last + " reported " + said);
         }
     }
 

@@ -149,7 +149,7 @@ Reading a table, in `dtx-write`, `dtx-package` and `dtx-blobs` alike:
 | a file of B bytes short of the payload the header names | `a DTX file of B bytes is short of N` |
 | text with no row in it | `the text does not contain a row` |
 | a cell X that is not a number | `"X", which is not a number` |
-| a value V outside the range of 1, 2 and 4 bytes | `V, which no width of 1, 2 or 4 bytes takes` |
+| a value V outside the range of 1, 2 and 4 bytes | `V, which is outside the range of 1, 2 and 4 bytes` |
 
 Writing a DTX2 table, in `dtx-write` and `dtx-package`:
 
