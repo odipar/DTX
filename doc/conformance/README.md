@@ -91,3 +91,30 @@ payloads: its 3.1 lists three kinds of block and its 3.4 three cases of
 the flag, a copy among neither, so a reader reads a copy as a
 match block, which governs every byte of `dtx2-copies` after its second
 block.
+
+**The fourth run**, 2026-09-29, against the kit with the clauses of the
+first three in it and a fourth implementer. The reader was 329 lines and
+produced all nineteen tables byte for byte; its notes had 26 entries with
+2 marked *decides output*, one here and one in ST4's document, and both
+changed.
+
+- SPEC.md 2.3 defined one offset a column and left which offset goes with
+  which column to the labels of its drawing. Offset `i` is column `i`'s
+  data set, and every DTX2 table here has more than one column.
+- ST4's 1.1 left the order of a unit's bytes in the output, which every
+  byte of `dtx2-w1-k4`, `dtx2-w2-k2` and `dtx2-w4-k4` turns on. A unit's
+  bytes keep the order stream B stores them in (odipar/ST4#175).
+
+Three more sentences of 2.3 read what the writer does. A column's data
+set packs its `R` times `W` bytes without DTX1's pad byte. A data set of
+a table that repeats loops at the form of ST4's 6.2 where its loop fits
+the ring and at that of 6.3 where the loop is longer, where the Note
+named 6.2 alone, and its loop point is `RR` times `W` over `k` units,
+where the Note equated it with `RR`. A column is a data set at any
+length, where 2.3 read that ST4 defines a stored form for a run shorter
+than twenty-eight bytes, which ST4's document lacks. The comments of the
+three trees and abi.md read that byte 20 of a data set records the byte
+its loop begins at, where they read the unit.
+
+`TASK.md` names `out/` as where the reader writes, and defines `READ.md`
+and `NOTES.md`, which the rule of this section reads.

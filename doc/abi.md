@@ -375,7 +375,7 @@ that meets every rule, and fails the package where none does.
 **The repeat.** A data set of a table that repeats loops at `RR` (R5.11),
 so the advance out of row `R` minus one is the advance into row `RR`. A
 loop longer than a back reference reaches is replayed instead: the set
-records the unit its loop begins at, and the reader puts every column's
+records the byte its loop begins at, and the reader puts every column's
 registers but the write pointer away at the loop's row and back at the
 pass's end, each column at its refill, splitting the refill the row falls
 inside (section 3). The rows from `RR` to `R` minus one decode again each

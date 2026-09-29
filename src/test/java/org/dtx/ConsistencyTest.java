@@ -393,8 +393,8 @@ final class ConsistencyTest {
             wrong.add("the signature's third byte gives version " + third
                     + ", and the sentence beside it reads " + first.group(2));
         }
-        defines(wrong, spec, "shorter than " + bytes + " is smaller stored",
-                "2.3's run that is smaller stored than packed");
+        defines(wrong, spec, "shorter than the " + bytes + " bytes of an ST4 header",
+                "2.3's column shorter than an ST4 header");
         defines(wrong, term, bytes + " bytes",
                 "the glossary's ST4 header size");
         defines(wrong, term, signature, "the glossary's ST4 signature");

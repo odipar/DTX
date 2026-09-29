@@ -15,6 +15,8 @@ A reader that repeats the table reads row `RR` after row `R` minus one;
 the file is one pass, rows 0 to `R` minus one, and nothing of the repeat.
 Compare your reader's `RR` with the header's instead.
 
+The reader writes each to `out/NAME.rows`, beside `tables/`.
+
 ## The tables
 
 SOURCES.md lists them, and is outside a run against this kit, since the
@@ -35,8 +37,18 @@ with copies from the literal stream, which its payload's flags byte marks.
 - Under DTX2 a reader checks every data set's first long against
   `$53 $34 $07 k` (R5.2), and a decoder built without the copy code
   reads `dtx2-copies` wrongly: the flags byte marks the build (R5.10).
-- The bytes a reader reads are compared with `NAME.rows` whole. A row that
-  differs in one byte fails the table.
+- The bytes a reader reads are compared whole with the kit's `NAME.rows`,
+  which is outside a run. A row that differs in one byte fails the table.
 
 A reader that produces every `.rows` file from every `.dtx` file reads
 DTX. Nothing here checks how fast, or how it is called.
+
+## Also produce
+
+`READ.md`: every file and page read, listed; where an implementation of
+anything was read, the list names it.
+
+`NOTES.md`: every place the specification left a choice. For each, the
+section, what it omits, what was assumed, and the wording proposed. Mark
+each entry **decides output** or **leaves output as it is**, by whether
+the assumption changed a byte emitted.
