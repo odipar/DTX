@@ -281,7 +281,7 @@ func ReadPacked(file []byte, header Header) (Packed, error) {
 			return Packed{}, fmt.Errorf("column %d's data set begins at %d,"+
 				" outside the payload", i, out.At[i])
 		}
-		// Byte 20 of a data set records the unit its loop begins at, or
+		// Byte 20 of a data set records the byte its loop begins at, or
 		// $FFFFFFFF where its end code loops it. A set that records one is
 		// replayed by the reader (abi.md 4), and every set of a payload
 		// has the same form: they are one table's columns, so one loop and

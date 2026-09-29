@@ -97,7 +97,7 @@ public final class Packager {
         boolean replayed = false;
         for (int i = 0; i < at.length; i++) {
             at[i] = Dtx.getLong(file, payload + 4 + 4 * i);
-            // Byte 20 of a data set records the unit its loop begins at, or
+            // Byte 20 of a data set records the byte its loop begins at, or
             // $FFFFFFFF where its end code loops it. A set that records
             // one is replayed by the reader (abi.md 4), and every set of a
             // payload has the same form: they are one table's columns, so

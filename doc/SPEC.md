@@ -129,9 +129,10 @@ columns of three, and a pad byte after the first two.
 
 ### 2.3 DTX2, column by column and packed
 
-`C` ST4 data sets, one a column. A column's data set packs the bytes of
-DTX1's column `i` and is complete: its ST4 header, and the
-length of what it unpacks to.
+`C` ST4 data sets, one a column. Column `i`'s data set packs the `R`
+times `W` bytes of that column as DTX1 lays them out, without DTX1's pad
+byte, and is complete: its ST4 header, and the length of what it unpacks
+to.
 
 Every data set in a payload is packed at one unit and unpacks through a
 ring of one size, so the payload defines both once and then where the data
@@ -142,7 +143,7 @@ sets are:
 | 0 | 2 | `N`, the bytes of the ring a column unpacks through |
 | 2 | 1 | `k`, the unit every data set is packed at: 1, 2 or 4 |
 | 3 | 1 | the flags: bit 0 marks a payload whose columns contain copies from their literal streams. The other bits are zero |
-| 4 | 4·`C` | one offset a column: where its data set begins, from the start of the payload |
+| 4 | 4·`C` | an offset a column, column 0 first: offset `i` is where column `i`'s data set begins, from the start of the payload |
 
 A writer puts `N` divided by `k` in a data set's `M` (ST4, SPEC.md 2.1),
 the same ring in the unit ST4 counts in, and a reader of copies reads `M`
@@ -152,9 +153,13 @@ runs on.
 
 Note: `R` in ST4's document is the loop point of a stream (ST4, SPEC.md
 6.1), where `R` here is the row count of a table (1). A data set of a
-table that repeats loops at the form of ST4, SPEC.md 6.2, and the loop
-point of that stream is this format's `RR` (R5.11): a reader of both
-documents meets one figure under the two names.
+table that repeats loops at the form of ST4, SPEC.md 6.2 where its loop
+fits the ring, and at that of 6.3, the rewind point in its header, where
+the loop is longer; the columns of a payload have one loop and one
+length, so every data set of it has the same form. The loop point of
+that stream, in units, is this format's `RR` times `W` over `k` (R5.11):
+a reader of both documents meets one figure under the two names, counted
+in units there and in rows here.
 
 R5.8 needs `N`. A reader reads it once and has a ring of that many bytes,
 and the ring stays one size as `R` grows.
@@ -211,8 +216,8 @@ is defined in full in [ST4](https://github.com/odipar/ST4).
   the two against each other: one compare of a data set's first long
   against `$53 $34 $07 k` checks the signature, the format version and
   the unit at once.
-- A run of bytes shorter than twenty-eight is smaller stored than packed.
-  ST4 defines that, and no requirement here follows from it.
+- A column is a data set at any length, which packs to more bytes than it
+  has where it is shorter than the twenty-eight bytes of an ST4 header.
 
 ```
    N, k and the flags once, an offset a column, then a data set a column

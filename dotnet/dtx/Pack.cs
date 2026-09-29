@@ -78,7 +78,7 @@ public static class Pack
         for (int i = 0; i < at.Length; i++)
         {
             at[i] = Format.GetLong(file, payload + 4 + 4 * i);
-            // Byte 20 of a data set records the unit its loop begins at, or
+            // Byte 20 of a data set records the byte its loop begins at, or
             // $FFFFFFFF where its end code loops it. A set that records
             // one is replayed by the reader (abi.md 4), and every set of a
             // payload has the same form: they are one table's columns, so
