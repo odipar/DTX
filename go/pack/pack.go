@@ -363,8 +363,8 @@ func same(first dtx.Header, given Packed, file []byte, header dtx.Header) error 
 }
 
 func apart(what string, first, next int) error {
-	return fmt.Errorf("one image gives %s once, and the first table gives"+
-		" %d where another gives %d", what, first, next)
+	return fmt.Errorf("one image shares %s, and the first table has"+
+		" %d where another has %d", what, first, next)
 }
 
 func boolAsInt(of bool) int {
@@ -465,14 +465,14 @@ func Figures(file []byte) (string, error) {
 		// reaches (abi.md 3). Under DTX2 the template names it.
 		out.WriteString(equ("DTX_PAYLOAD", Park))
 	}
-	out.WriteString("\n; What the code takes at assembly time.\n")
+	out.WriteString("\n; What the code reads at assembly time.\n")
 	out.WriteString(equ("DTX_WIDTH", header.Width))
 	if variant == dtx.DTX2 {
 		out.WriteString(equ("ST4_UNIT", given.Unit))
 	}
-	out.WriteString("\n; The rest of what the table gives. A combine writes" +
+	out.WriteString("\n; The rest of the table's figures. A combine writes" +
 		" these into the format\n; block and the code reads them from there" +
-		" (doc/abi.md 1), so they stand\n; here for a caller reading the" +
+		" (doc/abi.md 1), so they are\n; here for a caller reading the" +
 		" figures rather than for the assembler.\n")
 	out.WriteString(equ("DTX_ROWBYTES", header.RowBytes()))
 	out.WriteString(equ("DTX_STATE", state))
@@ -487,7 +487,7 @@ func Figures(file []byte) (string, error) {
 		if given.Copies {
 			out.WriteString(equ("ST4_WINDOW", 1))
 			out.WriteString("; the columns were packed with st4 -c, so the" +
-				" decoder takes the copy code\n")
+				" decoder is built with the copy code\n")
 		}
 	}
 	return out.String(), nil

@@ -96,16 +96,16 @@ final class CsvTest {
 
     @Test
     void whatTheTextDoesNotGiveIsReported() {
-        assertEquals("line 2 gives 2 values, not 3",
+        assertEquals("line 2 has 2 values, not 3",
                 assertThrows(IllegalArgumentException.class,
                         () -> Csv.table("1,2,3\n4,5\n")).getMessage());
-        assertEquals("line 1 column 1 gives \"x\", which is not a number",
+        assertEquals("line 1 column 1 is \"x\", which is not a number",
                 assertThrows(IllegalArgumentException.class,
                         () -> Csv.table("1,x\n")).getMessage());
         assertEquals("the text does not contain a row",
                 assertThrows(IllegalArgumentException.class,
                         () -> Csv.table("# nothing but a comment\n")).getMessage());
-        assertEquals("row 0 column 0 gives 300, which 1 bytes do not take",
+        assertEquals("row 0 column 0 is 300, which is outside the range of width 1",
                 assertThrows(IllegalArgumentException.class,
                         () -> Csv.table("300\n", 1)).getMessage());
         assertEquals("the width is 1, 2 or 4 bytes, not 3",
@@ -114,9 +114,9 @@ final class CsvTest {
     }
 
     @Test
-    void aValueNoWidthTakesIsReported() {
-        assertEquals("the text gives 4294967296, which no width of 1, 2 or 4"
-                + " bytes takes", assertThrows(IllegalArgumentException.class,
+    void aValueOutsideFourBytesIsReported() {
+        assertEquals("the text has 4294967296, which is outside the range of"
+                + " 1, 2 and 4 bytes", assertThrows(IllegalArgumentException.class,
                         () -> Csv.table("4294967296\n")).getMessage());
     }
 

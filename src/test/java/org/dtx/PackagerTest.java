@@ -336,7 +336,7 @@ final class PackagerTest {
         file[at + 3] = 2;                       // column 1 now defines k of 2
         assertEquals("column 1's data set opens 53340702 and the payload"
                 + " defines 53340701: an ST4 data set opens with S4, the"
-                + " format version 7 and the payload's own k",
+                + " format version 7 and the k of the payload",
                 assertThrows(IllegalArgumentException.class,
                         () -> Packager.packed(file, header)).getMessage());
     }
@@ -349,7 +349,7 @@ final class PackagerTest {
         file[at + 2] = 6;                       // the version before this one
         assertEquals("column 0's data set opens 53340601 and the payload"
                 + " defines 53340701: an ST4 data set opens with S4, the"
-                + " format version 7 and the payload's own k",
+                + " format version 7 and the k of the payload",
                 assertThrows(IllegalArgumentException.class,
                         () -> Packager.packed(file, header)).getMessage());
     }

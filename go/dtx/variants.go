@@ -293,7 +293,7 @@ func ReadPacked(file []byte, header Header) (Packed, error) {
 		if opens != signature {
 			return Packed{}, fmt.Errorf("column %d's data set opens %08X and"+
 				" the payload defines %08X: an ST4 data set opens with S4,"+
-				" the format version 7 and the payload's own k",
+				" the format version 7 and the k of the payload",
 				i, opens, signature)
 		}
 	}

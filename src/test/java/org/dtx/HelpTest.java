@@ -35,7 +35,7 @@ final class HelpTest {
             while (flag.find()) {
                 if (!text.contains("\n  " + flag.group(1))) {
                     wrong.add(one.getKey() + ": " + flag.group(1)
-                            + " is in the synopsis and has no line");
+                            + " is in the synopsis and lacks a line");
                 }
             }
             if (!text.contains("\n  -help ")) {

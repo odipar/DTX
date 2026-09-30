@@ -28,7 +28,7 @@ func TestTheTableTakesTheNarrowestWidthThatFitsEveryValue(t *testing.T) {
 			t.Fatal(err)
 		}
 		if width != one.want {
-			t.Fatalf("%q takes %d bytes, not %d", one.text, width, one.want)
+			t.Fatalf("%q fits %d bytes, not %d", one.text, width, one.want)
 		}
 	}
 }
@@ -74,7 +74,7 @@ func TestAWidthNamedOutranksTheNarrowest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if table.Width() != 4 {
-		t.Fatalf("W is %d, not the 4 given", table.Width())
+		t.Fatalf("W is %d, not the 4 passed", table.Width())
 	}
 	same(t, "column 0", table.Column(0),
 		[]byte{0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3})
@@ -83,35 +83,35 @@ func TestAWidthNamedOutranksTheNarrowest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if repeating.Repeat() != 1 {
-		t.Fatalf("RR is %d, not the 1 given", repeating.Repeat())
+		t.Fatalf("RR is %d, not the 1 passed", repeating.Repeat())
 	}
 }
 
 // What the text does not define is reported.
 func TestWhatIsRefused(t *testing.T) {
 	for _, bad := range []struct{ name, said, text string }{
-		{"a short line", "line 2 gives 2 values, not 3", "1,2,3\n4,5\n"},
+		{"a short line", "line 2 has 2 values, not 3", "1,2,3\n4,5\n"},
 		{"a value that is not a number",
-			"line 1 column 1 gives \"x\", which is not a number", "1,x\n"},
+			"line 1 column 1 is \"x\", which is not a number", "1,x\n"},
 		{"no row at all", "the text does not contain a row",
 			"# nothing but a comment\n"},
-		{"a value no width takes",
-			"the text gives 4294967296, which no width of 1, 2 or 4 bytes" +
-				" takes", "4294967296\n"},
+		{"a value outside 4 bytes",
+			"the text has 4294967296, which is outside the range of 1, 2" +
+				" and 4 bytes", "4294967296\n"},
 	} {
 		_, err := Width(bad.text)
 		if err == nil {
-			t.Fatalf("%s was taken", bad.name)
+			t.Fatalf("%s was read", bad.name)
 		}
 		if err.Error() != bad.said {
-			t.Fatalf("%s gave %q, not %q", bad.name, err, bad.said)
+			t.Fatalf("%s: %q, not %q", bad.name, err, bad.said)
 		}
 	}
 	if _, err := TableAt("300\n", 1); err == nil {
-		t.Fatal("300 was taken in one byte")
+		t.Fatal("300 was read into one byte")
 	}
 	if _, err := TableAt("1\n", 3); err == nil {
-		t.Fatal("a width of 3 was taken")
+		t.Fatal("a width of 3 was read")
 	}
 }
 
@@ -174,7 +174,7 @@ func TestALineOfNamesBeforeTheRowsIsNotARow(t *testing.T) {
 	}
 	same(t, "column 0", named.Column(0), []byte{1, 3})
 	if _, err := Width("1, 2\nleft, right\n"); err == nil {
-		t.Fatal("a line of names among the rows was taken as a row")
+		t.Fatal("a line of names among the rows was read as a row")
 	}
 }
 
@@ -201,7 +201,7 @@ func TestTheWidthAndRepeatGivenOutrankTheComment(t *testing.T) {
 		t.Fatal(err)
 	}
 	if from.Width() != 4 || from.Repeat() != 0 {
-		t.Fatalf("the comment gave W of %d and RR of %d",
+		t.Fatalf("the comment declared W of %d and RR of %d",
 			from.Width(), from.Repeat())
 	}
 	narrow, err := TableAt(given, 1)
@@ -209,14 +209,14 @@ func TestTheWidthAndRepeatGivenOutrankTheComment(t *testing.T) {
 		t.Fatal(err)
 	}
 	if narrow.Width() != 1 {
-		t.Fatalf("W is %d, not the 1 given", narrow.Width())
+		t.Fatalf("W is %d, not the 1 passed", narrow.Width())
 	}
 	repeating, err := Table(given, 1, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if repeating.Repeat() != 2 {
-		t.Fatalf("RR is %d, not the 2 given", repeating.Repeat())
+		t.Fatalf("RR is %d, not the 2 passed", repeating.Repeat())
 	}
 }
 

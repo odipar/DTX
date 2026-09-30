@@ -39,7 +39,7 @@ class BlobTest {
             assertTrue(name.add(build.name()), "two builds name " + build.name());
             assertTrue(bytes.add(new String(code, java.nio.charset.StandardCharsets.ISO_8859_1)),
                     build.name() + " is the same bytes as another build:"
-                            + " one of them is not a build of its own");
+                            + " the two are one build");
             assertEquals(build.variant(), code[Packager.FORMAT_AT + 3],
                     build.name() + "'s variant");
             assertEquals(build.unit(),
@@ -136,7 +136,7 @@ class BlobTest {
                     build.name() + " defines a stride");
             assertEquals(code.length,
                     Dtx.getLong(code, at + Packager.COLUMNS_AT),
-                    build.name() + " puts the column table off its own end");
+                    build.name() + " puts the column table past its end");
         }
     }
 }

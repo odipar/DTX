@@ -57,11 +57,11 @@ final class RigCallsTest {
             "for v in (0, 1, 2):",
             "    written = rig.write_table(csv, v, 2)",
             "    assert len(written) > 16, 'DTX%d came back empty' % v",
-            "    assert written[3] == v, 'DTX%d is not the variant asked for' % v",
-            "    assert written[14] == 2, 'DTX%d is not the width asked for' % v",
+            "    assert written[3] == v, 'DTX%d has another variant' % v",
+            "    assert written[14] == 2, 'DTX%d has another width' % v",
             "blobs = [rig.write_table(csv, 1, 2) for _ in range(2)]",
             "image, at = rig.package_many(blobs)",
-            "assert len(image) > 0, 'the packager wrote no image'",
+            "assert len(image) > 0, 'the packager wrote an empty image'",
             "assert all(one is not None for one in at), 'no place for a table'",
             "print('the rig reaches the tools')");
 

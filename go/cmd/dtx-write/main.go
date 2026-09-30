@@ -32,11 +32,11 @@ variant V, or comma separated text under -text.
 
   -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for
                text)
-  -wW          text: the bytes every value takes, 1, 2 or 4 (what the
-               text's first comment gives, or else the narrowest that
-               fits every value)
+  -wW          text: the bytes of every value, 1, 2 or 4 (what the
+               text's first comment declares, or else the narrowest
+               that fits every value)
   -rRR         the repeat: the row an advance past the last steps to, R for
-               none (what the file or the text's first comment gives, or R)
+               none (what the file or the text's first comment declares, or R)
   -kK          DTX2: the unit, 1, 2 or 4 (1)
   -mN          DTX2: the ring, in bytes (960)
   -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)
@@ -58,7 +58,7 @@ Examples
       text into a DTX0 file of four byte values, repeating at row 32
   dtx-write -k2 -copies < t.dtx > again.dtx
       a DTX2 file repacked at a unit of 2, with copies from the
-      literal stream. The width is the file's own
+      literal stream, at the width of the file
   dtx-write -text < t.dtx > t.csv
       a DTX file of any variant read out as text
   dtx-write -v2 -k1 < t.csv | dtx-package > t.bin
@@ -130,12 +130,12 @@ func run(args []string, in io.Reader, out io.Writer) error {
 			return misuse("dtx-write does not read " + arg)
 		}
 		if err != nil {
-			return fmt.Errorf("%s does not give a number", arg)
+			return misuse("dtx-write does not read " + arg)
 		}
 	}
 	if toText && variant >= 0 {
-		return misuse(fmt.Sprintf("-v%d names a DTX variant, and -text asks"+
-			" for text", variant))
+		return misuse(fmt.Sprintf("-v%d names a DTX variant, and -text"+
+			" writes text", variant))
 	}
 	read, err := io.ReadAll(in)
 	if err != nil {
@@ -144,8 +144,8 @@ func run(args []string, in io.Reader, out io.Writer) error {
 	var table *dtx.Table
 	if bytes.HasPrefix(read, dtx.Magic) {
 		if width != "" {
-			return misuse(fmt.Sprintf("-w%s gives text its width, and the"+
-				" input is a DTX file with its own", width))
+			return misuse(fmt.Sprintf("-w%s sets the width of text, and the"+
+				" input is a DTX file, which has a width", width))
 		}
 		header, err := dtx.ReadHeader(read)
 		if err != nil {
@@ -241,7 +241,7 @@ func readWidth(given, text string) (int, error) {
 	}
 	width, err := strconv.Atoi(strings.TrimSpace(given))
 	if err != nil {
-		return 0, fmt.Errorf("-w gives %q, which is not a width", given)
+		return 0, misuse("dtx-write does not read -w" + given)
 	}
 	return width, nil
 }

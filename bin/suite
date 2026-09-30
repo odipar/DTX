@@ -39,7 +39,7 @@ fi
 st4=$(sed -n 's|.*st4/go v\([0-9.]*\).*|\1|p' go/go.mod)
 if [ ! -x "${ST4:-st4}" ]; then
     echo "suite: St4Test reads the packer here against the real one, and no"\
-         "executable stands at ${ST4:-st4}; ST4 names it, and go.mod requires"\
+         "executable is at ${ST4:-st4}; ST4 names it, and go.mod requires"\
          "ST4 $st4, whose packer builds from go/v$st4 of that repository" >&2
     exit 2
 fi

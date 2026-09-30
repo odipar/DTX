@@ -168,8 +168,9 @@ public static class Csv
                 long value = row[r][i];
                 if (!Fits(value, width))
                 {
-                    throw new ArgumentException($"row {r} column {i} gives"
-                            + $" {value}, which {width} bytes do not take");
+                    throw new ArgumentException($"row {r} column {i} is"
+                            + $" {value}, which is outside the range of width"
+                            + $" {width}");
                 }
                 Put(column[i], r * width, value, width);
             }
@@ -206,7 +207,7 @@ public static class Csv
             }
             else if (cell.Length != columns)
             {
-                throw new ArgumentException($"line {at + 1} gives"
+                throw new ArgumentException($"line {at + 1} has"
                         + $" {cell.Length} values, not {columns}");
             }
             long[] row = new long[columns];
@@ -267,8 +268,9 @@ public static class Csv
                 {
                     if (taken == 4)
                     {
-                        throw new ArgumentException($"the text gives {value},"
-                                + " which no width of 1, 2 or 4 bytes takes");
+                        throw new ArgumentException($"the text has {value},"
+                                + " which is outside the range of 1, 2 and 4"
+                                + " bytes");
                     }
                     taken = taken == 1 ? 2 : 4;
                 }
@@ -297,7 +299,7 @@ public static class Csv
                 || failed is OverflowException)
         {
             throw new ArgumentException(
-                    $"{where} gives \"{cell}\", which is not a number");
+                    $"{where} is \"{cell}\", which is not a number");
         }
     }
 

@@ -120,7 +120,7 @@ func TestADtxFileIsWrittenOutAsTextAndReadsBack(t *testing.T) {
 		}
 		if !bytes.Equal(file, again) {
 			t.Fatalf("at a width of %d the table did not come back through"+
-				" text, with the width and repeat the comment gives", width)
+				" text, with the width and repeat the comment declares", width)
 		}
 	}
 }
@@ -147,7 +147,9 @@ func TestTheRepeatOfADtxFileIsChangedAndItsVariantKept(t *testing.T) {
 
 // A flag the tool does not read prints the tool's line and a misuse, which
 // main exits 2 on, as the Java tree exits. -copiesS with letters behind it
-// is one of those: a search of no seconds would pack another file.
+// is one of those: a search of no seconds would pack another file. So is a
+// flag whose figure is other than a number, -vx or -wx, as in the Java and
+// C# trees.
 func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 	for _, one := range []struct {
 		flags []string
@@ -155,14 +157,16 @@ func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 	}{
 		{[]string{"-z"}, "dtx-write does not read -z"},
 		{[]string{"-v2", "-copiesx"}, "dtx-write does not read -copiesx"},
+		{[]string{"-vx"}, "dtx-write does not read -vx"},
+		{[]string{"-wx"}, "dtx-write does not read -wx"},
 	} {
 		_, _, err := ran(t, numbers(4, 2), one.flags...)
 		var m misuse
 		if !errors.As(err, &m) {
-			t.Fatalf("%v gave %v, not a misuse", one.flags, err)
+			t.Fatalf("%v returned %v, not a misuse", one.flags, err)
 		}
 		if err.Error() != one.want {
-			t.Fatalf("%v gave %q, not %q", one.flags, err, one.want)
+			t.Fatalf("%v returned %q, not %q", one.flags, err, one.want)
 		}
 	}
 }
@@ -172,7 +176,7 @@ func TestTextAndAVariantTogetherAreAMisuse(t *testing.T) {
 	_, _, err := ran(t, numbers(4, 2), "-v1", "-text")
 	var m misuse
 	if !errors.As(err, &m) {
-		t.Fatalf("-v1 -text gave %v, not a misuse", err)
+		t.Fatalf("-v1 -text returned %v, not a misuse", err)
 	}
 }
 

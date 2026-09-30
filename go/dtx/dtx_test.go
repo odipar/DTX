@@ -51,7 +51,7 @@ func TestAPlainVariantWritesWhatItReads(t *testing.T) {
 						t.Fatalf("%s: %v", at, err)
 					}
 					if !got.Same(want) {
-						t.Fatalf("%s gave another table", at)
+						t.Fatalf("%s is another table", at)
 					}
 				}
 			}
@@ -103,7 +103,7 @@ func TestTheBoundsAreChecked(t *testing.T) {
 	} {
 		if _, err := NewTable(bad.rows, bad.repeat, bad.width,
 			[][]byte{one}); err == nil {
-			t.Fatalf("%s was taken", bad.name)
+			t.Fatalf("%s was read", bad.name)
 		}
 	}
 	if _, err := ReadHeader([]byte("DT")); err == nil {
@@ -213,14 +213,14 @@ func TestADtx0FileAndADtx1FileOfOneTableGiveTheSameDtx2File(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(fromZero) != string(fromOne) {
-		t.Fatal("a DTX0 file and a DTX1 file of one table gave two DTX2 files")
+		t.Fatal("a DTX0 file and a DTX1 file of one table converted to two DTX2 files")
 	}
 	written, err := WriteDtx2(want, standin{}, 1, 960)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(written) != string(fromZero) {
-		t.Fatal("the table and its DTX0 file gave two DTX2 files")
+		t.Fatal("the table and its DTX0 file converted to two DTX2 files")
 	}
 }
 
@@ -241,7 +241,7 @@ func TestAUnitOrRingOutsideItsBoundsIsRejected(t *testing.T) {
 	} {
 		_, err := WriteDtx2(built, standin{}, one.unit, one.ring)
 		if err == nil {
-			t.Fatalf("k of %d at a ring of %d was taken", one.unit, one.ring)
+			t.Fatalf("k of %d at a ring of %d was written", one.unit, one.ring)
 		}
 		if err.Error() != one.want {
 			t.Fatalf("the error is %q, not %q", err, one.want)
@@ -262,10 +262,10 @@ func TestAFileShortOfWhatItsHeaderDefinesIsRejected(t *testing.T) {
 	} {
 		file := one.write(table(t, 3, 2, 1))
 		if _, err := one.read(file[:len(file)-1]); err == nil {
-			t.Fatalf("a %s file a byte short was taken", one.name)
+			t.Fatalf("a %s file a byte short was read", one.name)
 		}
 		if _, err := one.read(file[:HeaderLength]); err == nil {
-			t.Fatalf("a %s file of a header alone was taken", one.name)
+			t.Fatalf("a %s file of a header alone was read", one.name)
 		}
 	}
 }
@@ -282,7 +282,7 @@ func TestADtx2FileReadsBackToTheTableItWasWrittenFrom(t *testing.T) {
 			t.Fatalf("%s: %v", name, err)
 		}
 		if !got.Same(want) {
-			t.Fatalf("%s gave another table", name)
+			t.Fatalf("%s is another table", name)
 		}
 	}
 	for _, unit := range []int{1, 2, 4} {
@@ -299,7 +299,7 @@ func TestADtx2FileReadsBackToTheTableItWasWrittenFrom(t *testing.T) {
 				t.Fatalf("%s through Read: %v", at, err)
 			}
 			if !got.Same(wide) {
-				t.Fatalf("%s through Read gave another table", at)
+				t.Fatalf("%s through Read is another table", at)
 			}
 		}
 	}
@@ -353,7 +353,7 @@ func TestEveryDataSetLoopsAtTheRowTheTableRepeatsAt(t *testing.T) {
 	// byte 3 of the column, which is not a unit of one.
 	_, err := Loop(tableAt(t, 64, 3, 2, 1), 2)
 	if err == nil {
-		t.Fatal("a repeat off a unit was taken")
+		t.Fatal("a repeat off a unit was looped")
 	}
 	want := "the table repeats at row 3, which is byte 3 of a column and" +
 		" not a unit of one at k of 2: RR times the width divides by k" +
@@ -362,7 +362,7 @@ func TestEveryDataSetLoopsAtTheRowTheTableRepeatsAt(t *testing.T) {
 		t.Fatalf("the error is %q", err)
 	}
 	if _, err := WriteDtx2(tableAt(t, 64, 3, 2, 1), st4.Packer{}, 2, 960); err == nil {
-		t.Fatal("a table the loop rule refuses was packed")
+		t.Fatal("a table that breaks the loop rule was packed")
 	}
 }
 
@@ -432,10 +432,10 @@ func TestADataSetOpeningWithAnotherUnitIsAnErrorOnRead(t *testing.T) {
 	}
 	cut := file[:HeaderLength+6]
 	if _, err := ReadDtx2(cut); err == nil {
-		t.Fatal("a payload cut short was taken")
+		t.Fatal("a payload cut short was read")
 	}
 	file[HeaderLength+2] = 1
 	if _, err := ReadDtx2(file); err == nil {
-		t.Fatal("a data set of another unit was taken")
+		t.Fatal("a data set of another unit was read")
 	}
 }

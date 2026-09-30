@@ -24,7 +24,7 @@ public static class Program
                 TextWriter to = args.Length == 0 ? Console.Error : Console.Out;
                 to.Write("dtx <tool> [arguments..]\n\n"
                         + "Runs one of the three tools, each of which prints its"
-                        + " own flags on -help:\n"
+                        + " flags on -help:\n"
                         + "dtx-write, dtx-package and dtx-blobs.\n");
                 return args.Length == 0 ? 2 : 0;
             }

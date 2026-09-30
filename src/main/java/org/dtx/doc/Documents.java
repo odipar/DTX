@@ -121,7 +121,7 @@ public final class Documents {
             String before = rows.get(i - 1)[0].replace("`", "").toLowerCase();
             String after = rows.get(i)[0].replace("`", "").toLowerCase();
             if (before.compareTo(after) > 0) {
-                wrong.add('"' + before + "\" stands before \"" + after + '"');
+                wrong.add('"' + before + "\" comes before \"" + after + '"');
             }
         }
         return wrong;

@@ -75,10 +75,10 @@ func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 	_, err := printed(t, t.TempDir(), "-z")
 	var m misuse
 	if !errors.As(err, &m) {
-		t.Fatalf("-z gave %v, not a misuse", err)
+		t.Fatalf("-z returned %v, not a misuse", err)
 	}
 	if want := "dtx-blobs does not read -z"; err.Error() != want {
-		t.Fatalf("-z gave %q, not %q", err, want)
+		t.Fatalf("-z returned %q, not %q", err, want)
 	}
 }
 
@@ -88,7 +88,7 @@ func TestAFlagTheToolDoesNotReadGivesTheToolsLine(t *testing.T) {
 func TestNoDirectoryToWriteIntoGivesTheUsageAndHelpPrintsTheOneText(
 	t *testing.T) {
 	if _, err := printed(t); !errors.Is(err, errUsage) {
-		t.Fatalf("no argument gave %v, not the usage", err)
+		t.Fatalf("no argument returned %v, not the usage", err)
 	}
 	said, err := printed(t, "-help")
 	if err != nil {

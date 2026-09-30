@@ -183,7 +183,7 @@ public sealed class St4Beside : IPacker
             if (run.ExitCode != 0 || !File.Exists(out_))
             {
                 throw new InvalidOperationException(
-                        $"{packer} gave {given.Trim()}");
+                        $"{packer} reported {given.Trim()}");
             }
             return File.ReadAllBytes(out_);
         }

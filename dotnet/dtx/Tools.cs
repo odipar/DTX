@@ -132,8 +132,8 @@ public static class Tools
         {
             if (width.Length != 0)
             {
-                Console.Error.WriteLine($"{width} gives text its width, and"
-                        + " the input is a DTX file with its own");
+                Console.Error.WriteLine($"{width} sets the width of text, and"
+                        + " the input is a DTX file, which has a width");
                 return 2;
             }
             table = Variants.Read(in_);
@@ -303,7 +303,7 @@ public static class Tools
         }
         if (!defines && named.Count > 1)
         {
-            Console.Error.WriteLine($"table 1 stands at image+{headers[0]}");
+            Console.Error.WriteLine($"table 1 at image+{headers[0]}");
         }
         return 0;
     }

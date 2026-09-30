@@ -66,7 +66,7 @@ final class Rig {
                     StandardCharsets.UTF_8);
             if (ran.waitFor() != 0) {
                 throw new IllegalStateException(
-                        argv.get(0) + " gave " + said.trim());
+                        argv.get(0) + " reported " + said.trim());
             }
             return said;
         } catch (IOException failed) {
@@ -209,7 +209,7 @@ final class Rig {
             String said = new String(ran.getErrorStream().readAllBytes(),
                     StandardCharsets.UTF_8);
             if (ran.waitFor() != 0) {
-                throw new IllegalStateException(argv.get(0) + " gave " + said.trim());
+                throw new IllegalStateException(argv.get(0) + " reported " + said.trim());
             }
             return said;
         } catch (IOException failed) {

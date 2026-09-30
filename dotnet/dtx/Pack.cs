@@ -91,7 +91,7 @@ public static class Pack
                         $"column {i}'s data set opens {read:X8} and the"
                         + $" payload defines {signature:X8}: an ST4 data set"
                         + " opens with S4, the format version 7 and the"
-                        + " payload's own k");
+                        + " k of the payload");
             }
         }
         return new Packed(Format.GetWord(file, payload), unit,
@@ -357,8 +357,8 @@ public static class Pack
     {
         if (first != next)
         {
-            throw new InvalidOperationException($"one image gives {what} once,"
-                    + $" and the first table gives {first} where another gives"
+            throw new InvalidOperationException($"one image shares {what},"
+                    + $" and the first table has {first} where another has"
                     + $" {next}");
         }
     }
@@ -445,15 +445,15 @@ public static class Pack
             // reaches (abi.md 3). Under DTX2 the template names it.
             out_.Append(Equ("DTX_PAYLOAD", Park));
         }
-        out_.Append("\n; What the code takes at assembly time.\n")
+        out_.Append("\n; What the code reads at assembly time.\n")
                 .Append(Equ("DTX_WIDTH", header.Width));
         if (variant == Format.Dtx2)
         {
             out_.Append(Equ("ST4_UNIT", given.Unit));
         }
-        out_.Append("\n; The rest of what the table gives. A combine writes"
+        out_.Append("\n; The rest of the table's figures. A combine writes"
                         + " these into the format\n; block and the code reads"
-                        + " them from there (doc/abi.md 1), so they stand\n;"
+                        + " them from there (doc/abi.md 1), so they are\n;"
                         + " here for a caller reading the figures rather than"
                         + " for the assembler.\n")
                 .Append(Equ("DTX_ROWBYTES", header.RowBytes))
@@ -471,7 +471,8 @@ public static class Pack
             {
                 out_.Append(Equ("ST4_WINDOW", 1))
                         .Append("; the columns were packed with st4 -c, so"
-                                + " the decoder takes the copy code\n");
+                                + " the decoder is built with the copy"
+                                + " code\n");
             }
         }
         return out_.ToString();
@@ -519,7 +520,7 @@ public static class Pack
             run.WaitForExit();
             if (run.ExitCode != 0 || !File.Exists(out_))
             {
-                throw new InvalidOperationException($"{rmac} gave {given.Trim()}");
+                throw new InvalidOperationException($"{rmac} reported {given.Trim()}");
             }
             return File.ReadAllBytes(out_);
         }
