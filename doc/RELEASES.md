@@ -32,6 +32,44 @@ build.
 
 ## Published
 
+### 0.11.12, 2026-09-30
+
+<https://github.com/odipar/DTX/releases/tag/v0.11.12>, built from the commit
+tagged `v0.11.12`.
+
+What a caller reads: the style check reads strings now, so a line a tool
+reports, its help and the comments of the equates it writes read the
+plain verb, in the three trees alike. A table and an image are the bytes
+they were: over the nineteen tables of the conformance kit, `dtx-write`
+and `dtx-package` of this release and of 0.11.11 write the same files,
+and the kit's.
+
+- **The lines of the CSV reader.** `row R column I is V, which is outside
+  the range of width W`, where 0.11.11 read `gives V, which W bytes do not
+  take`; `line N has M values, not C`; `the text has V, which is outside
+  the range of 1, 2 and 4 bytes`; `W is "X", which is not a number`.
+  tools.md's row reads the new text.
+- **`dtx-write`.** `-wW sets the width of text, and the input is a DTX
+  file, which has a width`. A flag whose figure is other than a number,
+  `-vx` or `-wx`, reports `dtx-write does not read F` and exits 2 in the
+  Go tool, as in the other two trees; the Go tool of 0.11.11 reported
+  `-vx does not give a number` and `-w gives "x", which is not a width`
+  and exited 1.
+- **`dtx-package`.** The offset of the first of several tables reads
+  `table 1 at image+N`, in the form of the line for every other table.
+  Two tables that differ in a figure an image shares read `one image
+  shares X, and the first table has A where another has B`.
+- **Help and equates.** The help of `dtx-write` and `dtx-package`, and
+  the comments of the equates `dtx-package -s` writes in the Java and C#
+  trees, read the plain verb.
+
+The 68000 sources moved a label and comments, `end_marker` to `end_code`,
+so the twenty-two images are the bytes of 0.11.11. The documents read
+what a reader skips and what a tool reports, and a fourth reader read the
+kit cold.
+
+Checks: `bin/suite` green, 118 tests and 0 skipped; `go test ./...` green.
+
 ### 0.11.11, 2026-09-22
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.11>, built from the commit
