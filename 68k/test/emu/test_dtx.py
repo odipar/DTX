@@ -11,13 +11,13 @@ registers that survive a call, and every word or long on its
 alignment.
 
 THE ROUND TRIP. The same text through the writer, the packager and the
-68000 at DTX0, DTX1 and DTX2, compared with the rows the text defines and
-with one another (R1.3). What a row should be is worked out in this file,
+68000 at DTX0, DTX1, DTX2 and DTX3, compared with the rows the text defines
+and with one another (R1.3). What a row should be is worked out in this file,
 from the text, by a reader that does not share code with the one under
 test - so neither the writer nor the 68000 is checked against itself.
-Under DTX2 it also counts the decoder's calls, the one thing a wrong
-stopping rule shows up in: the output does not change when a column is
-driven one call past its end code, but the count does.
+Under DTX2 and DTX3 it also counts the decoder's calls, the one thing a
+wrong stopping rule shows up in: the output does not change when a column
+is driven one call past its end code, but the count does.
 
     python3 68k/test/emu/test_dtx.py
 
@@ -190,7 +190,7 @@ def write_table(csv, variant, width=None, repeat=None, unit=1, ring=960,
         argv.append("-w%d" % width)
     if repeat is not None:
         argv.append("-r%d" % repeat)
-    if variant == 2:
+    if variant in (2, 3):
         argv += ["-k%d" % unit, "-m%d" % ring]
         # The tree contains a copy of ST4, so no packer is beside it. $ST4
         # names one to pack with instead of the carried one.
@@ -308,7 +308,8 @@ class Machine:
                 "d2": mu.reg_read(UC_M68K_REG_D2),
                 "d3": mu.reg_read(UC_M68K_REG_D3),
                 "a0": mu.reg_read(UC_M68K_REG_A0),
-                "a1": mu.reg_read(UC_M68K_REG_A1)}
+                "a1": mu.reg_read(UC_M68K_REG_A1),
+                "a2": mu.reg_read(UC_M68K_REG_A2)}
 
     def count(self, at):
         """A counter of how often the instruction at `at` is reached."""
@@ -327,16 +328,45 @@ class Machine:
         return out
 
 
+def caller(image, header_at, stride):
+    """How a caller reads a row of the table whose header is at
+    `header_at`: under the plain variants and DTX2 a value a column at
+    `stride` from the pointer (doc/abi.md 2); under DTX3 through the column
+    map, a live column at its slot's rings from the pointer and a constant
+    column's value out of the payload (SPEC.md 2.4)."""
+    variant = image[header_at + 3]
+    columns = struct.unpack(">H", image[header_at + 8:header_at + 10])[0]
+    width = image[header_at + 14]
+    if variant != 3:
+        return lambda m, at: m.row(at, columns, stride, width)
+    payload = header_at + 16
+    live = struct.unpack(">H", image[payload + 4:payload + 6])[0]
+    slots = image[payload + 8:payload + 8 + columns]
+    value, at = {}, payload + 8 + columns
+    for i, b in enumerate(slots):
+        if b == 0xFF and live < 256:
+            value[i] = bytes(image[at:at + width])
+            at += width
+
+    def read(m, pointer):
+        out = b""
+        for i in range(columns):
+            out += value[i] if i in value else bytes(
+                m.mu.mem_read(pointer + slots[i] * stride, width))
+        return out
+    return read
+
+
 # --------------------------------------------------------------------------
 
 def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
     blob = write_table(csv, variant, width, repeat, unit, ring)
-    if variant == 2:
+    if variant in (2, 3):
         # The table is the same under every variant (R1.3), so what a row
         # is, is read out of the plain file, by the reader in this rig.
         plain = write_table(csv, 1, width, repeat)
         _, rows, columns, rr, width, _, row_bytes, want = read_dtx(plain)
-        kind = 2
+        kind = variant
     else:
         kind, rows, columns, rr, width, _, row_bytes, want = read_dtx(blob)
     image, _ = package(blob)
@@ -351,7 +381,7 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
     want_stride = {0: width, 1: (rows * width + 1) // 2 * 2}.get(kind, n)
     assert stride == want_stride, \
         "the format block has a stride of %d, not %d" % (stride, want_stride)
-    if kind == 2:
+    if kind in (2, 3):
         assert p >= columns, "P is at least C"
         assert n == ring and fmt[18] == unit, "N and k the payload defines"
         assert fmt[19] == width, "the width the code was built for"
@@ -376,13 +406,18 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
         % (got["d3"], stride)
     assert got["a0"] == IMAGE + 16, "metadata returned the format block"
     assert got["a1"] == IMAGE + header_at, "metadata returned the header"
+    if kind == 3:
+        assert got["a2"] == IMAGE + header_at + 24, \
+            "metadata returned the column map at %08x" % got["a2"]
 
     m.call("init", a1=IMAGE + header_at)
+    read = caller(image, header_at, stride)
 
     def values(got):
         """The row an advance or a jump points at, read as a caller reads
-        it: a1 the first value, and a stride to the next column's."""
-        return m.row(got["a1"], columns, stride, width)
+        it: a1 the first value, and a stride to the next column's, through
+        the column map under DTX3."""
+        return read(m, got["a1"])
 
     # every row, one advance each. No call reports a row number: the caller
     # counts, as doc/abi.md 2 defines.
@@ -391,13 +426,13 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
         assert values(got) == want[r], \
             "row %d reads %s, not %s" % (r, values(got).hex(), want[r].hex())
 
-    # A table that repeats, under DTX2: every data set loops at RR (R5.11),
+    # A table that repeats, under DTX2 and DTX3: every data set loops at RR (R5.11),
     # so the rows come round from there and nothing is decoded twice. Where
     # the table does not repeat the set loops on its last unit, which is a
     # row only where the unit divides the width, so what is past the
     # last row is not defined and the caller stops (abi.md 7). Under DTX0
     # and DTX1 an advance past the last row reads past the table.
-    if kind == 2 and rr < rows:
+    if kind in (2, 3) and rr < rows:
         for pass_ in range(2):
             for r in range(rr, rows):
                 got = m.call("advance")
@@ -414,14 +449,17 @@ def check(name, csv, variant, width=None, repeat=None, unit=1, ring=960):
             assert values(got) == want[r + 1], \
                 "the row after a jump and an advance"
 
-    # the row an advance leaves remains until the next advance (doc/abi.md 2):
-    # under DTX2 the refill that would write over it is P advances away
+    # the row an advance leaves remains until the next advance (doc/abi.md 2),
+    # and under DTX2 and DTX3 through the next as well, but for one row: at
+    # a ring of 2P rows the advance onto a period's first row refills the
+    # first ring over the row before it
     m.call("init", a1=IMAGE + header_at)
     before = None
     for r in range(rows):
         got = m.call("advance")
-        if before is not None:
-            assert m.row(before, columns, stride, width) == want[r - 1], \
+        tight = kind in (2, 3) and n == 2 * p * width and r % p == 0
+        if before is not None and not tight:
+            assert read(m, before) == want[r - 1], \
                 "row %d moved under the caller" % (r - 1)
         before = got["a1"]
 
@@ -463,6 +501,15 @@ def numbers(rows, columns, span=251):
                      for r in range(rows)) + "\n"
 
 
+def mixed(rows, columns, constant, span=251):
+    """`numbers`, with each column named in `constant` one value: its
+    number, times 3. DTX3 has those as values and the rest as slots."""
+    return "\n".join(",".join(str(3 * i if i in constant else
+                                   (r * (i + 1)) % span)
+                               for i in range(columns))
+                      for r in range(rows)) + "\n"
+
+
 # --------------------------------------------------------------------------
 # The round trip: text, through the writer, through the packager, through a
 # 68000, and back to the rows the text defines.
@@ -496,12 +543,20 @@ def one_image_several_tables():
     separate header (doc/abi.md 2). The code appears once and every row of both
     comes back, so what a caller saves is the code and what it keeps is
     every value."""
-    for variant, unit, width in ((0, 1, 2), (1, 1, 2), (2, 1, 2), (2, 2, 2),
-                                 (0, 1, 4), (1, 1, 4), (2, 1, 4)):
-        first = numbers(24, 3, span=97)
-        second = numbers(40, 3, span=61)
-        blobs = [write_table(csv, variant, width, None, unit, 960)
-                 for csv in (first, second)]
+    for variant, unit, width, rings in (
+            (0, 1, 2, None), (1, 1, 2, None), (2, 1, 2, None), (2, 2, 2, None),
+            (0, 1, 4, None), (1, 1, 4, None), (2, 1, 4, None),
+            (3, 1, 2, None), (3, 2, 2, None), (3, 1, 4, None),
+            # Under DTX3 each table defines its ring, so two tables of one
+            # image differ in N and the state block is the larger's.
+            (3, 1, 1, (960, 120))):
+        first = numbers(24, 3, span=97) if variant != 3 \
+            else mixed(24, 4, {1}, span=97)
+        second = numbers(40, 3, span=61) if variant != 3 \
+            else mixed(40, 4, {0, 3}, span=61)
+        blobs = [write_table(csv, variant, width, None, unit,
+                             960 if rings is None else rings[i])
+                 for i, csv in enumerate((first, second))]
         image, at = package_many(blobs)
         # The code appears once: the image is smaller than two images of the
         # same tables by one code, less the header the second no longer
@@ -515,24 +570,29 @@ def one_image_several_tables():
             rows = struct.unpack(">I", image[table + 4:table + 8])[0]
             # The format block records the first table's stride, so a caller of
             # another derives it: the width under DTX0, the column's
-            # length on a word under DTX1, and the ring, which every table of
-            # an image shares, under DTX2 (doc/abi.md 1).
+            # length on a word under DTX1, the ring, which every table of
+            # an image shares, under DTX2 (doc/abi.md 1), and the table's
+            # ring, out of its payload, under DTX3 (SPEC.md 2.4).
             if variant == 0:
                 stride = width
             elif variant == 1:
                 stride = (rows * width + 1) & ~1
-            else:
+            elif variant == 2:
                 stride = struct.unpack(">H", image[16 + 16:16 + 18])[0]
+            else:
+                stride = struct.unpack(">H", image[table + 16:table + 18])[0]
             m = Machine(image, state)
             m.call("init", a1=IMAGE + table)
+            read = caller(image, table, stride)
             got = []
             for _ in range(len(want)):
                 row = m.call("advance")
-                got.append(m.row(row["a1"], columns, stride, width))
+                got.append(read(m, row["a1"]))
             assert got == want, ("the table at image+%d read %s, not %s"
                                  % (table, got[:2], want[:2]))
-        yield "DTX%d, W=%d%s" % (variant, width,
-                                 "" if variant != 2 else ", k=%d" % unit), \
+        yield "DTX%d, W=%d%s%s" % (
+            variant, width, "" if variant < 2 else ", k=%d" % unit,
+            "" if rings is None else ", N=%d and %d" % rings), \
             len(image), alone
 
 
@@ -548,7 +608,7 @@ def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     m = Machine(image, state_bytes)
     # The decoder is counted at ST4_resume's address in the listing. A missing
     # symbol is a fault in the rig, not a count of zero.
-    if variant == 2:
+    if variant in (2, 3):
         assert "ST4_resume" in at, \
             "no ST4_resume in the listing: the rig cannot count the decoder"
     resumes = m.count(IMAGE + at["ST4_resume"]) if "ST4_resume" in at else None
@@ -556,12 +616,15 @@ def rows_through_68k(csv, variant, width, repeat, unit, ring, copies=False):
     rows, columns = given["d0"], given["d1"] & 0xFFFF
     width = image[header_at + 14]
     m.call("init", a1=IMAGE + header_at)
+    read = caller(image, header_at, stride)
     out = []
     for r in range(rows):
         got = m.call("advance")
-        out.append(m.row(got["a1"], columns, stride, width))
+        out.append(read(m, got["a1"]))
     p = struct.unpack(">H", fmt[14:16])[0]
-    return out, blob, image, (resumes[0] if resumes else 0), p
+    live = columns if variant != 3 else struct.unpack(
+        ">H", image[header_at + 20:header_at + 22])[0]
+    return out, blob, image, (resumes[0] if resumes else 0), p, live
 
 
 def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
@@ -570,24 +633,25 @@ def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
     width, want = csv_rows(csv, width)
     columns = len(csv_values(csv)[0])
     given, sizes, asked = {}, [], ""
-    for variant in (0, 1, 2):
-        got, blob, image, resumes, p = rows_through_68k(
+    for variant in (0, 1, 2, 3):
+        got, blob, image, resumes, p, live = rows_through_68k(
             csv, variant, width, repeat, unit, ring,
-            copies and variant == 2)
-        if variant == 2:
-            # One call a column at init and one a column a period after it,
-            # every period, since every data set loops (R5.11) and no set
-            # runs out. Reading R rows costs the seed and one period a P
-            # rows, so a column is called once more than the periods those
-            # rows cover.
-            due = columns * (1 + (len(want) + p - 1) // p)
+            copies and variant >= 2)
+        if variant >= 2:
+            # One call a column with a ring at init and one a column a
+            # period after it, every period, since every data set loops
+            # (R5.11) and no set runs out. Reading R rows costs the seed and
+            # one period a P rows, so a column is called once more than the
+            # periods those rows cover. DTX3 calls its live columns alone.
+            due = live * (1 + (len(want) + p - 1) // p)
             assert resumes <= due, \
-                "the decoder was called %d times, and reading %d rows at a" \
-                " period of %d needs at most %d" % (resumes, len(want), p, due)
-            asked = "  %d resumes at P=%d" % (resumes, p)
+                "DTX%d: the decoder was called %d times, and reading %d rows" \
+                " at a period of %d needs at most %d" % (
+                    variant, resumes, len(want), p, due)
+            asked += "  DTX%d %d resumes at P=%d" % (variant, resumes, p)
         # The writer's link, where this rig can read the file: the bytes the
         # writer laid down are the rows the text defines.
-        if variant != 2:
+        if variant < 2:
             _, _, _, _, _, _, _, laid = read_dtx(blob)
             assert laid == want, \
                 "DTX%d: the writer laid down rows other than those of the text" % variant
@@ -601,6 +665,7 @@ def roundtrip(name, csv, width=None, repeat=None, unit=1, ring=960,
         sizes.append(len(image))
     assert given[0] == given[1], "DTX0 and DTX1 read different rows"
     assert given[1] == given[2], "DTX1 and DTX2 read different rows"
+    assert given[2] == given[3], "DTX2 and DTX3 read different rows"
     print("  %-32s R=%-5d C=%-2d W=%d images %s%s"
           % (name, len(want), columns, width,
              "/".join(str(s) for s in sizes), asked))
@@ -682,6 +747,35 @@ PACKED = [
     # decodes a period's rows round the loop.
     ("two rows of three columns", numbers(2, 3), 1, None, 1, 960),
     ("one row that repeats to itself", numbers(1, 2), 2, 0, 1, 960),
+]
+
+
+# Tables of constant and live columns, which DTX3 reads with a ring and a
+# decoder for the live columns alone, and the idle state for every turn of
+# a period past the last slot. PACKED reaches the paths a table of live
+# columns alone runs; these reach a map with gaps, L of 0, the idle turns,
+# and a period of thirty turns at the ring of 60 bytes that is the smallest
+# a width of 1 allows.
+MIXED = [
+    ("constant and live columns", mixed(64, 6, {0, 2, 5}), 1, None, 1, 960),
+    ("every column constant", mixed(64, 3, {0, 1, 2}), 1, None, 1, 960),
+    ("every column constant, repeating", mixed(64, 3, {0, 1, 2}), 2, 16, 1,
+     960),
+    ("one live column at a width of 4", mixed(64, 5, {0, 1, 3, 4}), 4, None,
+     1, 960),
+    ("constants, k of 2", mixed(64, 4, {2}), 2, None, 2, 960),
+    ("constants, k of 4", mixed(64, 4, {1, 2}), 4, None, 4, 960),
+    ("constants, a small ring", mixed(64, 4, {0}), 1, None, 1, 64),
+    ("constants and a repeat", mixed(64, 4, {3}), 1, 16, 1, 960),
+    ("constants and a replayed pass", mixed(512, 4, {1}), 2, 0, 1, 960),
+    ("constants and a pass replayed from row 101", mixed(512, 4, {0, 3}),
+     2, 101, 1, 64),
+    ("constants, R not a multiple of P", mixed(50, 5, {1, 4}), 1, None, 1,
+     960),
+    ("thirty columns, thirteen live, a ring of 60",
+     mixed(120, 30, set(range(13, 30))), 1, None, 1, 60),
+    ("thirty columns, a pass replayed at a ring of 60",
+     mixed(120, 30, set(range(2, 30, 2))), 1, 40, 1, 60),
 ]
 
 
@@ -1126,6 +1220,50 @@ def measured(variant, width, unit, columns):
             "code, bytes": str(code - 44)}
 
 
+# DTX3 on the same two tables, every column of them live, and on a table of
+# thirty columns of one byte with columns 13 to 29 constant: the idle turns
+# are turns 13 to P minus one. An advance is the first eight, as DTX2's is;
+# an idle turn is counted over 64 rows, on the turns past the last slot
+# that do not end a period, since the last turn of a period runs the
+# period's end as well.
+BUILDS3 = (1, 2, 4)
+EXAMPLES3 = (("three columns", 3, WIDTH, numbers(64, 3)),
+             ("twenty columns", 20, WIDTH, numbers(64, 20)),
+             ("thirty columns, seventeen constant", 30, 1,
+              mixed(64, 30, set(range(13, 30)))))
+CALLS3 = CALLS[:2] + ("an idle turn",) + CALLS[2:]
+
+
+def measured3(unit, columns, width, csv):
+    """The column of a DTX3 call table one image fills, in cycles: an
+    advance over the first eight rows, and the idle turns of 64."""
+    blob = write_table(csv, 3, width, None, unit, 960)
+    image, _ = package(blob)
+    state = struct.unpack(">I", image[20:24])[0]
+    code = struct.unpack(">I", image[36:40])[0]
+    header_at = struct.unpack(">I", image[24:28])[0]
+    p = struct.unpack(">H", image[30:32])[0]
+    live = struct.unpack(">H", image[header_at + 20:header_at + 22])[0]
+    m = Machine(image, state)
+    cycles = Cycles(m)
+    init = cycles.call(m, "init", a1=IMAGE + header_at)
+    advance = [cycles.call(m, "advance") for _ in range(64)]
+    idle = [c for r, c in enumerate(advance) if live <= r % p < p - 1]
+    advance = advance[:8]
+    jump0 = cycles.call(m, "jump", d0=0)
+    jump63 = cycles.call(m, "jump", d0=63)
+
+    def spread(of):
+        if not of:
+            return "-"
+        return str(min(of)) if min(of) == max(of) \
+            else "%d-%d" % (min(of), max(of))
+    return {"init": str(init), "advance": spread(advance),
+            "an idle turn": spread(idle),
+            "jump to row 0": str(jump0), "jump to row 63": str(jump63),
+            "code, bytes": str(code - 44)}
+
+
 def copy_cost(unit):
     """The cycles of init and 64 rows read and advanced, on a column packed
     without copies, by the decoder without the copy code and by the one with
@@ -1183,13 +1321,24 @@ def performance_tables():
         without, with_ = copy_cost(unit)
         costs[unit] = (without, with_)
         out.append("| %d | %d | %d | %d |" % (unit, without, with_, with_ - without))
-    return "\n".join(out), calls, reads, costs
+    out.append("")
+    calls3 = {}
+    for name, columns, width, csv in EXAMPLES3:
+        got = [measured3(unit, columns, width, csv) for unit in BUILDS3]
+        calls3[name] = got
+        out.append("### %s\n" % name.capitalize())
+        out.append("| call | DTX3 k=1 | DTX3 k=2 | DTX3 k=4 |")
+        out.append("|---|---|---|---|")
+        for call in CALLS3:
+            out.append("| %s | %s |" % (call, " | ".join(one[call] for one in got)))
+        out.append("")
+    return "\n".join(out), calls, reads, costs, calls3
 
 
 def performance():
     """doc/performance.md against the machine, cell by cell."""
     doc = open(os.path.join(ROOT, "doc", "performance.md")).read()
-    listed, said_reads, said_costs = [], {}, {}
+    listed, listed3, said_reads, said_costs = [], [], {}, {}
     under = None
     for line in doc.splitlines():
         if not line.startswith("|"):
@@ -1202,9 +1351,11 @@ def performance():
             under = said_costs
         elif len(cell) == 6 and cell[0] in CALLS:
             listed.append(cell)
+        elif len(cell) == 4 and cell[0] in CALLS3:
+            listed3.append(cell)
         elif under is not None and cell[0] in ("1", "2", "4"):
             under[int(cell[0])] = cell[1:]
-    tables, calls, reads, costs = performance_tables()
+    tables, calls, reads, costs, calls3 = performance_tables()
     cells = 0
     at = 0
     for name, _ in EXAMPLES:
@@ -1233,6 +1384,22 @@ def performance():
             "doc/performance.md has %s for the copy code at k of %d; the rig" \
             " counts %s" % (said_costs.get(unit), unit, want)
         cells += 3
+    at = 0
+    for name, _, _, _ in EXAMPLES3:
+        rows = listed3[at:at + len(CALLS3)]
+        assert [row[0] for row in rows] == list(CALLS3), \
+            "doc/performance.md's DTX3 %s table does not list the %d rows %s" \
+            % (name, len(CALLS3), ", ".join(CALLS3))
+        for row in rows:
+            for column, one in enumerate(calls3[name]):
+                assert row[1 + column] == one[row[0]], \
+                    "doc/performance.md has %s for %s, DTX3 %s, column %d;" \
+                    " the rig counts %s" % (row[1 + column], row[0], name,
+                                            column + 1, one[row[0]])
+                cells += 1
+        at += len(CALLS3)
+    assert len(listed3) == at, \
+        "doc/performance.md lists %d DTX3 call rows, not %d" % (len(listed3), at)
     print("  %d cells of doc/performance.md, each the figure the rig counts"
           % cells)
 
@@ -1256,8 +1423,19 @@ def main():
         except AssertionError as wrong:
             bad += 1
             print("  %-40s FAILED: %s" % (name, wrong))
+    print("DTX3")
+    for name, csv, width, repeat, unit, ring in PACKED + MIXED:
+        try:
+            check(name, csv, 3, width, repeat, unit, ring)
+        except AssertionError as wrong:
+            bad += 1
+            print("  %-40s FAILED: %s" % (name, wrong))
     print("the round trip: text, writer, packager, 68000, back to the text")
-    for name, csv, width, repeat, unit, ring in ROUND:
+    for name, csv, width, repeat, unit, ring in ROUND + [
+            ("constant and live columns", mixed(64, 6, {0, 2, 5}), 1, None,
+             1, 960),
+            ("every column constant", mixed(64, 3, {0, 1, 2}), 2, None, 1,
+             960)]:
         try:
             roundtrip(name, csv, width, repeat, unit, ring)
         except AssertionError as wrong:

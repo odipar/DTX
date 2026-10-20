@@ -16,7 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The twenty-two 68000 images, as go:embed embeds them in the Go
+    <!-- The forty 68000 images, as go:embed embeds them in the Go
          tree. A tree whose build has not run does not contain one, and
          Images.Read then returns null. -->
     <EmbeddedResource Include="../build/68k/*.bin" Condition="Exists('../build/68k')" />

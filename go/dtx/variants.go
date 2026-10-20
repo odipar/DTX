@@ -110,8 +110,8 @@ func ReadDtx1(file []byte) (*Table, error) {
 	return NewTable(header.Rows, header.Repeat, width, column)
 }
 
-// Read returns the table in a file, under any variant. A DTX2 file is unpacked
-// with the copy of ST4 carried in internal/st4.
+// Read returns the table in a file, under any variant. A DTX2 or DTX3 file is
+// unpacked with the copy of ST4 carried in internal/st4.
 func Read(file []byte) (*Table, error) {
 	header, err := ReadHeader(file)
 	if err != nil {
@@ -124,8 +124,10 @@ func Read(file []byte) (*Table, error) {
 		return ReadDtx1(file)
 	case DTX2:
 		return ReadDtx2(file)
+	case DTX3:
+		return ReadDtx3(file)
 	default:
-		return nil, fmt.Errorf("variant %d is not 0, 1 or 2", header.Variant)
+		return nil, fmt.Errorf("variant %d is not 0, 1, 2 or 3", header.Variant)
 	}
 }
 
@@ -243,14 +245,16 @@ func Dtx2From(file []byte, packer Packer, unit, ring int) ([]byte, error) {
 	return WriteDtx2(t, packer, unit, ring)
 }
 
-// Packed is a DTX2 payload's figures: the ring, the unit, whether its
+// Packed is a packed payload's figures: the ring, the unit, whether its
 // columns contain copies from the literal stream, whether a reader replays
-// each set's pass, and where each column's data set begins in the payload.
+// each set's pass, the columns with a ring and a decoder, and under DTX2
+// where each column's data set begins in the payload.
 type Packed struct {
 	Ring     int // N
 	Unit     int // k
 	Copies   bool
 	Replayed bool
+	Live     int // every column under DTX2, L under DTX3
 	At       []int
 }
 
@@ -272,6 +276,7 @@ func ReadPacked(file []byte, header Header) (Packed, error) {
 		Ring:   GetWord(file, payload),
 		Unit:   unit,
 		Copies: file[payload+3]&CopiesFlag != 0,
+		Live:   header.Columns,
 		At:     make([]int, header.Columns),
 	}
 	signature := 0x53340700 + unit

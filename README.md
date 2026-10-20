@@ -35,7 +35,7 @@ column means is left to the program, or to a format built on DTX.
 
 The tools come as executables for Windows, macOS and Linux, on x64 and
 arm64, from the [releases](https://github.com/odipar/DTX/releases). Each
-one contains the twenty-two 68000 images, and runs with no assembler,
+one contains the forty 68000 images, and runs with no assembler,
 packer or runtime beside it.
 
 A table starts as text: one row a line and one value a column. A value is
@@ -77,7 +77,7 @@ each. `-help` on any of them prints its usage and examples.
 |---|---|
 | `dtx-write` | text or a DTX file in, a DTX file or text out |
 | `dtx-package` | a DTX file into a standalone 68000 image |
-| `dtx-blobs` | the twenty-two images, one file a build |
+| `dtx-blobs` | the forty images, one file a build |
 
 ## Reading a table on a 68000
 
@@ -102,25 +102,29 @@ convention and [performance.md](doc/performance.md) has what every call
 costs, measured.
 
 One width a table, so the code is built for the width and no call tests it:
-twenty-two builds, one for DTX0, which reads a row as one run of bytes at
-any width, three for DTX1, and eighteen for DTX2, three widths by the three
-units its columns are packed at, with the copy code and without.
+forty builds, one for DTX0, which reads a row as one run of bytes at any
+width, three for DTX1, and eighteen each for DTX2 and DTX3, three widths by
+the three units their columns are packed at, with the copy code and
+without.
 
-## The three variants
+## The four variants
 
-A file declares which of three variants lays its table out:
+A file declares which of four variants lays its table out:
 
 | variant | the payload | for |
 |---|---|---|
 | DTX0 | row by row | a reader that reads whole rows |
 | DTX1 | column by column | a reader that reads one column of many |
 | DTX2 | column by column, each packed as an ST4 data set | a table too large to keep unpacked |
+| DTX3 | column by column, a constant column as its value and each other packed as ST4 streams | a packed table with columns that do not change, read in less memory |
 
 Every one is the same table ([requirements.md](doc/requirements.md) R1.3),
 so a file converts between them without loss. [SPEC.md](doc/SPEC.md)
 defines the bytes. DTX2 packs each column with
 [ST4](https://github.com/odipar/ST4), and a reader of it unpacks a column a
-part at a time, through a ring of `N` bytes.
+part at a time, through a ring of `N` bytes. DTX3 does the same for the
+columns whose values change, and has each other column as its value, with
+neither ring nor decoder.
 
 ## Words used here
 
@@ -191,7 +195,7 @@ written until it defines what DTX has to do.
 | [abi.md](doc/abi.md) | the calls a packaged table is read by, on the 68000 |
 | [performance.md](doc/performance.md) | what each call costs, in 68000 cycles, measured |
 | [experiments.md](doc/experiments.md) | what was measured against real tables, and what came out |
-| [BINARIES.md](doc/BINARIES.md) | the twenty-two 68000 images, and how a tool combines one with a table |
+| [BINARIES.md](doc/BINARIES.md) | the forty 68000 images, and how a tool combines one with a table |
 | [RELEASES.md](doc/RELEASES.md) | what a release contains, and what changed in each |
 | [doc/conformance/](doc/conformance) | the kit an independent reader is written against |
 

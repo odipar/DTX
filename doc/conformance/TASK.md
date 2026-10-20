@@ -25,6 +25,9 @@ complete: the header, and the payload of its variant. A DTX2 table's data
 sets are ST4 version 7 (SPEC.md 2.3), packed with the copy of ST4 in this
 repository, at the unit and ring the row names, and `dtx2-copies` was packed
 with copies from the literal stream, which its payload's flags byte marks.
+A DTX3 table's live columns are the streams of such data sets without
+their headers (SPEC.md 2.4), and `dtx3-copies` packs a column with copies
+where they pack it smaller.
 
 ## The rules
 
@@ -32,11 +35,14 @@ with copies from the literal stream, which its payload's flags byte marks.
   bounds what a table may contain, and a reader reports a table that breaks
   R6 and does not read further (R6.5). No table here breaks it.
 - A reader reads `R`, `C`, `RR` and the width from the header, and under
-  DTX2 `N`, `k` and the flags from the payload. Nothing outside the file
+  DTX2 and DTX3 `N`, `k` and the flags from the payload, under DTX3 with
+  `L`, the column map and the constant values. Nothing outside the file
   enters a read.
 - Under DTX2 a reader checks every data set's first long against
   `$53 $34 $07 k` (R5.2), and a decoder built without the copy code
   reads `dtx2-copies` wrongly: the flags byte marks the build (R5.10).
+  Under DTX3 the same byte marks it for `dtx3-copies` (R8.7), and bit 1
+  marks the loop of `dtx3-replayed` as replayed (R8.8).
 - The bytes a reader reads are compared whole with the kit's `NAME.rows`,
   which is outside a run. A row that differs in one byte fails the table.
 

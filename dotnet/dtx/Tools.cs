@@ -165,11 +165,17 @@ public static class Tools
             Format.Dtx1 => Variants.WriteDtx1(table),
             Format.Dtx2 => Variants.WriteDtx2(table, Packer(packer, copies),
                     unit, ring),
+            // A live column packs with copies where they pay: under -copies
+            // each is packed both ways and the smaller kept.
+            Format.Dtx3 => Dtx3.Write(table, copies.Length == 0
+                    ? new[] { Packer(packer, "") }
+                    : new[] { Packer(packer, ""), Packer(packer, copies) },
+                    unit, ring),
             _ => throw new ArgumentException(
-                    $"the variant is 0, 1 or 2, not {variant}"),
+                    $"the variant is 0, 1, 2 or 3, not {variant}"),
         };
         Write(out_);
-        string packing = !toText && variant == Format.Dtx2
+        string packing = !toText && Pack.Packs(variant)
                 ? $", k={unit}, N={ring}" : "";
         Console.Error.WriteLine($"{(toText ? "text" : $"DTX{variant}")}"
                 + $" {out_.Length} bytes, {table.Rows} rows, {table.Columns}"
@@ -310,12 +316,10 @@ public static class Tools
 
     /// <summary>The state block a table's reader needs, in bytes.</summary>
     private static int StateOf(byte[] file, Header header) =>
-            header.Variant == Format.Dtx2
-                    ? Pack.PackedStateBytes(header, Pack.ReadPacked(file, header))
-                    : Pack.StateBytes(header);
+            Pack.AnyStateBytes(file, header);
 
     /// <summary>
-    /// The twenty-two 68000 images the packager combines from, one file a
+    /// The forty 68000 images the packager combines from, one file a
     /// build.
     ///
     /// <para>The table each is assembled from is made here rather than read:
@@ -371,7 +375,9 @@ public static class Tools
     /// A table that fixes the figures one build's assembly reads. Any
     /// table of the kind does, since the code does not move with it: this
     /// one is 64 rows of two columns, at the build's width, and at a ring of
-    /// 960 where it is packed.
+    /// 960 where it is packed. Under DTX3 a column whose values are equal
+    /// is written as its value, so the seed's two columns count up and both
+    /// are packed.
     /// </summary>
     private static byte[] Seed(Images.Build build)
     {
@@ -381,6 +387,10 @@ public static class Tools
         for (int i = 0; i < columns; i++)
         {
             column[i] = new byte[rows * build.Width];
+            for (int r = 0; build.Variant == Format.Dtx3 && r < rows; r++)
+            {
+                column[i][r * build.Width] = (byte)r;
+            }
         }
         Table table = Table.Of(rows, rows, build.Width, column);
         return build.Variant switch
@@ -389,7 +399,9 @@ public static class Tools
             Format.Dtx1 => Variants.WriteDtx1(table),
             // The seed defines the build's copies flag, since that fixes
             // which decoder the template is assembled with.
-            _ => Variants.WriteDtx2(table, new Plain(build.Copies),
+            Format.Dtx2 => Variants.WriteDtx2(table, new Plain(build.Copies),
+                    build.Unit, 960),
+            _ => Dtx3.Write(table, new IPacker[] { new Plain(build.Copies) },
                     build.Unit, 960),
         };
     }

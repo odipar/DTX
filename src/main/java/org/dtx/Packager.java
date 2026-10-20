@@ -71,11 +71,36 @@ public final class Packager {
     }
 
     /**
-     * What a DTX2 payload defines: the ring, the unit, whether its columns
-     * contain copies from the literal stream, and where each data set begins.
+     * What a packed payload defines: the ring, the unit, whether its columns
+     * contain copies from the literal stream, whether its loop is replayed,
+     * the columns with a ring and a decoder, and under DTX2 where each data
+     * set begins.
      */
     record Packed(int ring, int unit, boolean copies, boolean replayed,
-            int[] at) {}
+            int live, int[] at) {}
+
+    /** What a table of a plain variant has: no ring, no unit, no decoder. */
+    private static final Packed PLAIN_PAYLOAD =
+            new Packed(0, 0, false, false, 0, new int[0]);
+
+    /** Whether {@code variant} packs its columns, DTX2 or DTX3. */
+    static boolean packs(int variant) {
+        return variant == Dtx.DTX2 || variant == Dtx.DTX3;
+    }
+
+    /** What the payload of a table of any variant defines. */
+    static Packed given(byte[] file, Dtx.Header header) {
+        return switch (header.variant()) {
+            case Dtx.DTX2 -> packed(file, header);
+            case Dtx.DTX3 -> {
+                Dtx3.Payload payload = Dtx3.payload(file, header);
+                yield new Packed(payload.ring(), payload.unit(),
+                        payload.copies(), payload.replayed(), payload.live(),
+                        new int[0]);
+            }
+            default -> PLAIN_PAYLOAD;
+        };
+    }
 
     /**
      * What a DTX2 payload defines, SPEC.md 2.3.
@@ -112,7 +137,7 @@ public final class Packager {
                         i, said, signature));
             }
         }
-        return new Packed(ring, unit, copies, replayed, at);
+        return new Packed(ring, unit, copies, replayed, at.length, at);
     }
 
     /**
@@ -170,13 +195,18 @@ public final class Packager {
     }
 
     /**
-     * The state block a packaged DTX2 reader needs, in bytes. A replayed
-     * payload adds a copy of the registers a column behind the rings, where
-     * the reader puts them at the row its loop begins (abi.md 4).
+     * The state block a packaged DTX2 or DTX3 reader needs, in bytes. A
+     * replayed payload adds a copy of the registers a column with a ring
+     * behind the rings, where the reader puts them at the row its loop
+     * begins (abi.md 4). DTX2 has a ring for every column; DTX3 for its live
+     * columns alone.
      */
     static int stateBytes(Dtx.Header header, Packed packed) {
-        return ring(header, packed) + packed.ring() * header.columns()
-                + (packed.replayed() ? SAVED * header.columns() : 0);
+        if (!packs(header.variant())) {
+            return stateBytes();
+        }
+        return ring(header, packed) + packed.ring() * packed.live()
+                + (packed.replayed() ? SAVED * packed.live() : 0);
     }
 
     /**
@@ -184,7 +214,9 @@ public final class Packager {
      * points at: the width under DTX0, where a row's values are one after
      * another; the length of a column under DTX1, where the columns lie at
      * one stride; and {@code N} under DTX2, where every column has a ring of
-     * that size. {@code DTX_metadata} reports it, out of the format block.
+     * that size; under DTX3 {@code N} as well, the stride from one live
+     * column's ring to the next. {@code DTX_metadata} reports it, out of the
+     * format block.
      */
     static int stride(Dtx.Header header, Packed packed) {
         return switch (header.variant()) {
@@ -199,9 +231,14 @@ public final class Packager {
         return PACKED_HEAD;
     }
 
-    /** Where the rings are in the state block: behind a decoder state a turn. */
+    /**
+     * Where the rings are in the state block: under DTX2 behind a decoder
+     * state a turn, and under DTX3 behind a decoder state a live column and
+     * the one every idle turn reads (abi.md 3).
+     */
     static int ring(Dtx.Header header, Packed packed) {
-        return decoders() + STATE * period(header, packed);
+        return decoders() + STATE * (header.variant() == Dtx.DTX3
+                ? packed.live() + 1 : period(header, packed));
     }
 
     /** log2 of {@code of}, where it is a power of two, or -1. */
@@ -225,17 +262,15 @@ public final class Packager {
     public static String table(byte[] file) {
         Dtx.Header header = Dtx.header(file);
         int variant = header.variant();
-        if (variant != Dtx.DTX0 && variant != Dtx.DTX1
-                && variant != Dtx.DTX2) {
+        if (variant != Dtx.DTX0 && variant != Dtx.DTX1 && !packs(variant)) {
             throw new IllegalArgumentException(
-                    "the variant is 0, 1 or 2, not " + variant);
+                    "the variant is 0, 1, 2 or 3, not " + variant);
         }
         int width = header.width();
         int rows = header.rows();
         int rowBytes = header.rowBytes();
-        Packed packed = variant == Dtx.DTX2
-                ? packed(file, header) : new Packed(0, 0, false, false, new int[0]);
-        int period = variant == Dtx.DTX2 ? period(header, packed) : 1;
+        Packed packed = given(file, header);
+        int period = packs(variant) ? period(header, packed) : 1;
         // The payload defines whether its columns contain copies (R5.10), so
         // the decoder built for them is fixed by the file and not by a
         // word carried beside it. That build writes the reach into two of
@@ -256,16 +291,16 @@ public final class Packager {
                 .append(equ("DTX_TURN", TURN))
                 .append(equ("DTX_PARK", PARK))
                 .append(equ("DTX_POINTER", POINTER));
-        if (variant != Dtx.DTX2) {
+        if (!packs(variant)) {
             // Nothing parks a6 under the plain variants, so the payload
             // init was seeded on is in that long instead, which a jump
-            // reaches (abi.md 3). Under DTX2 the template names it.
+            // reaches (abi.md 3). Under DTX2 and DTX3 the template names it.
             out.append(equ("DTX_PAYLOAD", PARK));
         }
         out
                 .append("\n; What the code reads at assembly time.\n")
                 .append(equ("DTX_WIDTH", width));
-        if (variant == Dtx.DTX2) {
+        if (packs(variant)) {
             out.append(equ("ST4_UNIT", packed.unit()));
         }
         out.append("\n; The rest of the table's figures. A combine writes"
@@ -274,9 +309,8 @@ public final class Packager {
                         + " are\n; here for a caller reading the figures"
                         + " rather than for the assembler.\n")
                 .append(equ("DTX_ROWBYTES", rowBytes))
-                .append(equ("DTX_STATE", variant == Dtx.DTX2
-                        ? stateBytes(header, packed) : stateBytes()));
-        if (variant == Dtx.DTX2) {
+                .append(equ("DTX_STATE", stateBytes(header, packed)));
+        if (packs(variant)) {
             out.append(equ("DTX_PERIOD", period))
                     .append(equ("DTX_N", packed.ring()));
             if (copies) {
@@ -305,7 +339,8 @@ public final class Packager {
         if (header.variant() != Dtx.DTX2) {
             // Every column is one width, so a pointer and a stride walk them
             // all: a plain read is arithmetic on R, C and the
-            // width, and no column table is written.
+            // width, and no column table is written. DTX3's payload has a
+            // stream record a live column, which its reader reads there.
             return new byte[0];
         }
         Packed given = packed(file, header);
@@ -339,8 +374,8 @@ public final class Packager {
 
     /**
      * The file the code for one build is in. A build assembles to one
-     * code for any table it reads: DTX0 one, DTX1 one a width, DTX2 one a
-     * width, a unit and the copy code or not.
+     * code for any table it reads: DTX0 one, DTX1 one a width, DTX2 and DTX3
+     * one a width, a unit and the copy code or not.
      */
     public static String carriedName(int variant, int width, int unit,
             boolean copies) {
@@ -350,8 +385,8 @@ public final class Packager {
             // the width.
             return "DTX0.bin";
         }
-        return variant == Dtx.DTX2
-                ? "DTX2-w" + width + "-k" + unit
+        return packs(variant)
+                ? "DTX" + variant + "-w" + width + "-k" + unit
                         + (copies ? "-copies" : "") + ".bin"
                 : "DTX1-w" + width + ".bin";
     }
@@ -477,8 +512,23 @@ public final class Packager {
         return combine(code, List.of(file)).image();
     }
 
-    /** The same, of one table or several. */
+    /** The same, of one table or several, the code built with the copy
+     *  code where the first table has copies. */
     static Packaged combine(byte[] code, List<byte[]> files) {
+        return combine(code, files,
+                given(files.get(0), Dtx.header(files.get(0))).copies());
+    }
+
+    /**
+     * The same, of code that has the copy code where {@code copies} is set.
+     * Under DTX3 a table without copies reads through the decoder with the
+     * copy code (abi.md 5), so the tables of one image differ in the flag
+     * and the code has the copy code where any of them has copies.
+     *
+     * @throws IllegalStateException as above, or where a DTX3 table has
+     *     copies and the code does not have the copy code
+     */
+    static Packaged combine(byte[] code, List<byte[]> files, boolean copies) {
         if (files.isEmpty()) {
             throw new IllegalStateException("no table: an image contains one"
                     + " at least");
@@ -504,8 +554,7 @@ public final class Packager {
                     + " bytes and the format block puts the column table at "
                     + columns + ": it would not land there");
         }
-        Packed given = variant == Dtx.DTX2
-                ? packed(file, header) : new Packed(0, 0, false, false, new int[0]);
+        Packed given = given(file, header);
         int unit = code[FORMAT_AT + UNIT_AT] & 0xFF;
         if (unit != given.unit()) {
             throw new IllegalStateException("the code decodes at a unit of "
@@ -522,17 +571,21 @@ public final class Packager {
         // pair begins on a long: init reaches the records at the header
         // less 16C, and SPEC.md 1 requires a header on a long of a
         // table's bytes.
-        int state = variant == Dtx.DTX2 ? stateBytes(header, given) : stateBytes();
+        int state = stateBytes(header, given);
         int at = code.length;
         int[] headers = new int[files.size()];
         byte[][] entries = new byte[files.size()][];
         for (int i = 0; i < files.size(); i++) {
             byte[] next = files.get(i);
             Dtx.Header its = Dtx.header(next);
+            if (variant == Dtx.DTX3 && given(next, its).copies() && !copies) {
+                throw new IllegalStateException("table " + (i + 1) + " has"
+                        + " copies from the literal stream, and the code was"
+                        + " built without the copy code");
+            }
             if (i > 0) {
                 same(header, given, next, its);
-                state = Math.max(state, its.variant() == Dtx.DTX2
-                        ? stateBytes(its, packed(next, its)) : stateBytes());
+                state = Math.max(state, stateBytes(its, given(next, its)));
                 // A pair begins on a long. The code ends on one and a
                 // column table is a multiple of 16, so the first pair lands
                 // on a long without this and a one table image comes out
@@ -558,15 +611,17 @@ public final class Packager {
         Dtx.putLong(image, FORMAT_AT + TABLE_AT, headers[0]);
         Dtx.putWord(image, FORMAT_AT + ROWBYTES_AT, rowBytes);
         Dtx.putWord(image, FORMAT_AT + PERIOD_AT,
-                variant == Dtx.DTX2 ? period(header, given) : 1);
+                packs(variant) ? period(header, given) : 1);
         Dtx.putWord(image, FORMAT_AT + RING_AT, given.ring());
         Dtx.putLong(image, FORMAT_AT + STRIDE_AT, stride(header, given));
         return new Packaged(image, headers);
     }
 
-    /** One image defines the variant, the width, the unit and, under DTX2,
-     *  {@code P} and {@code N} once (doc/abi.md 1), so every table past
-     *  the first meets what the first defines.
+    /** One image defines the variant, the width, the unit and, under DTX2
+     *  and DTX3, {@code P} once, and under DTX2 {@code N} and the copies
+     *  flag (doc/abi.md 1), so every table past the first meets what the
+     *  first defines. Under DTX3 each table defines its ring, and a table
+     *  without copies reads through the copy code.
      *
      *  @throws IllegalStateException naming the figure two tables differ on
      */
@@ -576,13 +631,16 @@ public final class Packager {
         if (first.variant() != Dtx.DTX0) {
             apart("the width", first.width(), header.width());
         }
-        if (first.variant() != Dtx.DTX2) {
+        if (!packs(first.variant())) {
             return;
         }
-        Packed its = packed(file, header);
+        Packed its = given(file, header);
         apart("the unit k", given.unit(), its.unit());
-        apart("the copies flag", given.copies() ? 1 : 0, its.copies() ? 1 : 0);
-        apart("the ring N", given.ring(), its.ring());
+        if (first.variant() == Dtx.DTX2) {
+            apart("the copies flag", given.copies() ? 1 : 0,
+                    its.copies() ? 1 : 0);
+            apart("the ring N", given.ring(), its.ring());
+        }
         apart("the period P", period(first, given), period(header, its));
     }
 
@@ -597,10 +655,10 @@ public final class Packager {
     /**
      * The image, combined from the code in this repository.
      *
-     * <p>The file defines which of the twenty-two it needs: the variant,
-     * the width every value is written in, and under DTX2 the unit its
-     * sets are packed at and whether they contain copies from the literal
-     * stream (R5.10). No word from a caller enters it, so no word can
+     * <p>The file defines which of the forty it needs: the variant,
+     * the width every value is written in, and under DTX2 and DTX3 the
+     * unit its sets are packed at and whether they contain copies from the
+     * literal stream (R5.10, R8.7). No word from a caller enters it, so no word can
      * differ from the bytes.
      */
     public static byte[] image(byte[] file) {
@@ -624,13 +682,20 @@ public final class Packager {
         }
         byte[] file = files.get(0);
         Dtx.Header header = Dtx.header(file);
-        if (header.variant() != Dtx.DTX2) {
+        if (!packs(header.variant())) {
             return combine(carriedCode(header.variant(), header.width(), 0,
-                    false), files);
+                    false), files, false);
         }
-        Packed given = packed(file, header);
-        return combine(carriedCode(Dtx.DTX2, header.width(), given.unit(),
-                given.copies()), files);
+        Packed given = given(file, header);
+        boolean copies = given.copies();
+        if (header.variant() == Dtx.DTX3) {
+            for (byte[] next : files) {
+                Dtx.Header its = Dtx.header(next);
+                copies |= its.variant() == Dtx.DTX3 && given(next, its).copies();
+            }
+        }
+        return combine(carriedCode(header.variant(), header.width(),
+                given.unit(), copies), files, copies);
     }
 
     /**
@@ -714,8 +779,7 @@ public final class Packager {
             return;
         }
         long bytes = image.length;
-        int state = header.variant() == Dtx.DTX2
-                ? stateBytes(header, packed(file, header)) : stateBytes();
+        int state = stateBytes(header, given(file, header));
         System.err.printf("%s -> DTX%d %s %d bytes, table %d bytes,"
                 + " %d rows, %d columns, state block %d bytes%n",
                 named.get(0), header.variant(),
@@ -730,8 +794,7 @@ public final class Packager {
             System.err.printf("%s -> table %d at image+%d, %d bytes,"
                     + " %d rows, %d columns, state block %d bytes%n",
                     named.get(i), i + 1, headers[i], next.length, its.rows(),
-                    its.columns(), its.variant() == Dtx.DTX2
-                            ? stateBytes(its, packed(next, its)) : stateBytes());
+                    its.columns(), stateBytes(its, given(next, its)));
         }
         if (!defines && named.size() > 1) {
             System.err.printf("table 1 at image+%d%n", headers[0]);

@@ -12,6 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -70,7 +71,38 @@ class ConformanceTest {
             new Source("dtx2-twenty-columns", Rig.numbers(64, 20, 251), 2, 2, null, 1, 960, false,
                     "DTX2: C of 20, so P is 20 and a read walks twenty rings"),
             new Source("dtx2-copies", Rig.repeating(), 2, 2, null, 1, 64, true,
-                    "DTX2 with copies from the literal stream, at a ring of 64 the pattern does not fit"));
+                    "DTX2 with copies from the literal stream, at a ring of 64 the pattern does not fit"),
+            new Source("dtx3-w1-k1", Rig.mixed(64, 6, Set.of(0, 2, 5), 251), 3, 1, null, 1, 960, false,
+                    "DTX3: three constant columns among six, a map with gaps and three values"),
+            new Source("dtx3-w2-k2", Rig.numbers(64, 2, 251), 3, 2, null, 2, 960, false,
+                    "DTX3 at a width of 2 and k of 2, every column live"),
+            new Source("dtx3-w4-k1", Rig.mixed(64, 3, Set.of(1), 251), 3, 4, null, 1, 960, false,
+                    "DTX3 at a width of 4 and k of 1, a constant value of four bytes"),
+            new Source("dtx3-every-column-constant", Rig.mixed(8, 3, Set.of(0, 1, 2), 251), 3, 2, null, 1, 960, false,
+                    "DTX3: L of 0, every column a value and no stream record"),
+            new Source("dtx3-replayed", Rig.mixed(512, 3, Set.of(1), 251), 3, 1, 0, 1, 64, false,
+                    "DTX3: a loop of 512 rows against a ring of 64, which bit 1 marks replayed"),
+            new Source("dtx3-copies", Rig.repeating(), 3, 2, null, 1, 64, true,
+                    "DTX3 with copies where they pack a column smaller, at a ring of 64"),
+            new Source("dtx3-thirty-columns", Rig.mixed(120, 30, range(13, 30), 251), 3, 1, null, 1, 60, false,
+                    "DTX3: thirteen live columns of thirty at a ring of 60, P of 30"));
+
+    /** The columns {@code from} to {@code to} less one. */
+    private static Set<Integer> range(int from, int to) {
+        Set<Integer> out = new java.util.HashSet<>();
+        for (int i = from; i < to; i++) {
+            out.add(i);
+        }
+        return out;
+    }
+
+    /** What SOURCES.md calls the text of a table with constant columns. */
+    private static final java.util.Map<String, String> MIXED = java.util.Map.of(
+            "dtx3-w1-k1", "mixed 64 6, columns 0, 2 and 5",
+            "dtx3-w4-k1", "mixed 64 3, column 1",
+            "dtx3-every-column-constant", "mixed 8 3, columns 0 to 2",
+            "dtx3-replayed", "mixed 512 3, column 1",
+            "dtx3-thirty-columns", "mixed 120 30, columns 13 to 29");
 
     private static Path kit() {
         return Rig.root().resolve("doc/conformance");
@@ -84,7 +116,10 @@ class ConformanceTest {
         return switch (source.variant()) {
             case Dtx.DTX0 -> Dtx0.write(table);
             case Dtx.DTX1 -> Dtx1.write(table);
-            default -> Dtx2.write(table, source.copies() ? new St4(true, 0) : new St4(),
+            case Dtx.DTX2 -> Dtx2.write(table, source.copies() ? new St4(true, 0) : new St4(),
+                    source.unit(), source.ring());
+            default -> Dtx3.write(table, source.copies()
+                    ? List.of(new St4(), new St4(true, 0)) : List.of(new St4()),
                     source.unit(), source.ring());
         };
     }
@@ -116,11 +151,12 @@ class ConformanceTest {
     private static String row(Source source, byte[] table) {
         String options = "-v" + source.variant() + " -w" + source.width()
                 + (source.repeat() == null ? "" : " -r" + source.repeat())
-                + (source.variant() == Dtx.DTX2 ? " -k" + source.unit() + " -m" + source.ring() : "")
+                + (Packager.packs(source.variant()) ? " -k" + source.unit() + " -m" + source.ring() : "")
                 + (source.copies() ? " -copies" : "");
         String text = source.text().equals(Rig.repeating()) ? "repeating"
-                : "numbers " + source.text().split("\n").length + " "
-                        + source.text().split("\n")[0].split(",").length;
+                : MIXED.getOrDefault(source.name(), "numbers "
+                        + source.text().split("\n").length + " "
+                        + source.text().split("\n")[0].split(",").length);
         return "| `" + source.name() + "` | " + text + " | `" + options + "` | "
                 + table.length + " | " + sha256(table).substring(0, 16) + " | "
                 + source.exercises() + " |";

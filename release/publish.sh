@@ -1,6 +1,6 @@
 #!/bin/sh
 # The standalone DTX executables: one set per platform, each containing the
-# twenty-two 68000 images, so a machine with neither this repository nor a
+# forty 68000 images, so a machine with neither this repository nor a
 # toolchain can write a table and package it for a 68000. The images go
 # beside them in one zip, for a caller who needs an image and no tool.
 #
@@ -52,8 +52,8 @@ mkdir -p "$OUT/release"
 rm -f "$OUT/dtx-blobs"
 
 count=$(ls "$IMAGES"/*.bin 2>/dev/null | wc -l | tr -d ' ')
-if [ "$count" != 22 ]; then
-    echo "publish: $count images built, not the 22 there are" >&2
+if [ "$count" != 40 ]; then
+    echo "publish: $count images built, not the 40 there are" >&2
     exit 1
 fi
 

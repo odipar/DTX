@@ -51,7 +51,8 @@ class BlobTest {
                     code[Packager.FORMAT_AT + Packager.WIDTH_AT] & 0xFF,
                     build.name() + "'s width");
         }
-        assertEquals(22, name.size(), "DTX0, three DTX1 and eighteen DTX2");
+        assertEquals(40, name.size(),
+                "DTX0, three DTX1, eighteen DTX2 and eighteen DTX3");
     }
 
     @Test
@@ -111,6 +112,40 @@ class BlobTest {
         }
         Table built = Table.of(rows, rows, width, column);
         return variant == Dtx.DTX0 ? Dtx0.write(built) : Dtx1.write(built);
+    }
+
+    /**
+     * doc/BINARIES.md records what each build's file runs to: one figure for
+     * DTX0, and the least and the most for each other variant. Read back
+     * against the carried files, so the sentence fails here when a build
+     * grows or shrinks.
+     */
+    @Test
+    void theImagesMeasureWhatBinariesRecords() throws Exception {
+        int[][] span = new int[4][];
+        for (Blobs.Build build : Blobs.all()) {
+            int bytes = Packager.carriedCode(build.variant(), build.width(),
+                    build.unit(), build.copies()).length;
+            int[] was = span[build.variant()];
+            span[build.variant()] = was == null ? new int[] {bytes, bytes}
+                    : new int[] {Math.min(was[0], bytes), Math.max(was[1], bytes)};
+        }
+        String said = Files.readString(Rig.root().resolve("doc/BINARIES.md"))
+                .replaceAll("\\s+", " ");
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(
+                "no table behind it: (\\d+) bytes for DTX0, (\\d+) for a DTX1"
+                + " image, (\\d+) to (\\d+) for a DTX2 image and (\\d+) to"
+                + " (\\d+) for a DTX3 image").matcher(said);
+        assertTrue(m.find(), "doc/BINARIES.md no longer records the images'"
+                + " bytes");
+        assertEquals(span[Dtx.DTX0][0], Integer.parseInt(m.group(1)), "DTX0");
+        assertEquals(span[Dtx.DTX0][1], Integer.parseInt(m.group(1)), "DTX0");
+        assertEquals(span[Dtx.DTX1][0], Integer.parseInt(m.group(2)), "DTX1");
+        assertEquals(span[Dtx.DTX1][1], Integer.parseInt(m.group(2)), "DTX1");
+        assertEquals(span[Dtx.DTX2][0], Integer.parseInt(m.group(3)), "DTX2, the least");
+        assertEquals(span[Dtx.DTX2][1], Integer.parseInt(m.group(4)), "DTX2, the most");
+        assertEquals(span[Dtx.DTX3][0], Integer.parseInt(m.group(5)), "DTX3, the least");
+        assertEquals(span[Dtx.DTX3][1], Integer.parseInt(m.group(6)), "DTX3, the most");
     }
 
     @Test

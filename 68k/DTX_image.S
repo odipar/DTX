@@ -5,7 +5,7 @@
 ; Robbert's direction. Use it freely, including commercially, as long as your
 ; documentation says you used DTX (see LICENSE).
 ;
-; Included by DTX0.S, DTX1.S and DTX2.S, never assembled alone. It contains
+; Included by DTX0.S, DTX1.S, DTX2.S and DTX3.S, never assembled alone. It contains
 ; the four slots, the format block, DTX_metadata and DTX_payload, which
 ; doc/abi.md 1 defines for every image and no variant changes, and the macro
 ; DTX0 and DTX1 install a long with.
@@ -50,7 +50,8 @@ _fmt:
         dc.l    0                       ; where the first table is
         dc.w    0                       ; the first table's row bytes
         dc.w    0                       ; P, which every table shares
-        dc.w    0                       ; N, which every table shares
+        dc.w    0                       ; N, which every DTX2 table shares,
+                                        ; and the first table's under DTX3
         dc.b    \unit,\width
         dc.l    _columns-_base          ; the first table's column table
         dc.l    0                       ; the stride from one column's value
@@ -63,7 +64,9 @@ _fmt:
 ; stride out of the block itself. This call reports the first table's figures;
 ; a caller reading another table reads R, C and RR out of that table's
 ; header, at the offsets below.
-; SPEC.md 1 lays it out: R at +4, C at +8 and RR at +10.
+; SPEC.md 1 lays it out: R at +4, C at +8 and RR at +10. Under DTX3 the
+; column map is at +8 of the payload, 16 past the header (SPEC.md 2.4), and
+; the call reports it in a2.
 DTX_metadata:
         lea     _fmt(pc),a0
         lea     _base(pc),a1            ; the image's first byte
@@ -72,6 +75,9 @@ DTX_metadata:
         move.w  8(a1),d1                ; C
         move.l  10(a1),d2               ; RR
         move.l  24(a0),d3               ; the stride
+        .if     \variant=3
+        lea     24(a1),a2               ; the column map
+        .endif
         rts
 
 ; DTX_payload. The table's header in a1 on the way in, and on the way out
@@ -89,8 +95,8 @@ DTX_payload:
 ; What follows the code. Nothing is assembled after this label: the packager
 ; appends a column table and then a .dtx file for each of the image's
 ; tables, so _columns is where the first pair lands and the code ends on a
-; long to put it there. DTX0 and DTX1 do not have a column table, so under
-; those two the first table's header is the first byte there. Where
+; long to put it there. DTX0, DTX1 and DTX3 do not have a column table, so
+; under those three the first table's header is the first byte there. Where
 ; _columns is assembled in and the format block repeats it; a
 ; table's header is behind a column table of 16C bytes, which moves
 ; with that table's C, so no instruction reaches a header by a displacement

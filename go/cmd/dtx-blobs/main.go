@@ -1,11 +1,11 @@
 // Command dtx-blobs builds the 68000 images the packager combines from, one
 // file a build. doc/tools.md defines the tool.
 //
-// Twenty-two of them. DTX0 reads a row as one run of bytes, so its code does
+// Forty of them. DTX0 reads a row as one run of bytes, so its code does
 // not move with the width and one file is every DTX0 table's. DTX1 moves a
-// value a column, so it has one a width. DTX2 has one a width and a build of
-// the decoder built into it: a unit of 1, 2 or 4, with the copy code and
-// without. This is the one step an assembler is needed for.
+// value a column, so it has one a width. DTX2 and DTX3 each have one a width
+// and a build of the decoder built into it: a unit of 1, 2 or 4, with the
+// copy code and without. This is the one step an assembler is needed for.
 //
 // The table each is assembled from is made here rather than read: the code
 // does not move with a table's shape, and pack.Blank zeroes the six fields
@@ -32,9 +32,9 @@ import (
 // tool. The Java and C# trees print the same text.
 const help = `dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 
-Builds the twenty-two images from the 68k/ templates with rmac and writes
-them into each DIR: DTX0, DTX1 at each width, and DTX2 at each width and a
-unit of 1, 2 and 4, with the copy code and without.
+Builds the forty images from the 68k/ templates with rmac and writes them
+into each DIR: DTX0, DTX1 at each width, and DTX2 and DTX3 at each width
+and a unit of 1, 2 and 4, with the copy code and without.
 
   -aRMAC       the assembler (rmac, on the path)
   -tTEMPLATES  the directory the templates are read from (68k, or what
@@ -44,7 +44,7 @@ unit of 1, 2 and 4, with the copy code and without.
 Examples
 
   dtx-blobs build/68k
-      the twenty-two images into build/68k, with the rmac on the path
+      the forty images into build/68k, with the rmac on the path
   dtx-blobs build/68k go/image/data -a/usr/local/bin/rmac
       into two directories, with that rmac
   dtx-blobs -t/src/dtx/68k build/68k
@@ -107,12 +107,16 @@ func (h plain) Pack(column []byte, unit, ring, loop int) ([]byte, error) {
 // seed returns a table that fixes the figures one build's assembly reads.
 // Any table of the kind does, since the code does not move with it: this
 // one is 64 rows of two columns at the build's width, at a ring of 960 where
-// the build is packed.
+// the build is packed. Under DTX3 a column whose values are equal is written
+// as its value, so the seed's two columns count up and both are packed.
 func seed(build image.Build) ([]byte, error) {
 	const rows, columns = 64, 2
 	column := make([][]byte, columns)
 	for i := range column {
 		column[i] = make([]byte, rows*build.Width)
+		for r := 0; build.Variant == dtx.DTX3 && r < rows; r++ {
+			column[i][r*build.Width] = byte(r)
+		}
 	}
 	table, err := dtx.NewTable(rows, rows, build.Width, column)
 	if err != nil {
@@ -123,8 +127,11 @@ func seed(build image.Build) ([]byte, error) {
 		return dtx.WriteDtx0(table), nil
 	case dtx.DTX1:
 		return dtx.WriteDtx1(table), nil
-	default:
+	case dtx.DTX2:
 		return dtx.WriteDtx2(table, plain{build.Copies}, build.Unit, 960)
+	default:
+		return dtx.WriteDtx3(table, []dtx.Packer{plain{build.Copies}},
+			build.Unit, 960)
 	}
 }
 

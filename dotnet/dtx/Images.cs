@@ -5,11 +5,11 @@ using System.Reflection;
 /// <summary>
 /// The 68000 images a DTX table is packaged behind.
 ///
-/// <para>Twenty-two of them. DTX0 reads a row as one run of bytes, so its
-/// code does not move with the width and one file is every DTX0 table's.
-/// DTX1 moves a value a column, so it has one a width. DTX2 has one a width
-/// and a build of the decoder built into it: a unit of 1, 2 or 4, with the
-/// copy code and without. They are built once and an assembly that packages
+/// <para>Forty of them. DTX0 reads a row as one run of bytes, so its code
+/// does not move with the width and one file is every DTX0 table's. DTX1
+/// moves a value a column, so it has one a width. DTX2 and DTX3 each have
+/// one a width and a build of the decoder built into it: a unit of 1, 2 or
+/// 4, with the copy code and without. They are built once and an assembly that packages
 /// a table contains them rather than assembling one. doc/tools.md defines
 /// how they are built and doc/abi.md what each of them does.</para>
 ///
@@ -21,7 +21,7 @@ public static class Images
 {
     /// <summary>
     /// One build of the code: a variant, the width its values are in, and
-    /// under DTX2 a decoder.
+    /// under DTX2 and DTX3 a decoder.
     /// </summary>
     public readonly record struct Build(int Variant, int Width, int Unit,
             bool Copies);
@@ -34,12 +34,15 @@ public static class Images
         {
             out_.Add(new Build(Format.Dtx1, width, 0, false));
         }
-        foreach (int width in new[] { 1, 2, 4 })
+        foreach (int variant in new[] { Format.Dtx2, Format.Dtx3 })
         {
-            foreach (int unit in new[] { 1, 2, 4 })
+            foreach (int width in new[] { 1, 2, 4 })
             {
-                out_.Add(new Build(Format.Dtx2, width, unit, false));
-                out_.Add(new Build(Format.Dtx2, width, unit, true));
+                foreach (int unit in new[] { 1, 2, 4 })
+                {
+                    out_.Add(new Build(variant, width, unit, false));
+                    out_.Add(new Build(variant, width, unit, true));
+                }
             }
         }
         return out_.ToArray();
@@ -47,7 +50,7 @@ public static class Images
 
     /// <summary>
     /// The file one build is in. A variant assembles to one code any
-    /// table that follows it, and under DTX2 to one a build of the decoder
+    /// table that follows it, and under DTX2 and DTX3 to one a build of the decoder
     /// built into it: the unit it decodes at, with the copy code and
     /// without.
     /// </summary>
@@ -60,8 +63,8 @@ public static class Images
             // the width.
             return "DTX0.bin";
         }
-        return variant == Format.Dtx2
-                ? $"DTX2-w{width}-k{unit}{(copies ? "-copies" : "")}.bin"
+        return Pack.Packs(variant)
+                ? $"DTX{variant}-w{width}-k{unit}{(copies ? "-copies" : "")}.bin"
                 : $"DTX1-w{width}.bin";
     }
 

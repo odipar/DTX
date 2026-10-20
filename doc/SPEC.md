@@ -15,7 +15,7 @@ by 2, and on a long where it divides by 4.
 | offset | bytes | contains |
 |---|---|---|
 | 0 | 3 | `DTX` |
-| 3 | 1 | the variant: 0, 1, 2, or a number a later specification assigns |
+| 3 | 1 | the variant: 0, 1, 2, 3, or a number a later specification assigns |
 | 4 | 4 | `R`, the row count, 1 upward |
 | 8 | 2 | `C`, the column count, 1 to 256 |
 | 10 | 4 | `RR`, the row the table repeats to |
@@ -54,13 +54,14 @@ header, and the pictures below lay out that same table:
 
 `W` is the width from the header, the bytes every value is written in. The
 payload begins on a long. Inside it DTX0 does not pad, DTX1 pads before each
-column to a word, and DTX2 pads before each data set to a long: each
-variant's section defines where. A pad byte is zero.
+column to a word, DTX2 pads before each data set to a long, and DTX3 before
+its stream records and each slot's streams to a long: each variant's
+section defines where. A pad byte is zero.
 
 In DTX0 and DTX1 an offset is arithmetic on `R`, `C` and `W` (R3.3, R4.2),
-and DTX1's pad enters that arithmetic as a fixed term. DTX2 differs: the
-payload defines at what offset each column begins, and a value within a
-packed column is found by unpacking (2.3).
+and DTX1's pad enters that arithmetic as a fixed term. DTX2 and DTX3
+differ: the payload defines at what offset each packed column begins, and a
+value within a packed column is found by unpacking (2.3, 2.4).
 
 ### 2.1 DTX0, row by row
 
@@ -233,6 +234,78 @@ is defined in full in [ST4](https://github.com/odipar/ST4).
 A reader unpacks a column through its ring rather than into `R` times `W`
 bytes (R5.8).
 
+### 2.4 DTX3, a constant column as its value and the others packed
+
+A column whose `R` values are equal is a **constant column**, and the
+payload has its value once. Every other column is a **live column**, packed
+as DTX2 packs a column (2.3). A live column's **slot** is its rank among
+the live columns, the first being slot 0, and `L` is how many there are,
+0 to `C`.
+
+| offset | bytes | contains |
+|---|---|---|
+| 0 | 2 | `N`, the bytes of the ring a live column unpacks through: a multiple of `k`, from `k` to 32512 |
+| 2 | 1 | `k`, the unit every live column is packed at: 1, 2 or 4 |
+| 3 | 1 | the flags: bit 0 marks a payload with copies from the literal stream in a live column, and bit 1 a payload whose loop is replayed. The other bits are zero |
+| 4 | 2 | `L` |
+| 6 | 2 | zero |
+| 8 | `C` | the **column map**, a byte a column, column 0 first: a live column's slot, and $FF for a constant column |
+| 8 + `C` | `W` times `C` less `L` | the constant columns' values, in column order, each `W` bytes |
+| .. | 16`L` | a **stream record** a slot, slot 0 first, beginning on a long |
+| .. | .. | each slot's four streams, slot 0's first, each slot's beginning on a long |
+
+The slots follow the column order: a live column's slot is one more than
+the slot of the live column before it. At an `L` of 256 every column is
+live, the map's last byte is slot 255, and the constant values run to zero
+bytes.
+
+A stream record is four longs, where streams A, B, C and D of its slot
+begin, counted from the payload's first byte. The four are the streams of
+an ST4 data set packed as DTX2 packs a column (2.3), in the order and with
+the padding that data set lays them out, and without its twenty-eight byte
+header. That header's fields are the table's and the payload's once for
+every live column: the length of what a column unpacks to is `R` times `W`,
+`M` is `N` over `k`, the rewind point is `RR` times `W` where bit 1 is set
+and absent where it is clear, and the signature is ST4's format version 7
+at the payload's `k`. `N` at most 32512 keeps `M` exactly `N` over `k` at
+every unit: 32512 bytes is the furthest an ST4 offset reaches (ST4, SPEC.md
+4.3).
+
+A slot's stream D runs to the next slot's stream A, and the last slot's to
+the end of the payload; a reader stops on the end code, as in a data set.
+Streams A and D begin on a word, since a 68000 reads both a word at a time.
+
+**The flags byte.** Bit 0 marks the decoder a reader needs: a decoder with
+the copy code reads a live column with copies and one without, and a
+decoder without it reads the second kind alone (2.3). So a writer packs
+each live column as it packs smallest, with copies or without, and one
+column with copies sets the bit. Bit 1 marks the form of the loop. Every
+live column of a payload has one loop and one length, so one form of it
+(ST4, SPEC.md 6.2 and 6.3): the bit is set where the loop is longer than a
+back reference reaches and a reader replays it, and clear where the streams
+loop by their end code or the table does not repeat.
+
+A reader has a ring of `N` bytes a live column, and slot `j`'s ring is `j`
+rings past slot 0's, so one pointer arithmetic runs every live column
+(R8.4). Column `i`'s value for a row is the byte the map has for it times
+`N` past slot 0's value, where the column is live, and its value in the
+payload where it is constant. A constant column has neither ring nor
+decoder.
+
+`R` times `W` divides by `k`, and where the table repeats `RR` times `W`
+divides by `k` as well, as under DTX2 (R8.9).
+
+```
+   C = 3, column 1 constant: N, k and the flags, L, the map, the value,
+   a record a slot, then each slot's streams
+
+  +----+--+--+----+----+--+--+--+----+------+------+======+======+
+  | N  |k |f | 2  | 0  |0 |FF|1 | v1 | rec0 | rec1 | slot | slot |
+  +----+--+--+----+----+--+--+--+----+------+------+======+======+
+     2  1  1   2    2   \  map /  W    16     16     0's    1's
+                                \ up to a long /     on a long each
+```
+
 ---
 
 ## 3. Not yet written
@@ -244,5 +317,4 @@ those it reads, an `R` below 1, a `C` outside 1 to 256, a width other than
 1, 2 or 4, an `RR` over `R`, or a DTX2 whose column is not a whole number
 of units.
 
-Whether a variant may contain columns of more than one kind, packing some and
-leaving others plain.
+Whether a variant may leave some columns plain beside packed ones.

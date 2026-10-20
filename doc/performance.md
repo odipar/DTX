@@ -97,3 +97,58 @@ three column table at each unit.
 
 The two decoders differ at init, where the one with the copy code writes
 the ring's size into two of its instructions, and not in a row.
+
+## DTX3
+
+The same two tables, every column of them live, and a third of thirty
+columns of one byte whose columns 13 to 29 are constant: column `i` of row
+`r` is `r` times (`i` plus one), modulo 251, below column 13, and 3 times
+`i` from there. Each is at a ring of 960 bytes. An advance is counted over
+the first eight rows, as under DTX2; an idle turn over 64 rows, on the
+turns past the last slot that do not end a period.
+
+### Three columns
+
+| call | DTX3 k=1 | DTX3 k=2 | DTX3 k=4 |
+|---|---|---|---|
+| init | 7732 | 6364 | 6322 |
+| advance | 638-890 | 602-854 | 406-606 |
+| an idle turn | - | - | - |
+| jump to row 0 | 7844 | 6440 | 6402 |
+| jump to row 63 | 55554 | 52046 | 42608 |
+| code, bytes | 1416 | 1412 | 1420 |
+
+### Twenty columns
+
+| call | DTX3 k=1 | DTX3 k=2 | DTX3 k=4 |
+|---|---|---|---|
+| init | 54556 | 40996 | 39476 |
+| advance | 1082 | 824 | 766 |
+| an idle turn | - | - | - |
+| jump to row 0 | 55112 | 41294 | 39716 |
+| jump to row 63 | 116814 | 92438 | 87978 |
+| code, bytes | 1416 | 1412 | 1420 |
+
+### Thirty columns, seventeen constant
+
+| call | DTX3 k=1 | DTX3 k=2 | DTX3 k=4 |
+|---|---|---|---|
+| init | 28458 | 25728 | 25130 |
+| advance | 944 | 746 | 794 |
+| an idle turn | 154 | 154 | 154 |
+| jump to row 0 | 28884 | 25956 | 25406 |
+| jump to row 63 | 58898 | 52990 | 45934 |
+| code, bytes | 1404 | 1416 | 1416 |
+
+An advance that refills is DTX2's and 4 cycles more: the branch past the
+refill and the step is a word branch, which costs 12 cycles where it falls
+through against a short branch's 8. An **idle turn** is 154 cycles: it reads
+the idle state's budget of 0, steps the turn and moves the pointer. The last
+turn of a period also runs the period's end, as it does under DTX2, and
+costs more.
+
+**Init under DTX3** is `L` decoder seeds and `L` refills, so the table of
+thirty columns, thirteen of them live, initialises in about half the cycles
+of the twenty column table. The code is 16 bytes larger than DTX2's at a
+width and a unit: init works out where the stream records are behind the
+map and the constant values.

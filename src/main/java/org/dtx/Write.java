@@ -3,6 +3,7 @@ package org.dtx;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * The tool that writes a table: {@code dtx-write < in > out}.
@@ -106,8 +107,14 @@ public final class Write {
                 case Dtx.DTX1 -> Dtx1.write(table);
                 case Dtx.DTX2 -> Dtx2.write(table, packer(packer, copies),
                         unit, ring);
+                // A live column packs with copies where they pay: under
+                // -copies each is packed both ways and the smaller kept.
+                case Dtx.DTX3 -> Dtx3.write(table, copies.isEmpty()
+                        ? List.of(packer(packer, ""))
+                        : List.of(packer(packer, ""), packer(packer, copies)),
+                        unit, ring);
                 default -> throw new IllegalArgumentException(
-                        "the variant is 0, 1 or 2, not " + variant);
+                        "the variant is 0, 1, 2 or 3, not " + variant);
             };
         }
         System.out.write(out);
@@ -121,7 +128,7 @@ public final class Write {
                 + " width %d, RR=%d%s%n",
                 toText ? "text" : "DTX" + variant, out.length,
                 table.rows(), table.columns(), table.width(), table.repeat(),
-                !toText && variant == Dtx.DTX2
+                !toText && Packager.packs(variant)
                         ? ", k=" + unit + ", N=" + ring : "");
     }
 

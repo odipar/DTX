@@ -184,7 +184,7 @@ final class ConsistencyTest {
     /**
      * Every clause one document cites in another is a clause that document
      * defines. The check above reads SPEC.md against itself; this reads
-     * abi.md's twenty-two citations and every other document's, which no
+     * abi.md's citations and every other document's, which no
      * check followed.
      *
      * <p>A citation qualified with ST4, YMXS or YMXR names that

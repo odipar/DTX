@@ -13,6 +13,8 @@ const (
 	DTX0 = 0 // laid out row by row
 	DTX1 = 1 // laid out column by column
 	DTX2 = 2 // laid out column by column and packed
+	DTX3 = 3 // column by column, a constant column as its value and
+	// every other packed
 )
 
 // Magic is the three bytes a file opens with.

@@ -146,6 +146,29 @@ final class Rig {
         return out.toString();
     }
 
+    /**
+     * {@link #numbers(int, int)}, with each column named in
+     * {@code constant} one value, its number times 3: DTX3 has those as
+     * values and the rest as slots.
+     */
+    static String mixed(int rows, int columns, java.util.Set<Integer> constant) {
+        return mixed(rows, columns, constant, 97);
+    }
+
+    /** The same, modulo {@code modulo}, as {@link #numbers(int, int, int)}. */
+    static String mixed(int rows, int columns, java.util.Set<Integer> constant,
+            int modulo) {
+        StringBuilder out = new StringBuilder();
+        for (int r = 0; r < rows; r++) {
+            for (int i = 0; i < columns; i++) {
+                out.append(i == 0 ? "" : ",").append(constant.contains(i)
+                        ? 3 * i : r * (i + 1) % modulo);
+            }
+            out.append('\n');
+        }
+        return out.toString();
+    }
+
     /** A table repeating a pattern 37 rows long, 512 rows. */
     static String repeating() {
         StringBuilder out = new StringBuilder();
@@ -164,7 +187,7 @@ final class Rig {
         if (repeat != null) {
             argv.add("-r" + repeat);
         }
-        if (variant == Dtx.DTX2) {
+        if (Packager.packs(variant)) {
             argv.add("-k" + unit);
             argv.add("-m" + ring);
             if (copies) {

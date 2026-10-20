@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// A build with the images contains all twenty-two, and each is the bytes the
+// A build with the images contains all forty, and each is the bytes the
 // Maven build wrote. A tree built without them does not contain one, which is
 // the other whole state: half of them would be a build gone wrong.
 func TestContainsEveryImageOrNone(t *testing.T) {
@@ -49,13 +49,13 @@ func TestContainsEveryImageOrNone(t *testing.T) {
 				build.Name(), got, want)
 		}
 	}
-	if len(name) != 22 {
-		t.Fatalf("%d builds, not the DTX0, three DTX1 and eighteen DTX2 there"+
-			" are", len(name))
+	if len(name) != 40 {
+		t.Fatalf("%d builds, not the DTX0, three DTX1, eighteen DTX2 and"+
+			" eighteen DTX3 there are", len(name))
 	}
 }
 
-// No two of the twenty-two are one bytes. A build is a variant, a width and
+// No two of the forty are one bytes. A build is a variant, a width and
 // a decoder, and each of the three moves the code: two builds that assembled
 // to the same bytes would be one build named twice.
 func TestNoTwoImagesAreTheSameBytes(t *testing.T) {

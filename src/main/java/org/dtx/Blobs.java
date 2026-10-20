@@ -16,11 +16,11 @@ import org.st4.St4Format;
  * appends the column table and the table's bytes. This writes those files,
  * and it is the one step rmac is needed for.
  *
- * <p>Twenty-two of them. DTX0 reads a row as one run of bytes, so its code
+ * <p>Forty of them. DTX0 reads a row as one run of bytes, so its code
  * does not move with the width and one file is every DTX0 table's. DTX1
- * moves a value a column, so it has one a width. DTX2 has one a width and a
- * build of the decoder built into it, a unit of 1, 2 or 4 with the copy
- * code and without.
+ * moves a value a column, so it has one a width. DTX2 and DTX3 each have one
+ * a width and a build of the decoder built into it, a unit of 1, 2 or 4 with
+ * the copy code and without.
  *
  * <p>The table each is assembled from fixes only the figures the assembler
  * reads, so it is made here rather than read: the columns do not contain
@@ -34,7 +34,7 @@ public final class Blobs {
 
     /**
      * One build of the code: a variant, the width its values are in, and
-     * under DTX2 a decoder.
+     * under DTX2 and DTX3 a decoder.
      */
     public record Build(int variant, int width, int unit, boolean copies) {
 
@@ -51,10 +51,12 @@ public final class Blobs {
         for (int width : new int[] {1, 2, 4}) {
             out.add(new Build(Dtx.DTX1, width, 0, false));
         }
-        for (int width : new int[] {1, 2, 4}) {
-            for (int unit : new int[] {1, 2, 4}) {
-                out.add(new Build(Dtx.DTX2, width, unit, false));
-                out.add(new Build(Dtx.DTX2, width, unit, true));
+        for (int variant : new int[] {Dtx.DTX2, Dtx.DTX3}) {
+            for (int width : new int[] {1, 2, 4}) {
+                for (int unit : new int[] {1, 2, 4}) {
+                    out.add(new Build(variant, width, unit, false));
+                    out.add(new Build(variant, width, unit, true));
+                }
             }
         }
         return out;
@@ -64,6 +66,8 @@ public final class Blobs {
      * A table that fixes the figures one build's assembly reads. Any table
      * of the kind does, since the code does not move with it: this one is
      * 64 rows of two columns, at a ring of 960 where the build is packed.
+     * Under DTX3 a column whose values are equal is written as its value,
+     * so the seed's two columns count up and both are packed.
      */
     public static byte[] seed(Build build) {
         int rows = 64;
@@ -71,6 +75,9 @@ public final class Blobs {
         byte[][] column = new byte[columns][];
         for (int i = 0; i < columns; i++) {
             column[i] = new byte[rows * build.width()];
+            for (int r = 0; build.variant() == Dtx.DTX3 && r < rows; r++) {
+                column[i][r * build.width()] = (byte) r;
+            }
         }
         Table table = Table.of(rows, rows, build.width(), column);
         return switch (build.variant()) {
@@ -78,7 +85,9 @@ public final class Blobs {
             case Dtx.DTX1 -> Dtx1.write(table);
             // The seed defines the build's copies flag, since that is
             // what fixes which decoder the template is assembled with.
-            default -> Dtx2.write(table, new Plain(build.copies()),
+            case Dtx.DTX2 -> Dtx2.write(table, new Plain(build.copies()),
+                    build.unit(), 960);
+            default -> Dtx3.write(table, new Plain(build.copies()),
                     build.unit(), 960);
         };
     }

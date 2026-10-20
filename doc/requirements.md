@@ -46,8 +46,8 @@ before what it describes, and what things are called comes before both.
 
 - **R2.1** A **variant** is one way of laying the rows out, and the only
   thing two layouts of one table differ in (R1.3).
-- **R2.2** **DTX0**, **DTX1** and **DTX2** are the variants this
-  specification defines, in R3, R4 and R5. A later variant gets the next
+- **R2.2** **DTX0**, **DTX1**, **DTX2** and **DTX3** are the variants this
+  specification defines, in R3, R4, R5 and R8. A later variant gets the next
   number, and **DTXN** names one of those.
 - **R2.3** A table defines which variant it is, and a reader which variants
   it reads. Where either defines it is SPEC.md's.
@@ -132,26 +132,62 @@ otherwise.
   reads a table of that width.
 - **R6.4** `RR` names a row of the table, 0 to `R` minus one, or is `R`
   itself where the table does not repeat.
-- **R6.5** Where a table breaks any of these, or R5.6, or its payload's
-  data sets do not declare its `k` and ST4's format version 7, a reader
-  reports it and does not read further. What it reports is
+- **R6.5** Where a table breaks any of these, or R5.6 or R8.9, or its
+  payload's data sets do not declare its `k` and ST4's format version 7, a
+  reader reports it and does not read further. What it reports is
   SPEC.md's.
 
 ## R7. Not yet required
 
-What R1 to R6 do not yet define. Each is open, and none of it is fixed by
-[doc/SPEC.md](SPEC.md), which defines the format R1 to R6 require.
+What R1 to R6 and R8 do not yet define. Each is open, and none of it is
+fixed by [doc/SPEC.md](SPEC.md), which defines the format R1 to R6 and R8
+require.
 
 - Whether a table defines its length, and whether a reader needs one to
   read it.
 - What a reader reports of a table it will not read. R6.5 has it report and
   not read further, and leaves what it reports to SPEC.md, which has not
   written it.
-- Whether a variant may contain columns of more than one kind, some packed
-  and some plain, or of more than one width.
+- Whether a variant may leave some columns plain beside packed ones, or
+  contain columns of more than one width.
 - What checks a reader written elsewhere against this repository's. The
   Java, Go and C# trees write the same bytes and a test compares them, and
   the 68000 reader is compared with the text a table came from under
   emulation. A reader written against the kit under doc/conformance is
   checked by hand: conformance/README.md records each run and what it
   moved, and no test reads one back.
+
+## R8. DTX3
+
+- **R8.1** The rows laid out column by column. A column whose values are
+  all one value is a constant column and is written once; every other
+  column is live and packed with ST4, as R5.1 packs a column.
+- **R8.2** One unit `k` for a payload, and one ST4 decoder in a reader,
+  built for that `k`, which runs every live column (R5.3).
+- **R8.3** One ring size `N` for a payload's live columns, which every one
+  of them was packed for (R5.4). Each table defines its `N`, so two tables
+  read by one reader differ in their rings.
+- **R8.4** A live column's slot is its rank among the live columns. A
+  reader's rings are one size and at a fixed stride by slot, so one pointer
+  arithmetic runs every live column: slot `j`'s value for a row is `j`
+  rings past slot 0's. A constant column has neither ring nor decoder.
+- **R8.5** The payload maps each column to its slot or marks it constant,
+  and has each constant column's value, so a reader reads a row's constant
+  columns out of the payload and its live columns out of the rings.
+- **R8.6** A live column is the four streams of an ST4 data set, without
+  its header: the table and the payload define that header's fields once
+  for every live column. `N` is at most 32512, the furthest an ST4 offset
+  reaches, so `M` is `N` over `k` at every unit.
+- **R8.7** The payload defines whether a live column contains copies from
+  its literal stream. A decoder with the copy code reads a column with
+  copies and one without, so a writer packs each live column as it packs
+  smaller and the payload marks the build a reader needs (R5.10).
+- **R8.8** The payload defines the form of its loop: a loop the streams
+  repeat by their end code, or one a reader replays (R5.11). Every live
+  column has one loop and one length, so one form.
+- **R8.9** `R` times the width divides by `k`, and so does `RR` times the
+  width where `RR` is below `R` (R5.6, R5.11).
+- **R8.10** A table of constant columns in fewer bytes than DTX2, and read
+  in less memory: a constant column costs its value and a byte of the map,
+  where under DTX2 it is a data set with a ring and a decoder state, which
+  DTX3 is for.

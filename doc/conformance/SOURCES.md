@@ -6,11 +6,12 @@ its sha256, and what reading it exercises. `ConformanceTest` writes every
 table again from these and compares the file in `tables/` with it, so a
 row here is one the writer wrote.
 
-The text is one of two. **numbers R C** is `R` rows of `C` columns where row
-`r`, column `i` is `r` times (`i` plus one), modulo 251. **repeating** is 512
-rows of two columns where row `r` is `r` modulo 37 and seven times that,
-so a pattern 37 rows long repeats, further back than a ring of 64 bytes
-reaches.
+The text is one of three. **numbers R C** is `R` rows of `C` columns where
+row `r`, column `i` is `r` times (`i` plus one), modulo 251. **mixed R C**
+is the same, with each column it names 3 times its number in every row, so
+those columns are constant. **repeating** is 512 rows of two columns where
+row `r` is `r` modulo 37 and seven times that, so a pattern 37 rows long
+repeats, further back than a ring of 64 bytes reaches.
 
 Beside every `NAME.dtx` is `NAME.rows`: the rows in the table, as DTX0
 lays them out, with nothing between the values. A reader of the table
@@ -37,3 +38,10 @@ reads that file back (TASK.md).
 | `dtx2-rows-not-a-multiple-of-p` | numbers 50 3 | `-v2 -w1 -k1 -m960` | 284 | 76c705b1e5fc0347 | DTX2: R of 50 at P of 3, so the last refill of a column is short |
 | `dtx2-twenty-columns` | numbers 64 20 | `-v2 -w2 -k1 -m960` | 3300 | 34c8bd7f7fc53dd6 | DTX2: C of 20, so P is 20 and a read walks twenty rings |
 | `dtx2-copies` | repeating | `-v2 -w2 -k1 -m64 -copies` | 356 | 4764b1c120676c1a | DTX2 with copies from the literal stream, at a ring of 64 the pattern does not fit |
+| `dtx3-w1-k1` | mixed 64 6, columns 0, 2 and 5 | `-v3 -w1 -k1 -m960` | 288 | 622c5fb704173997 | DTX3: three constant columns among six, a map with gaps and three values |
+| `dtx3-w2-k2` | numbers 64 2 | `-v3 -w2 -k2 -m960` | 324 | 5c85aa3052ab4eac | DTX3 at a width of 2 and k of 2, every column live |
+| `dtx3-w4-k1` | mixed 64 3, column 1 | `-v3 -w4 -k1 -m960` | 304 | 4bf05d33c8b16bc9 | DTX3 at a width of 4 and k of 1, a constant value of four bytes |
+| `dtx3-every-column-constant` | mixed 8 3, columns 0 to 2 | `-v3 -w2 -k1 -m960` | 36 | 62d2e607f0c163c2 | DTX3: L of 0, every column a value and no stream record |
+| `dtx3-replayed` | mixed 512 3, column 1 | `-v3 -w1 -r0 -k1 -m64` | 1092 | 9ea895758ada64d9 | DTX3: a loop of 512 rows against a ring of 64, which bit 1 marks replayed |
+| `dtx3-copies` | repeating | `-v3 -w2 -k1 -m64 -copies` | 332 | 7721acd1cc29b053 | DTX3 with copies where they pack a column smaller, at a ring of 64 |
+| `dtx3-thirty-columns` | mixed 120 30, columns 13 to 29 | `-v3 -w1 -k1 -m60` | 1892 | dc371e11d6342bbd | DTX3: thirteen live columns of thirty at a ring of 60, P of 30 |

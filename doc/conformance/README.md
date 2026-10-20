@@ -1,6 +1,6 @@
 # conformance
 
-The kit an independent reader is written against: nineteen tables under
+The kit an independent reader is written against: twenty-six tables under
 `tables/`, one file each and the rows in it beside it, and TASK.md, which
 defines what a reader produces from each and the rules it is checked
 against.
@@ -14,7 +14,11 @@ here.
 The tables reach every variant at every width, a repeat and a repeat at row 0,
 one row, a DTX2 at each unit above and below the width, twenty columns, a
 table whose rows are not a multiple of its period, and columns packed with
-copies at a ring too short for their pattern. The Java reader reads every
+copies at a ring too short for their pattern. The seven DTX3 tables reach
+a column map with gaps, a constant value at each width, a table of
+constant columns alone, a loop marked replayed, copies where they pack a
+column smaller, and thirty columns at the smallest ring their period
+allows. The Java reader reads every
 table here back to its rows in `ConformanceTest`; the Go and C# trees write
 the same bytes as the Java tree in `ParityTest`; and the 68000 reads tables
 of the same shapes under emulation in `68k/test/emu/test_dtx.py`.

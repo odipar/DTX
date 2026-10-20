@@ -1,6 +1,6 @@
 // Package image contains the 68000 images a DTX table is packaged behind.
 //
-// One build is one code, so the twenty-two are built once and a program that
+// One build is one code, so the forty are built once and a program that
 // packages a table contains them rather than assembling one. doc/tools.md
 // defines how they are built and doc/abi.md what each of them does.
 //
@@ -26,8 +26,8 @@ import (
 var data embed.FS
 
 // Name returns the file one build is in: a variant, the width its values
-// are written in, and under DTX2 the unit its decoder decodes at and whether
-// that decoder has the copy code.
+// are written in, and under DTX2 and DTX3 the unit its decoder decodes at and
+// whether that decoder has the copy code.
 //
 // DTX0 reads a row as one run of bytes, and the move that run needs comes
 // from the row's bytes: its code does not move with the width, so one file
@@ -36,13 +36,13 @@ func Name(variant, width, unit int, copies bool) string {
 	if variant == 0 {
 		return "DTX0.bin"
 	}
-	if variant != 2 {
+	if variant != 2 && variant != 3 {
 		return fmt.Sprintf("DTX1-w%d.bin", width)
 	}
 	if copies {
-		return fmt.Sprintf("DTX2-w%d-k%d-copies.bin", width, unit)
+		return fmt.Sprintf("DTX%d-w%d-k%d-copies.bin", variant, width, unit)
 	}
-	return fmt.Sprintf("DTX2-w%d-k%d.bin", width, unit)
+	return fmt.Sprintf("DTX%d-w%d-k%d.bin", variant, width, unit)
 }
 
 // Read returns one image's bytes, or nil where the build does not contain one.
@@ -56,7 +56,7 @@ func Read(variant, width, unit int, copies bool) []byte {
 
 // Code returns one image's bytes, from what this build contains or, where it
 // does not contain one, from build/68k, where the Maven build writes the
-// twenty-two.
+// forty.
 //
 // DTX_68K names where the templates are, 68k/, and build/68k is beside
 // it under the same parent.
@@ -79,7 +79,7 @@ func Code(variant, width, unit int, copies bool) ([]byte, error) {
 }
 
 // Build is one build of the code: a variant, the width its values are in, and
-// under DTX2 a decoder.
+// under DTX2 and DTX3 a decoder.
 type Build struct {
 	Variant int
 	Width   int
@@ -94,18 +94,20 @@ func (b Build) Name() string {
 
 // Builds returns every build, in the order the Maven build writes them.
 //
-// Twenty-two: one DTX0, one DTX1 a width, and one DTX2 a width and a build
-// of the decoder built into it: a unit of 1, 2 or 4, with the copy code and
-// without.
+// Forty: one DTX0, one DTX1 a width, and one DTX2 and one DTX3 a width and
+// a build of the decoder built into it: a unit of 1, 2 or 4, with the copy
+// code and without.
 func Builds() []Build {
 	out := []Build{{0, 1, 0, false}}
 	for _, width := range []int{1, 2, 4} {
 		out = append(out, Build{1, width, 0, false})
 	}
-	for _, width := range []int{1, 2, 4} {
-		for _, unit := range []int{1, 2, 4} {
-			out = append(out, Build{2, width, unit, false},
-				Build{2, width, unit, true})
+	for _, variant := range []int{2, 3} {
+		for _, width := range []int{1, 2, 4} {
+			for _, unit := range []int{1, 2, 4} {
+				out = append(out, Build{variant, width, unit, false},
+					Build{variant, width, unit, true})
+			}
 		}
 	}
 	return out

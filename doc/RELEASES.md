@@ -10,9 +10,9 @@ below it.
 
 - one zip a platform, over six: Windows, macOS and Linux, each on x64 and
   arm64. A zip contains the three tools as executables, and each executable
-  contains the twenty-two 68000 images, so a caller who unpacks one has the
+  contains the forty 68000 images, so a caller who unpacks one has the
   whole of what packaging needs
-- one zip of the twenty-two images, one file a build inside it, for a
+- one zip of the forty images, one file a build inside it, for a
   caller who needs an image and no tool (BINARIES.md)
 - `MANIFEST.txt`: every file's size and sha256 beside what identifies it -
   a variant, a width, a unit and copies for an image, what it contains for

@@ -59,10 +59,11 @@ const PackedHead = 72
 // Plain is the state block DTX0 and DTX1 need: the head, and one pointer.
 const Plain = Pointer + 4
 
-// Packed is a DTX2 payload's figures: the ring, the unit, whether its
-// columns contain copies from the literal stream, and where each column's data
-// set begins in the payload. The DTX2 reader in dtx reads the same payload,
-// so the one reader is there.
+// Packed is a packed payload's figures: the ring, the unit, whether its
+// columns contain copies from the literal stream, whether its loop is
+// replayed, the columns with a ring and a decoder, and under DTX2 where each
+// column's data set begins in the payload. The readers in dtx read the
+// same payloads, so the one reader is there.
 type Packed = dtx.Packed
 
 // ReadPacked reads those out of a DTX2 payload, SPEC.md 2.3, and checks the
@@ -71,18 +72,47 @@ func ReadPacked(file []byte, header dtx.Header) (Packed, error) {
 	return dtx.ReadPacked(file, header)
 }
 
+// Packs reports whether variant packs its columns, DTX2 or DTX3.
+func Packs(variant int) bool {
+	return variant == dtx.DTX2 || variant == dtx.DTX3
+}
+
+// PayloadOf returns what the payload of a table of any variant defines: a
+// DTX2 payload's out of ReadPacked, a DTX3 payload's out of
+// dtx.ReadPayload3, and the zero figures of a plain variant.
+func PayloadOf(file []byte, header dtx.Header) (Packed, error) {
+	switch header.Variant {
+	case dtx.DTX2:
+		return ReadPacked(file, header)
+	case dtx.DTX3:
+		payload, err := dtx.ReadPayload3(file, header)
+		if err != nil {
+			return Packed{}, err
+		}
+		return Packed{Ring: payload.Ring, Unit: payload.Unit,
+			Copies: payload.Copies, Replayed: payload.Replayed,
+			Live: payload.Live()}, nil
+	default:
+		return Packed{}, nil
+	}
+}
+
 // Decoders returns where the decoder states are in the state block,
 // doc/abi.md 3.
 func Decoders() int {
 	return PackedHead
 }
 
-// Ring returns where the rings are in the state block: behind a decoder
-// state a turn.
+// Ring returns where the rings are in the state block: under DTX2 behind a
+// decoder state a turn, and under DTX3 behind a decoder state a live
+// column and the one every idle turn reads (abi.md 3).
 func Ring(header dtx.Header, given Packed) (int, error) {
 	period, err := Period(header, given)
 	if err != nil {
 		return 0, err
+	}
+	if header.Variant == dtx.DTX3 {
+		return Decoders() + State*(given.Live+1), nil
 	}
 	return Decoders() + State*period, nil
 }
@@ -95,25 +125,41 @@ func StateBytes() int {
 	return Plain
 }
 
-// PackedStateBytes returns the state block a packaged DTX2 reader needs. A
-// replayed payload adds a copy of the registers a column behind the rings,
-// where the reader puts them at the row its loop begins (abi.md 4).
+// PackedStateBytes returns the state block a packaged DTX2 or DTX3 reader
+// needs. A replayed payload adds a copy of the registers a column with a
+// ring behind the rings, where the reader puts them at the row its loop
+// begins (abi.md 4). DTX2 has a ring for every column; DTX3 for its live
+// columns alone.
 func PackedStateBytes(header dtx.Header, given Packed) (int, error) {
 	ring, err := Ring(header, given)
 	if err != nil {
 		return 0, err
 	}
-	out := ring + given.Ring*header.Columns
+	out := ring + given.Ring*given.Live
 	if given.Replayed {
-		out += Saved * header.Columns
+		out += Saved * given.Live
 	}
 	return out, nil
+}
+
+// AnyStateBytes returns the state block a reader of a table of any
+// variant needs.
+func AnyStateBytes(file []byte, header dtx.Header) (int, error) {
+	if !Packs(header.Variant) {
+		return StateBytes(), nil
+	}
+	given, err := PayloadOf(file, header)
+	if err != nil {
+		return 0, err
+	}
+	return PackedStateBytes(header, given)
 }
 
 // Stride returns the stride from one column's value to the next, in the row an
 // advance points at: the width under DTX0, where a row's values are one
 // after another; a column's length under DTX1, R times the width up to a
-// word; and N under DTX2, where every column has a ring of that size.
+// word; and N under DTX2, where every column has a ring of that size, and
+// under DTX3, the stride from one live column's ring to the next.
 // DTX_metadata reports it, out of the format block.
 func Stride(header dtx.Header, given Packed) int {
 	switch header.Variant {
@@ -168,7 +214,8 @@ func Period(header dtx.Header, given Packed) (int, error) {
 //
 // DTX0 and DTX1 do not have one. Every column is one width, so a pointer and
 // a stride walk them all: a plain read is arithmetic on R, C and the
-// width.
+// width. DTX3's payload has a stream record a live column, which its
+// reader reads there.
 func ColumnTable(file []byte, header dtx.Header) ([]byte, error) {
 	if header.Variant != dtx.DTX2 {
 		return nil, nil
@@ -209,16 +256,27 @@ func Combine(code, file []byte, header dtx.Header) ([]byte, error) {
 //
 // The first file names the code and every other meets it on what an image
 // defines once (doc/abi.md 1): the variant, the width, the unit and, under
-// DTX2, the period and the ring.
+// DTX2 and DTX3, the period, and under DTX2 the ring and the copies flag.
+// The code has the copy code where the first table has copies.
 func CombineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int, error) {
-	out, at, err := combineMany(code, files, header)
+	if len(files) == 0 {
+		return nil, nil, fmt.Errorf("no table: an image contains one at least")
+	}
+	given, err := PayloadOf(files[0], header)
 	if err != nil {
 		return nil, nil, err
 	}
-	return out, at, nil
+	return CombineWith(code, files, header, given.Copies)
 }
 
-func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int, error) {
+// CombineWith is CombineMany of code that has the copy code where copies is
+// set. Under DTX3 a table without copies reads through the decoder with
+// the copy code (abi.md 5), so the tables of one image differ in the flag
+// and the code has the copy code where any of them has copies. It is an
+// error where a DTX3 table has copies and the code does not have the copy
+// code.
+func CombineWith(code []byte, files [][]byte, header dtx.Header,
+	copies bool) ([]byte, []int, error) {
 	if len(files) == 0 {
 		return nil, nil, fmt.Errorf("no table: an image contains one at least")
 	}
@@ -242,12 +300,9 @@ func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int,
 			" block puts the column table at %d: it would not land there",
 			len(code), columns)
 	}
-	var given Packed
-	if header.Variant == dtx.DTX2 {
-		var err error
-		if given, err = ReadPacked(file, header); err != nil {
-			return nil, nil, err
-		}
+	given, err := PayloadOf(file, header)
+	if err != nil {
+		return nil, nil, err
 	}
 	if unit := int(code[FormatAt+UnitAt]); unit != given.Unit {
 		return nil, nil, fmt.Errorf("the code decodes at a unit of %d and the"+
@@ -260,8 +315,7 @@ func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int,
 	}
 	state := StateBytes()
 	period := 1
-	var err error
-	if header.Variant == dtx.DTX2 {
+	if Packs(header.Variant) {
 		if state, err = PackedStateBytes(header, given); err != nil {
 			return nil, nil, err
 		}
@@ -283,18 +337,25 @@ func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int,
 			if its, err = dtx.ReadHeader(next); err != nil {
 				return nil, nil, err
 			}
+		}
+		if header.Variant == dtx.DTX3 {
+			itsGiven, err := PayloadOf(next, its)
+			if err != nil {
+				return nil, nil, err
+			}
+			if itsGiven.Copies && !copies {
+				return nil, nil, fmt.Errorf("table %d has copies from the"+
+					" literal stream, and the code was built without the"+
+					" copy code", i+1)
+			}
+		}
+		if i > 0 {
 			if err = same(header, given, next, its); err != nil {
 				return nil, nil, err
 			}
-			mine := StateBytes()
-			if its.Variant == dtx.DTX2 {
-				itsPacked, err := ReadPacked(next, its)
-				if err != nil {
-					return nil, nil, err
-				}
-				if mine, err = PackedStateBytes(its, itsPacked); err != nil {
-					return nil, nil, err
-				}
+			mine, err := AnyStateBytes(next, its)
+			if err != nil {
+				return nil, nil, err
 			}
 			if mine > state {
 				state = mine
@@ -324,7 +385,9 @@ func combineMany(code []byte, files [][]byte, header dtx.Header) ([]byte, []int,
 }
 
 // same reads a table past the first against what an image defines once
-// (doc/abi.md 1), naming the figure two tables differ on.
+// (doc/abi.md 1), naming the figure two tables differ on. Under DTX3 each
+// table defines its ring, and a table without copies reads through the
+// copy code.
 func same(first dtx.Header, given Packed, file []byte, header dtx.Header) error {
 	if first.Variant != header.Variant {
 		return apart("the variant", first.Variant, header.Variant)
@@ -332,20 +395,20 @@ func same(first dtx.Header, given Packed, file []byte, header dtx.Header) error 
 	if first.Variant != dtx.DTX0 && first.Width != header.Width {
 		return apart("the width", first.Width, header.Width)
 	}
-	if first.Variant != dtx.DTX2 {
+	if !Packs(first.Variant) {
 		return nil
 	}
-	its, err := ReadPacked(file, header)
+	its, err := PayloadOf(file, header)
 	if err != nil {
 		return err
 	}
 	if given.Unit != its.Unit {
 		return apart("the unit k", given.Unit, its.Unit)
 	}
-	if given.Copies != its.Copies {
+	if first.Variant == dtx.DTX2 && given.Copies != its.Copies {
 		return apart("the copies flag", boolAsInt(given.Copies), boolAsInt(its.Copies))
 	}
-	if given.Ring != its.Ring {
+	if first.Variant == dtx.DTX2 && given.Ring != its.Ring {
 		return apart("the ring N", given.Ring, its.Ring)
 	}
 	mine, err := Period(first, given)
@@ -376,10 +439,11 @@ func boolAsInt(of bool) int {
 
 // Image returns the image for this table, from the code this build contains.
 //
-// The file defines which of the twenty-two it needs: the variant, the width
-// every value is written in, and under DTX2 the unit its sets are packed at
-// and whether they contain copies from the literal stream (R5.10). No word
-// from a caller enters it, so no word can differ from the bytes.
+// The file defines which of the forty it needs: the variant, the width
+// every value is written in, and under DTX2 and DTX3 the unit its sets are
+// packed at and whether they contain copies from the literal stream (R5.10,
+// R8.7). No word from a caller enters it, so no word can differ from the
+// bytes.
 func Image(file []byte) ([]byte, error) {
 	out, _, err := Images([][]byte{file})
 	return out, err
@@ -388,7 +452,8 @@ func Image(file []byte) ([]byte, error) {
 // Images returns the image of one table or several, and where each table's
 // header is in it. The first file names the code and every other meets
 // it: an image defines the variant, the width, the unit and, under DTX2, the
-// period and the ring once.
+// period and the ring once. Under DTX3 the code has the copy code where any
+// table has copies.
 func Images(files [][]byte) ([]byte, []int, error) {
 	if len(files) == 0 {
 		return nil, nil, fmt.Errorf("no table: an image contains one at least")
@@ -398,19 +463,29 @@ func Images(files [][]byte) ([]byte, []int, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	unit, copies := 0, false
-	if header.Variant == dtx.DTX2 {
-		given, err := ReadPacked(file, header)
-		if err != nil {
-			return nil, nil, err
-		}
-		unit, copies = given.Unit, given.Copies
-	}
-	code, err := image.Code(header.Variant, header.Width, unit, copies)
+	given, err := PayloadOf(file, header)
 	if err != nil {
 		return nil, nil, err
 	}
-	return CombineMany(code, files, header)
+	copies := given.Copies
+	for _, next := range files[1:] {
+		its, err := dtx.ReadHeader(next)
+		if err != nil {
+			return nil, nil, err
+		}
+		if header.Variant == dtx.DTX3 && its.Variant == dtx.DTX3 {
+			itsGiven, err := PayloadOf(next, its)
+			if err != nil {
+				return nil, nil, err
+			}
+			copies = copies || itsGiven.Copies
+		}
+	}
+	code, err := image.Code(header.Variant, header.Width, given.Unit, copies)
+	if err != nil {
+		return nil, nil, err
+	}
+	return CombineWith(code, files, header, copies)
 }
 
 // equ returns one NAME equ VALUE line.
@@ -425,21 +500,21 @@ func equ(name string, value int) string {
 // Figures returns the figures of one table, as a template reads them: the
 // equates, and no instruction. R, C and RR reach the code at run time
 // instead, out of the table's header, and what is left is the width, the
-// row's bytes and the state block, and under DTX2 the period, N, the unit
-// and the copy code (doc/tools.md).
+// row's bytes and the state block, and under DTX2 and DTX3 the period, N,
+// the unit and the copy code (doc/tools.md).
 func Figures(file []byte) (string, error) {
 	header, err := dtx.ReadHeader(file)
 	if err != nil {
 		return "", err
 	}
 	variant := header.Variant
-	if variant != dtx.DTX0 && variant != dtx.DTX1 && variant != dtx.DTX2 {
-		return "", fmt.Errorf("the variant is 0, 1 or 2, not %d", variant)
+	if variant != dtx.DTX0 && variant != dtx.DTX1 && !Packs(variant) {
+		return "", fmt.Errorf("the variant is 0, 1, 2 or 3, not %d", variant)
 	}
 	var given Packed
 	period, state := 1, StateBytes()
-	if variant == dtx.DTX2 {
-		if given, err = ReadPacked(file, header); err != nil {
+	if Packs(variant) {
+		if given, err = PayloadOf(file, header); err != nil {
 			return "", err
 		}
 		if period, err = Period(header, given); err != nil {
@@ -459,15 +534,15 @@ func Figures(file []byte) (string, error) {
 	out.WriteString(equ("DTX_TURN", Turn))
 	out.WriteString(equ("DTX_PARK", Park))
 	out.WriteString(equ("DTX_POINTER", Pointer))
-	if variant != dtx.DTX2 {
+	if !Packs(variant) {
 		// Nothing parks a6 under the plain variants, so the payload
 		// init was seeded on is in that long instead, which a jump
-		// reaches (abi.md 3). Under DTX2 the template names it.
+		// reaches (abi.md 3). Under DTX2 and DTX3 the template names it.
 		out.WriteString(equ("DTX_PAYLOAD", Park))
 	}
 	out.WriteString("\n; What the code reads at assembly time.\n")
 	out.WriteString(equ("DTX_WIDTH", header.Width))
-	if variant == dtx.DTX2 {
+	if Packs(variant) {
 		out.WriteString(equ("ST4_UNIT", given.Unit))
 	}
 	out.WriteString("\n; The rest of the table's figures. A combine writes" +
@@ -476,7 +551,7 @@ func Figures(file []byte) (string, error) {
 		" figures rather than for the assembler.\n")
 	out.WriteString(equ("DTX_ROWBYTES", header.RowBytes()))
 	out.WriteString(equ("DTX_STATE", state))
-	if variant == dtx.DTX2 {
+	if Packs(variant) {
 		out.WriteString(equ("DTX_PERIOD", period))
 		out.WriteString(equ("DTX_N", given.Ring))
 		// The payload defines whether its columns contain copies (R5.10), so

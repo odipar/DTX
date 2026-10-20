@@ -23,6 +23,12 @@ public final class Dtx {
     /** The variant byte of a table laid out column by column and packed. */
     public static final int DTX2 = 2;
 
+    /**
+     * The variant byte of a table laid out column by column, a constant
+     * column as its value and every other packed.
+     */
+    public static final int DTX3 = 3;
+
     /** What a header runs to, under every variant and every {@code C}. */
     public static final int HEADER = 16;
 
@@ -119,10 +125,10 @@ public final class Dtx {
     }
 
     /**
-     * The table in {@code file}, under any variant. A DTX2 file is unpacked
-     * with the copy of ST4 in this repository.
+     * The table in {@code file}, under any variant. A DTX2 or DTX3 file is
+     * unpacked with the copy of ST4 in this repository.
      *
-     * @throws IllegalArgumentException where the variant is not 0, 1 or 2
+     * @throws IllegalArgumentException where the variant is not 0, 1, 2 or 3
      */
     public static Table read(byte[] file) {
         Header header = header(file);
@@ -130,8 +136,9 @@ public final class Dtx {
             case DTX0 -> Dtx0.read(file);
             case DTX1 -> Dtx1.read(file);
             case DTX2 -> Dtx2.read(file);
+            case DTX3 -> Dtx3.read(file);
             default -> throw new IllegalArgumentException(
-                    "variant " + header.variant() + " is not 0, 1 or 2");
+                    "variant " + header.variant() + " is not 0, 1, 2 or 3");
         };
     }
 
