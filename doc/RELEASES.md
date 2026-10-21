@@ -32,6 +32,39 @@ build.
 
 ## Published
 
+### 0.12.0, 2026-10-21
+
+<https://github.com/odipar/DTX/releases/tag/v0.12.0>, built from the commit
+tagged `v0.12.0`.
+
+What a caller reads: a fourth variant, DTX3 (SPEC.md 2.4, R8). A column
+whose values are equal is constant and the payload has its value once,
+with neither ring nor decoder; every other column is live, and its slot,
+its rank among the live columns, places its ring, decoder state and
+stream record at one stride from slot 0's. A column map of a byte a column
+has each column's slot or the mark of a constant one, and a caller reads a
+constant column out of the payload. DTX2 and every file written before
+this release read as they did.
+
+- **`dtx-write -v3`.** A constant column is written as its value, and
+  each live column is packed with every packer named and the smallest
+  kept: under `-copies` a live column packs with copies where they pack
+  it smaller. The live columns pack in parallel, the bytes the same.
+- **`dtx-package`.** Forty images, eighteen of them DTX3. An image of
+  several DTX3 tables is the build with the copy code where any of them
+  has copies, and its tables may differ in `N`. `DTX_metadata` reports a
+  DTX3 table's column map in `a2`.
+- **The 68000 reader.** `68k/DTX3.S`, DTX2.S's reader over the slots: a
+  turn past the last slot reads one idle state, 154 cycles, and a refill
+  costs 4 cycles more than under DTX2 (performance.md).
+
+The eighteen DTX2 images and the four plain ones are the bytes of 0.11.12.
+abi.md 2 reads that at a ring of 2P rows the advance onto a period's
+first row refills the first ring over the row before it, under DTX2 as
+under DTX3; BINARIES.md's image sizes are the measured ones.
+
+Checks: `bin/suite` green, 127 tests and 0 skipped; `go test ./...` green.
+
 ### 0.11.12, 2026-09-30
 
 <https://github.com/odipar/DTX/releases/tag/v0.11.12>, built from the commit
