@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
  * The three trees against each other, byte for byte.
  *
  * <p>One input has one output. Java, Go and C# write the same DTX files,
- * rewrite them the same way, build the same twenty-two images and combine the
+ * rewrite them the same way, build the same forty images and combine the
  * same packages, so a caller who runs any one of them has the same bytes
  * at every step.
  *
@@ -185,12 +185,31 @@ class ParityTest {
                 new Case("DTX2, k of 2 at a width of 2", 2, 2, null, 2, 960, false),
                 new Case("DTX2, k of 4 at a width of 4", 2, 4, null, 4, 960, false),
                 new Case("DTX2, k of 1 at a width of 4", 2, 4, null, 1, 960, false),
-                new Case("DTX2, with copies", 2, 2, null, 1, 960, true))) {
+                new Case("DTX2, with copies", 2, 2, null, 1, 960, true),
+                new Case("DTX3, k of 1", 3, 1, null, 1, 960, false),
+                new Case("DTX3, k of 2 at a width of 2", 3, 2, null, 2, 960, false),
+                new Case("DTX3, a repeat", 3, 1, 32, 1, 960, false),
+                new Case("DTX3, with copies at a ring of 64", 3, 2, null, 1, 64, true))) {
             List<String> argv = new ArrayList<>(Rig.writeArgs(one.variant(),
                     one.width(), one.repeat(), one.unit(), one.ring(),
                     one.copies()));
             same(one.name(), each("write", text, argv, "w"));
         }
+        // DTX3 has a constant column as its value, so a table of constant
+        // and live columns reaches the map, the values and the slots.
+        Path mixed = work().resolve("m.csv");
+        Files.writeString(mixed, Rig.mixed(300, 6, java.util.Set.of(0, 2, 5)));
+        for (List<String> argv : List.of(
+                List.of("-v3", "-w1", "-m60"),
+                List.of("-v3", "-w2", "-k2", "-m120", "-copies"),
+                List.of("-v3", "-w1", "-r0", "-m60"),
+                List.of("-v3", "-w4", "-r100", "-m240", "-copies"))) {
+            same("DTX3 " + argv, each("write", mixed, argv, "w"));
+        }
+        Path constant = work().resolve("c.csv");
+        Files.writeString(constant, Rig.mixed(64, 3, java.util.Set.of(0, 1, 2)));
+        same("DTX3, every column constant", each("write", constant,
+                List.of("-v3", "-w1"), "w"));
     }
 
     @Test
@@ -212,6 +231,8 @@ class ParityTest {
                 new Case("DTX2 to DTX0", packed, List.of("-v0"), "r.dtx"),
                 new Case("DTX2 to DTX1, repeating at 16", packed, List.of("-v1", "-r16"), "r.dtx"),
                 new Case("DTX2 to text", packed, List.of("-text"), "r.csv"),
+                new Case("DTX1 to DTX3", plain, List.of("-v3", "-k1", "-m120"), "r.dtx"),
+                new Case("DTX2 to DTX3, with copies", packed, List.of("-v3", "-m64", "-copies"), "r.dtx"),
                 new Case("DTX1 to text", plain, List.of("-text"), "r.csv"))) {
             same(one.name(), each("write", one.in(), one.flags(), one.out()));
         }
@@ -266,7 +287,10 @@ class ParityTest {
                 new Case("DTX2, k of 4 at a width of 1", 2, 64, 2, 1, null, 4, 960, false),
                 new Case("DTX2, with copies", 2, 64, 2, 2, null, 1, 960, true),
                 new Case("DTX2, twenty columns", 2, 64, 20, 2, null, 1, 960, false),
-                new Case("DTX2, a ring of 480", 2, 64, 2, 2, null, 1, 480, false))) {
+                new Case("DTX2, a ring of 480", 2, 64, 2, 2, null, 1, 480, false),
+                new Case("DTX3, k of 1", 3, 64, 3, 1, null, 1, 960, false),
+                new Case("DTX3, k of 2 at a width of 2", 3, 64, 2, 2, null, 2, 960, false),
+                new Case("DTX3, with copies", 3, 64, 2, 2, null, 1, 64, true))) {
             Path src = work.resolve("p.dtx");
             Files.write(src, Rig.write(work, Rig.numbers(one.rows(), one.columns()),
                     one.variant(), one.width(), one.repeat(), one.unit(),
@@ -288,7 +312,9 @@ class ParityTest {
                 new Case("DTX1, three tables", 1, 2, 1, false),
                 new Case("DTX2, three tables", 2, 2, 1, false),
                 new Case("DTX2, three tables at k of 2", 2, 2, 2, false),
-                new Case("DTX2, three tables with copies", 2, 2, 1, true))) {
+                new Case("DTX2, three tables with copies", 2, 2, 1, true),
+                new Case("DTX3, three tables", 3, 2, 1, false),
+                new Case("DTX3, three tables with copies", 3, 2, 1, true))) {
             List<String> named = new ArrayList<>();
             int[] rows = {24, 40, 9};
             for (int i = 0; i < rows.length; i++) {

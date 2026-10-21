@@ -23,8 +23,9 @@ import org.junit.jupiter.api.Test;
  * instructions at any of them, and its format block and its table differ. This assembles a corpus a variant at a time and compares every
  * image's code to the first one's, byte for byte.
  *
- * <p>Under DTX2 the decoder is built for one unit and for copies or not, so
- * k and copies may move the code and R, C and RR may not: those are grouped.
+ * <p>Under DTX2 and DTX3 the decoder is built for one unit and for copies or
+ * not, so k and copies may move the code and R, C and RR may not: those are
+ * grouped.
  *
  * <p>Skipped where no rmac is on the path or at {@code $RMAC}.
  */
@@ -74,8 +75,14 @@ class StabilityTest {
             boolean copies) {
         Path work = Rig.work("dtxstable");
         String csv = csv(shape.rows(), shape.columns());
+        // DTX3 packs a column with copies where they pay, and these columns
+        // pack smaller without them, so the flag is set on the file to build
+        // the copy code: a decoder with it reads a column without copies.
         byte[] blob = Rig.write(work, csv, variant, shape.width(),
-                shape.repeat(), unit, ring, copies);
+                shape.repeat(), unit, ring, copies && variant != Dtx.DTX3);
+        if (variant == Dtx.DTX3 && copies) {
+            blob[Dtx.HEADER + 3] |= Dtx3.COPIES;
+        }
         byte[] image = Packager.combine(
                 Packager.code(blob, Path.of(Rig.rmac())), blob);
         // The format block defines where the column table begins, at +20 of
@@ -102,8 +109,9 @@ class StabilityTest {
     @Test
     void oneVariantAssemblesToOneCodeAtAnyRowsColumnsOrRepeat() {
         needsRmac();
-        for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1, Dtx.DTX2}) {
-            List<Shape> shapes = variant == Dtx.DTX2
+        for (int variant : new int[] {Dtx.DTX0, Dtx.DTX1, Dtx.DTX2,
+                Dtx.DTX3}) {
+            List<Shape> shapes = Packager.packs(variant)
                     ? packedCorpus(1) : corpus(1);
             byte[] first = code(variant, shapes.get(0), 1, 960, false);
             String name = shapes.get(0).name();
@@ -143,31 +151,34 @@ class StabilityTest {
     void aPackedImageHasOneCodeABuildAndNoTwoBuildsAreOneCode() {
         needsRmac();
         // The width, k and copies build the code, not the table, so a DTX2
-        // image may have different code for each of them and must not for
-        // R, C or RR.
+        // or DTX3 image may have different code for each of them and must
+        // not for R, C or RR.
         Set<String> apart = new HashSet<>();
         List<Integer> sizes = new ArrayList<>();
-        for (int width : new int[] {1, 2, 4}) {
-            for (int unit : new int[] {1, 2, 4}) {
-                for (boolean copies : new boolean[] {false, true}) {
-                    List<Shape> shapes = packedCorpus(width);
-                    byte[] first = code(Dtx.DTX2, shapes.get(0), unit, 960,
-                            copies);
-                    for (Shape shape : shapes.subList(1, shapes.size())) {
-                        assertArrayEquals(first,
-                                code(Dtx.DTX2, shape, unit, 960, copies),
-                                "w=" + width + " k=" + unit
-                                + (copies ? " with copies" : " without copies")
-                                + ": " + shape.name() + " moved the code");
+        for (int variant : new int[] {Dtx.DTX2, Dtx.DTX3}) {
+            for (int width : new int[] {1, 2, 4}) {
+                for (int unit : new int[] {1, 2, 4}) {
+                    for (boolean copies : new boolean[] {false, true}) {
+                        List<Shape> shapes = packedCorpus(width);
+                        byte[] first = code(variant, shapes.get(0), unit, 960,
+                                copies);
+                        for (Shape shape : shapes.subList(1, shapes.size())) {
+                            assertArrayEquals(first,
+                                    code(variant, shape, unit, 960, copies),
+                                    "DTX" + variant + " w=" + width + " k="
+                                    + unit + (copies ? " with copies"
+                                            : " without copies")
+                                    + ": " + shape.name() + " moved the code");
+                        }
+                        apart.add(new String(first,
+                                java.nio.charset.StandardCharsets.ISO_8859_1));
+                        sizes.add(first.length);
                     }
-                    apart.add(new String(first,
-                            java.nio.charset.StandardCharsets.ISO_8859_1));
-                    sizes.add(first.length);
                 }
             }
         }
-        assertEquals(18, apart.size(),
-                "eighteen builds, and no two of them one code: " + sizes);
+        assertEquals(36, apart.size(),
+                "thirty-six builds, and no two of them one code: " + sizes);
     }
 
     @Test

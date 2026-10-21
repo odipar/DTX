@@ -53,11 +53,33 @@ public static class Pack
     public const int Plain = Pointer + 4;
 
     /// <summary>
-    /// What a DTX2 payload defines: the ring, the unit, whether its columns
-    /// contain copies from the literal stream, and where each data set begins.
+    /// What a packed payload defines: the ring, the unit, whether its
+    /// columns contain copies from the literal stream, whether its loop is
+    /// replayed, the columns with a ring and a decoder, and under DTX2 where
+    /// each data set begins.
     /// </summary>
     public readonly record struct Packed(int Ring, int Unit, bool Copies,
-            bool Replayed, int[] At);
+            bool Replayed, int Live, int[] At);
+
+    /// <summary>Whether variant packs its columns, DTX2 or DTX3.</summary>
+    public static bool Packs(int variant) =>
+            variant == Format.Dtx2 || variant == Format.Dtx3;
+
+    /// <summary>What the payload of a table of any variant defines.</summary>
+    public static Packed Given(byte[] file, Header header)
+    {
+        if (header.Variant == Format.Dtx2)
+        {
+            return ReadPacked(file, header);
+        }
+        if (header.Variant == Format.Dtx3)
+        {
+            Dtx3.Payload payload = Dtx3.ReadPayload(file, header);
+            return new Packed(payload.Ring, payload.Unit, payload.Copies,
+                    payload.Replayed, payload.Live, Array.Empty<int>());
+        }
+        return new Packed(0, 0, false, false, 0, Array.Empty<int>());
+    }
 
     /// <summary>
     /// What a DTX2 payload defines, SPEC.md 2.3.
@@ -95,16 +117,22 @@ public static class Pack
             }
         }
         return new Packed(Format.GetWord(file, payload), unit,
-                (file[payload + 3] & Format.CopiesFlag) != 0, replayed, at);
+                (file[payload + 3] & Format.CopiesFlag) != 0, replayed,
+                at.Length, at);
     }
 
     /// <summary>Where the decoder states are in the state block, doc/abi.md 3.</summary>
     public static int Decoders() => PackedHead;
 
-    /// <summary>Where the rings are in the state block: behind a decoder
-    /// state a turn.</summary>
-    public static int Ring(Header header, Packed given) =>
-            Decoders() + State * Period(header, given);
+    /// <summary>Where the rings are in the state block: under DTX2 behind
+    /// a decoder state a turn, and under DTX3 behind a decoder state a live
+    /// column and the one every idle turn reads (abi.md 3).</summary>
+    public static int Ring(Header header, Packed given)
+    {
+        int period = Period(header, given);
+        return Decoders() + State * (header.Variant == Format.Dtx3
+                ? given.Live + 1 : period);
+    }
 
     /// <summary>
     /// The state block a plain reader of this table needs, in bytes.
@@ -115,20 +143,29 @@ public static class Pack
     public static int StateBytes(Header header) => Plain;
 
     /// <summary>
-    /// The state block a packaged DTX2 reader needs, in bytes. A replayed
-    /// payload adds a copy of the registers a column behind the rings,
-    /// where the reader puts them at the row its loop begins (abi.md 4).
+    /// The state block a packaged DTX2 or DTX3 reader needs, in bytes. A
+    /// replayed payload adds a copy of the registers a column with a ring
+    /// behind the rings, where the reader puts them at the row its loop
+    /// begins (abi.md 4). DTX2 has a ring for every column; DTX3 for its
+    /// live columns alone.
     /// </summary>
     public static int PackedStateBytes(Header header, Packed given) =>
-            Ring(header, given) + given.Ring * header.Columns
-                    + (given.Replayed ? Saved * header.Columns : 0);
+            Ring(header, given) + given.Ring * given.Live
+                    + (given.Replayed ? Saved * given.Live : 0);
+
+    /// <summary>The state block a reader of a table of any variant needs.</summary>
+    public static int AnyStateBytes(byte[] file, Header header) =>
+            Packs(header.Variant)
+                    ? PackedStateBytes(header, Given(file, header))
+                    : StateBytes(header);
 
     /// <summary>
     /// The stride from one column's value to the next, in the row an advance
     /// points at: the width under DTX0, where a row's values are one after
     /// another; the length of a column under DTX1, where the columns lie at
     /// one stride; and N under DTX2, where every column has a ring of that
-    /// size. DTX_metadata reports it, out of the format block.
+    /// size, and under DTX3, the stride from one live column's ring to the
+    /// next. DTX_metadata reports it, out of the format block.
     /// </summary>
     public static int Stride(Header header, Packed given) => header.Variant switch
     {
@@ -199,7 +236,8 @@ public static class Pack
         {
             // Every column is one width, so a pointer and a stride walk them
             // all: a plain read is arithmetic on R, C and the
-            // width, and no column table is written.
+            // width, and no column table is written. DTX3's payload has a
+            // stream record a live column, which its reader reads there.
             return Array.Empty<byte>();
         }
         Packed given = ReadPacked(file, header);
@@ -246,6 +284,27 @@ public static class Pack
             throw new InvalidOperationException("no table: an image contains"
                     + " one at least");
         }
+        return Combine(code, files, header, Given(files[0], header).Copies,
+                out headers);
+    }
+
+    /// <summary>
+    /// The same, of code that has the copy code where copies is set. Under
+    /// DTX3 a table without copies reads through the decoder with the copy
+    /// code (abi.md 5), so the tables of one image differ in the flag and
+    /// the code has the copy code where any of them has copies.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">as above, or where a
+    /// DTX3 table has copies and the code does not have the copy
+    /// code</exception>
+    public static byte[] Combine(byte[] code, List<byte[]> files, Header header,
+            bool copies, out int[] headers)
+    {
+        if (files.Count == 0)
+        {
+            throw new InvalidOperationException("no table: an image contains"
+                    + " one at least");
+        }
         byte[] file = files[0];
         if (code.Length < FormatAt + FormatSize
                 || code[FormatAt] != 'D' || code[FormatAt + 1] != 'T'
@@ -270,9 +329,7 @@ public static class Pack
                     + $" {code.Length} bytes and the format block puts the"
                     + $" column table at {columns}: it would not land there");
         }
-        Packed given = header.Variant == Format.Dtx2
-                ? ReadPacked(file, header)
-                : new Packed(0, 0, false, false, Array.Empty<int>());
+        Packed given = Given(file, header);
         if (code[FormatAt + UnitAt] != given.Unit)
         {
             throw new InvalidOperationException($"the code decodes at a unit"
@@ -291,21 +348,24 @@ public static class Pack
         // less 16C. The code ends on a long and a column table is a
         // multiple of 16, so the first pair lands on a long without
         // padding and a one table image comes out the bytes it always was.
-        int state = header.Variant == Format.Dtx2
-                ? PackedStateBytes(header, given) : StateBytes(header);
+        int state = AnyStateBytes(file, header);
         var body = new List<byte>(code);
         headers = new int[files.Count];
         for (int i = 0; i < files.Count; i++)
         {
             byte[] next = files[i];
-            Header its = header;
+            Header its = i > 0 ? Format.ReadHeader(next) : header;
+            if (header.Variant == Format.Dtx3 && Given(next, its).Copies
+                    && !copies)
+            {
+                throw new InvalidOperationException($"table {i + 1} has copies"
+                        + " from the literal stream, and the code was built"
+                        + " without the copy code");
+            }
             if (i > 0)
             {
-                its = Format.ReadHeader(next);
                 Same(header, given, next, its);
-                state = Math.Max(state, its.Variant == Format.Dtx2
-                        ? PackedStateBytes(its, ReadPacked(next, its))
-                        : StateBytes(its));
+                state = Math.Max(state, AnyStateBytes(next, its));
                 while (body.Count % 4 != 0)
                 {
                     body.Add(0);
@@ -323,16 +383,18 @@ public static class Pack
         Format.PutLong(out_, FormatAt + TableAt, headers[0]);
         Format.PutWord(out_, FormatAt + RowBytesAt, header.RowBytes);
         Format.PutWord(out_, FormatAt + PeriodAt,
-                header.Variant == Format.Dtx2 ? Period(header, given) : 1);
+                Packs(header.Variant) ? Period(header, given) : 1);
         Format.PutWord(out_, FormatAt + RingAt, given.Ring);
         Format.PutLong(out_, FormatAt + StrideAt, Stride(header, given));
         return out_;
     }
 
     /// <summary>
-    /// One image defines the variant, the width, the unit and, under DTX2, P
-    /// and N once (doc/abi.md 1), so every table past the first meets what
-    /// the first defines.
+    /// One image defines the variant, the width, the unit and, under DTX2
+    /// and DTX3, P once, and under DTX2 N and the copies flag (doc/abi.md
+    /// 1), so every table past the first meets what the first defines.
+    /// Under DTX3 each table defines its ring, and a table without copies
+    /// reads through the copy code.
     /// </summary>
     private static void Same(Header first, Packed given, byte[] file,
             Header header)
@@ -342,14 +404,17 @@ public static class Pack
         {
             Apart("the width", first.Width, header.Width);
         }
-        if (first.Variant != Format.Dtx2)
+        if (!Packs(first.Variant))
         {
             return;
         }
-        Packed its = ReadPacked(file, header);
+        Packed its = Given(file, header);
         Apart("the unit k", given.Unit, its.Unit);
-        Apart("the copies flag", given.Copies ? 1 : 0, its.Copies ? 1 : 0);
-        Apart("the ring N", given.Ring, its.Ring);
+        if (first.Variant == Format.Dtx2)
+        {
+            Apart("the copies flag", given.Copies ? 1 : 0, its.Copies ? 1 : 0);
+            Apart("the ring N", given.Ring, its.Ring);
+        }
         Apart("the period P", Period(first, given), Period(header, its));
     }
 
@@ -366,11 +431,11 @@ public static class Pack
     /// <summary>
     /// The image for this table, from the code this build contains.
     ///
-    /// <para>Which of the twenty-two it needs is the file's to define: the
-    /// variant, the width every value is written in, and under DTX2 the unit its
-    /// data sets are packed at and whether they contain copies from the
-    /// literal stream (R5.10). No word from a caller enters it, so no word
-    /// can differ from the bytes.</para>
+    /// <para>Which of the forty it needs is the file's to define: the
+    /// variant, the width every value is written in, and under DTX2 and DTX3
+    /// the unit its data sets are packed at and whether they contain copies
+    /// from the literal stream (R5.10, R8.7). No word from a caller enters
+    /// it, so no word can differ from the bytes.</para>
     /// </summary>
     public static byte[] Image(byte[] file) =>
             Image(new List<byte[]> { file }, out _);
@@ -378,7 +443,8 @@ public static class Pack
     /// <summary>
     /// The same, of one table or several: the first file names the code and
     /// every other meets it on what an image defines once, the variant, the
-    /// width, the unit and, under DTX2, the period and the ring.
+    /// width, the unit and, under DTX2, the period and the ring. Under DTX3
+    /// the code has the copy code where any table has copies.
     /// </summary>
     public static byte[] Image(List<byte[]> files, out int[] headers)
     {
@@ -388,14 +454,23 @@ public static class Pack
                     + " one at least");
         }
         Header header = Format.ReadHeader(files[0]);
-        if (header.Variant != Format.Dtx2)
+        if (!Packs(header.Variant))
         {
             return Combine(Images.Code(header.Variant, header.Width, 0, false),
-                    files, header, out headers);
+                    files, header, false, out headers);
         }
-        Packed given = ReadPacked(files[0], header);
-        return Combine(Images.Code(Format.Dtx2, header.Width, given.Unit,
-                given.Copies), files, header, out headers);
+        Packed given = Given(files[0], header);
+        bool copies = given.Copies;
+        if (header.Variant == Format.Dtx3)
+        {
+            foreach (byte[] next in files)
+            {
+                Header its = Format.ReadHeader(next);
+                copies |= its.Variant == Format.Dtx3 && Given(next, its).Copies;
+            }
+        }
+        return Combine(Images.Code(header.Variant, header.Width, given.Unit,
+                copies), files, header, copies, out headers);
     }
 
     /// <summary>One NAME equ VALUE line.</summary>
@@ -411,18 +486,17 @@ public static class Pack
     {
         Header header = Format.ReadHeader(file);
         int variant = header.Variant;
-        if (variant != Format.Dtx0 && variant != Format.Dtx1
-                && variant != Format.Dtx2)
+        if (variant != Format.Dtx0 && variant != Format.Dtx1 && !Packs(variant))
         {
             throw new ArgumentException(
-                    $"the variant is 0, 1 or 2, not {variant}");
+                    $"the variant is 0, 1, 2 or 3, not {variant}");
         }
-        Packed given = new(0, 0, false, false, Array.Empty<int>());
+        Packed given = new(0, 0, false, false, 0, Array.Empty<int>());
         int period = 1;
         int state = StateBytes(header);
-        if (variant == Format.Dtx2)
+        if (Packs(variant))
         {
-            given = ReadPacked(file, header);
+            given = Given(file, header);
             period = Period(header, given);
             state = PackedStateBytes(header, given);
         }
@@ -438,16 +512,16 @@ public static class Pack
                 .Append(Equ("DTX_TURN", Turn))
                 .Append(Equ("DTX_PARK", Park))
                 .Append(Equ("DTX_POINTER", Pointer));
-        if (variant != Format.Dtx2)
+        if (!Packs(variant))
         {
             // Nothing parks a6 under the plain variants, so the payload
             // init was seeded on is in that long instead, which a jump
-            // reaches (abi.md 3). Under DTX2 the template names it.
+            // reaches (abi.md 3). Under DTX2 and DTX3 the template names it.
             out_.Append(Equ("DTX_PAYLOAD", Park));
         }
         out_.Append("\n; What the code reads at assembly time.\n")
                 .Append(Equ("DTX_WIDTH", header.Width));
-        if (variant == Format.Dtx2)
+        if (Packs(variant))
         {
             out_.Append(Equ("ST4_UNIT", given.Unit));
         }
@@ -458,7 +532,7 @@ public static class Pack
                         + " for the assembler.\n")
                 .Append(Equ("DTX_ROWBYTES", header.RowBytes))
                 .Append(Equ("DTX_STATE", state));
-        if (variant == Format.Dtx2)
+        if (Packs(variant))
         {
             out_.Append(Equ("DTX_PERIOD", period))
                     .Append(Equ("DTX_N", given.Ring));

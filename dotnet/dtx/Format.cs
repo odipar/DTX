@@ -18,6 +18,10 @@ public static class Format
     /// <summary>Column by column and packed.</summary>
     public const int Dtx2 = 2;
 
+    /// <summary>Column by column, a constant column as its value and every
+    /// other packed.</summary>
+    public const int Dtx3 = 3;
+
     /// <summary>The three bytes a file opens with.</summary>
     public static readonly byte[] Magic = { (byte)'D', (byte)'T', (byte)'X' };
 

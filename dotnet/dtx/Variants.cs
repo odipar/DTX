@@ -136,8 +136,9 @@ public static class Variants
             Format.Dtx0 => ReadDtx0(file),
             Format.Dtx1 => ReadDtx1(file),
             Format.Dtx2 => ReadDtx2(file),
+            Format.Dtx3 => Dtx3.Read(file),
             _ => throw new ArgumentException(
-                    $"variant {header.Variant} is not 0, 1 or 2"),
+                    $"variant {header.Variant} is not 0, 1, 2 or 3"),
         };
     }
 

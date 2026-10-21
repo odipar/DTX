@@ -40,10 +40,11 @@ in both directions (requirements.md, R1.3).
 
 A **variant** is one way of laying a table's rows out in bytes. The table
 is the same under all of them, and the variant is the whole of the
-difference: DTX0 lays the rows out row by row, DTX1 column by column, and
-DTX2 column by column with each column packed.
+difference: DTX0 lays the rows out row by row, DTX1 column by column, DTX2
+column by column with each column packed, and DTX3 column by column with a
+constant column as its value and each other column packed.
 
-The three are for two things. DTX0 and DTX1 are for reading and writing
+The four are for two things. DTX0 and DTX1 are for reading and writing
 plainly: the bytes are the rows, so a reader finds a value by arithmetic
 and reads it, and a writer puts a row down as it is. Row by row a whole
 row is one run of bytes; column by column a column's values lie together,
@@ -67,6 +68,14 @@ Packing is the table in fewer bytes, once the table has rows enough for the
 packing to cost less than it saves. A short one packs to more than it has,
 since what the packing costs stays fixed as `R` grows (requirements.md,
 R5.7).
+
+DTX3 is for size too, and for the memory a reader needs. A column whose
+values are equal is a **constant column**, written once as its value with
+neither ring nor decoder; every other is a **live column**, packed as DTX2
+packs one. A live column's **slot** is its rank among the live columns, and
+the rings are at one stride by slot rather than by column, so a reader
+reads the **column map** to find a column: a live column's slot, or the
+mark of a constant one (requirements.md, R8).
 
 ---
 

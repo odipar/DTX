@@ -1,7 +1,7 @@
 // Command dtx-package turns a DTX file into a standalone 68000 image.
 //
 // It combines rather than assembles: the code does not move with the table's
-// shape, so this executable contains the twenty-two images built once and
+// shape, so this executable contains the forty images built once and
 // reads the one the table needs. No assembler runs. doc/tools.md defines the
 // tool and doc/abi.md the four calls into the image.
 //
@@ -24,9 +24,10 @@ import (
 const help = `dtx-package [in.dtx...] < in.dtx > out.bin
 
 Packages one DTX file or several as a 68000 image, on standard output: the
-code for their variant and, under DTX1 and DTX2, their width, then a column
-table and a file for each. One table comes in on standard input, and several
-are named. doc/abi.md defines the four calls into the image.
+code for their variant and, under DTX1, DTX2 and DTX3, their width, then for
+each a file, behind its column table under DTX2. One table comes in on
+standard input, and several are named. doc/abi.md defines the four calls into
+the image.
 
   -help        this text
 
@@ -137,12 +138,5 @@ func run(args []string, in io.Reader, out io.Writer) error {
 
 // stateOf returns the state block a table's reader needs, in bytes.
 func stateOf(file []byte, header dtx.Header) (int, error) {
-	if header.Variant != dtx.DTX2 {
-		return pack.StateBytes(), nil
-	}
-	given, err := pack.ReadPacked(file, header)
-	if err != nil {
-		return 0, err
-	}
-	return pack.PackedStateBytes(header, given)
+	return pack.AnyStateBytes(file, header)
 }

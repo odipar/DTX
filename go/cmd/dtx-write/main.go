@@ -30,18 +30,20 @@ Writes the table on standard input to standard output. The input is a DTX
 file of any variant, or comma separated text; the output is a DTX file of
 variant V, or comma separated text under -text.
 
-  -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for
-               text)
+  -vV          the variant to write, 0, 1, 2 or 3 (the one read, or 0
+               for text)
   -wW          text: the bytes of every value, 1, 2 or 4 (what the
                text's first comment declares, or else the narrowest
                that fits every value)
   -rRR         the repeat: the row an advance past the last steps to, R for
                none (what the file or the text's first comment declares, or R)
-  -kK          DTX2: the unit, 1, 2 or 4 (1)
-  -mN          DTX2: the ring, in bytes (960)
-  -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)
-  -copies[S]   DTX2: copies from the literal stream, with S seconds of
-               search for a better parse
+  -kK          DTX2 and DTX3: the unit, 1, 2 or 4 (1)
+  -mN          DTX2 and DTX3: the ring, in bytes (960)
+  -pPACKER     DTX2 and DTX3: an ST4 executable to pack with (the copy
+               carried here)
+  -copies[S]   copies from the literal stream, with S seconds of search
+               for a better parse: DTX2 packs every column with them,
+               DTX3 each live column where they pack it smaller
   -text        writes the table as comma separated text
   -help        this text
 
@@ -70,6 +72,10 @@ Examples
   dtx-write -v2 -p/usr/local/bin/st4 < t.csv > t.dtx
       the same packed by that ST4 executable, in place of the
       copy carried here
+  dtx-write -v3 -m240 -copies < t.csv > t.dtx
+      text into a DTX3 file: a constant column as its value, and
+      each other through a ring of 240 bytes, with copies where
+      they pack it smaller
 
 doc/tools.md, Write.
 `
@@ -201,8 +207,24 @@ func run(args []string, in io.Reader, out io.Writer) error {
 				return taken
 			}
 			written, err = dtx.WriteDtx2(table, with, unit, ring)
+		case dtx.DTX3:
+			// A live column packs with copies where they pay: under
+			// -copies each is packed both ways and the smaller kept.
+			plain, taken := packerFor(packer, "")
+			if taken != nil {
+				return taken
+			}
+			packers := []dtx.Packer{plain}
+			if copies != "" {
+				with, taken := packerFor(packer, copies)
+				if taken != nil {
+					return taken
+				}
+				packers = append(packers, with)
+			}
+			written, err = dtx.WriteDtx3(table, packers, unit, ring)
 		default:
-			return fmt.Errorf("the variant is 0, 1 or 2, not %d", variant)
+			return fmt.Errorf("the variant is 0, 1, 2 or 3, not %d", variant)
 		}
 		if err != nil {
 			return err
@@ -214,7 +236,7 @@ func run(args []string, in io.Reader, out io.Writer) error {
 	kind, packing := "text", ""
 	if !toText {
 		kind = fmt.Sprintf("DTX%d", variant)
-		if variant == dtx.DTX2 {
+		if variant == dtx.DTX2 || variant == dtx.DTX3 {
 			packing = fmt.Sprintf(", k=%d, N=%d", unit, ring)
 		}
 	}

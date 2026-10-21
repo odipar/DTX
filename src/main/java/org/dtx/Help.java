@@ -44,18 +44,20 @@ final class Help {
             file of any variant, or comma separated text; the output is a DTX file of
             variant V, or comma separated text under -text.
 
-              -vV          the variant to write, 0, 1 or 2 (the one read, or 0 for
-                           text)
+              -vV          the variant to write, 0, 1, 2 or 3 (the one read, or 0
+                           for text)
               -wW          text: the bytes of every value, 1, 2 or 4 (what the
                            text's first comment declares, or else the narrowest
                            that fits every value)
               -rRR         the repeat: the row an advance past the last steps to, R for
                            none (what the file or the text's first comment declares, or R)
-              -kK          DTX2: the unit, 1, 2 or 4 (1)
-              -mN          DTX2: the ring, in bytes (960)
-              -pPACKER     DTX2: an ST4 executable to pack with (the copy carried here)
-              -copies[S]   DTX2: copies from the literal stream, with S seconds of
-                           search for a better parse
+              -kK          DTX2 and DTX3: the unit, 1, 2 or 4 (1)
+              -mN          DTX2 and DTX3: the ring, in bytes (960)
+              -pPACKER     DTX2 and DTX3: an ST4 executable to pack with (the copy
+                           carried here)
+              -copies[S]   copies from the literal stream, with S seconds of search
+                           for a better parse: DTX2 packs every column with them,
+                           DTX3 each live column where they pack it smaller
               -text        writes the table as comma separated text
               -help        this text
 
@@ -84,6 +86,10 @@ final class Help {
               dtx-write -v2 -p/usr/local/bin/st4 < t.csv > t.dtx
                   the same packed by that ST4 executable, in place of the
                   copy carried here
+              dtx-write -v3 -m240 -copies < t.csv > t.dtx
+                  text into a DTX3 file: a constant column as its value, and
+                  each other through a ring of 240 bytes, with copies where
+                  they pack it smaller
 
             doc/tools.md, Write.
             """;
@@ -92,9 +98,10 @@ final class Help {
             dtx-package [in.dtx...] [-aRMAC] [-s] < in.dtx > out.bin
 
             Packages one DTX file or several as a 68000 image, on standard output:
-            the code for their variant and, under DTX1 and DTX2, their width, then a
-            column table and a file for each. One table comes in on standard input,
-            and several are named. doc/abi.md defines the four calls into the image.
+            the code for their variant and, under DTX1, DTX2 and DTX3, their width,
+            then for each a file, behind its column table under DTX2. One table comes
+            in on standard input, and several are named. doc/abi.md defines the four
+            calls into the image.
 
               -aRMAC       assembles the code with the rmac at RMAC, in place of the
                            image the build made. The templates are read from 68k
@@ -122,9 +129,9 @@ final class Help {
     static final String BLOBS = """
             dtx-blobs DIR [DIR..] [-aRMAC] [-tTEMPLATES]
 
-            Builds the twenty-two images from the 68k/ templates with rmac and writes
-            them into each DIR: DTX0, DTX1 at each width, and DTX2 at each width and a
-            unit of 1, 2 and 4, with the copy code and without.
+            Builds the forty images from the 68k/ templates with rmac and writes them
+            into each DIR: DTX0, DTX1 at each width, and DTX2 and DTX3 at each width
+            and a unit of 1, 2 and 4, with the copy code and without.
 
               -aRMAC       the assembler (rmac, on the path)
               -tTEMPLATES  the directory the templates are read from (68k, or what
@@ -134,7 +141,7 @@ final class Help {
             Examples
 
               dtx-blobs build/68k
-                  the twenty-two images into build/68k, with the rmac on the path
+                  the forty images into build/68k, with the rmac on the path
               dtx-blobs build/68k go/image/data -a/usr/local/bin/rmac
                   into two directories, with that rmac
               dtx-blobs -t/src/dtx/68k build/68k
