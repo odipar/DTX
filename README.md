@@ -195,6 +195,7 @@ written until it defines what DTX has to do.
 | [abi.md](doc/abi.md) | the calls a packaged table is read by, on the 68000 |
 | [performance.md](doc/performance.md) | what each call costs, in 68000 cycles, measured |
 | [experiments.md](doc/experiments.md) | what was measured against real tables, and what came out |
+| [ring-sizes.md](doc/ring-sizes.md) | a design ahead of the code: a ring size a slot under DTX3 |
 | [BINARIES.md](doc/BINARIES.md) | the forty 68000 images, and how a tool combines one with a table |
 | [RELEASES.md](doc/RELEASES.md) | what a release contains, and what changed in each |
 | [doc/conformance/](doc/conformance) | the kit an independent reader is written against |
